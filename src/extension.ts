@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { SymbolCandidate } from './candidateScanner';
 import { DocumentationResolver, type DocumentationLookup, type LocationLike } from './documentationResolver';
-import { buildCommentHints, type ShowCommentConfig } from './hintBuilder';
+import { buildCommentHints, type SymbolDocLensConfig } from './hintBuilder';
 import { hoverContentsToMarkdownLines } from './hoverContent';
 
 const SUPPORTED_LANGUAGES = [
@@ -15,21 +15,21 @@ const SUPPORTED_LANGUAGES = [
 export function activate(context: vscode.ExtensionContext): void {
   const lookup = new VscodeDocumentationLookup();
   const resolver = new DocumentationResolver(lookup, readResolverOptions());
-  const hintProvider = new ShowCommentInlayHintProvider(resolver);
+  const hintProvider = new SymbolDocLensInlayHintProvider(resolver);
 
   const selector = SUPPORTED_LANGUAGES.map((language) => ({ language, scheme: 'file' }));
   context.subscriptions.push(vscode.languages.registerInlayHintsProvider(selector, hintProvider));
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('showComment.refresh', () => {
+    vscode.commands.registerCommand('symbolDocLens.refresh', () => {
       resolver.clearCache();
       hintProvider.refresh();
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('showComment.toggle', async () => {
-      const config = vscode.workspace.getConfiguration('showComment');
+    vscode.commands.registerCommand('symbolDocLens.toggle', async () => {
+      const config = vscode.workspace.getConfiguration('symbolDocLens');
       const enabled = config.get<boolean>('enabled', true);
       await config.update('enabled', !enabled, vscode.ConfigurationTarget.Global);
       resolver.clearCache();
@@ -39,7 +39,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('showComment')) {
+      if (event.affectsConfiguration('symbolDocLens')) {
         resolver.updateOptions(readResolverOptions());
         hintProvider.refresh();
       }
@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {}
 
-class ShowCommentInlayHintProvider implements vscode.InlayHintsProvider {
+class SymbolDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   private readonly emitter = new vscode.EventEmitter<void>();
   readonly onDidChangeInlayHints = this.emitter.event;
 
@@ -64,7 +64,7 @@ class ShowCommentInlayHintProvider implements vscode.InlayHintsProvider {
     range: vscode.Range,
     token: vscode.CancellationToken
   ): Promise<vscode.InlayHint[]> {
-    const config = readShowCommentConfig();
+    const config = readSymbolDocLensConfig();
     const lines = collectLines(document, range);
     const hints = await buildCommentHints({
       lines,
@@ -162,8 +162,8 @@ function collectLines(document: vscode.TextDocument, range: vscode.Range): strin
   return lines;
 }
 
-function readShowCommentConfig(): ShowCommentConfig {
-  const config = vscode.workspace.getConfiguration('showComment');
+function readSymbolDocLensConfig(): SymbolDocLensConfig {
+  const config = vscode.workspace.getConfiguration('symbolDocLens');
   return {
     enabled: config.get<boolean>('enabled', true),
     languages: config.get<string[]>('languages', SUPPORTED_LANGUAGES),
@@ -172,7 +172,7 @@ function readShowCommentConfig(): ShowCommentConfig {
 }
 
 function readResolverOptions(): { maxHintLength: number } {
-  const config = vscode.workspace.getConfiguration('showComment');
+  const config = vscode.workspace.getConfiguration('symbolDocLens');
   return {
     maxHintLength: config.get<number>('maxHintLength', 80)
   };

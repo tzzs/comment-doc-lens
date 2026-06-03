@@ -1,7 +1,7 @@
 {
-  "name": "vs-show-comment",
-  "displayName": "Show Comment",
-  "description": "Show definition comments for referenced symbols as VS Code inlay hints.",
+  "name": "symbol-doc-lens",
+  "displayName": "Symbol Doc Lens",
+  "description": "Show symbol documentation inline at reference sites.",
   "version": "0.0.1",
   "publisher": "local",
   "engines": {
@@ -16,30 +16,30 @@
     "onLanguage:javascript",
     "onLanguage:typescriptreact",
     "onLanguage:javascriptreact",
-    "onCommand:showComment.toggle",
-    "onCommand:showComment.refresh"
+    "onCommand:symbolDocLens.toggle",
+    "onCommand:symbolDocLens.refresh"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "showComment.toggle",
-        "title": "Show Comment: Toggle"
+        "command": "symbolDocLens.toggle",
+        "title": "Symbol Doc Lens: Toggle"
       },
       {
-        "command": "showComment.refresh",
-        "title": "Show Comment: Refresh"
+        "command": "symbolDocLens.refresh",
+        "title": "Symbol Doc Lens: Refresh"
       }
     ],
     "configuration": {
-      "title": "Show Comment",
+      "title": "Symbol Doc Lens",
       "properties": {
-        "showComment.enabled": {
+        "symbolDocLens.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable Show Comment inlay hints."
+          "description": "Enable Symbol Doc Lens inlay hints."
         },
-        "showComment.languages": {
+        "symbolDocLens.languages": {
           "type": "array",
           "items": {
             "type": "string"
@@ -51,15 +51,15 @@
             "typescriptreact",
             "javascriptreact"
           ],
-          "description": "Language identifiers where Show Comment runs."
+          "description": "Language identifiers where Symbol Doc Lens runs."
         },
-        "showComment.maxHintLength": {
+        "symbolDocLens.maxHintLength": {
           "type": "number",
           "default": 80,
           "minimum": 20,
           "description": "Maximum length of the inline comment summary."
         },
-        "showComment.maxHintsPerRequest": {
+        "symbolDocLens.maxHintsPerRequest": {
           "type": "number",
           "default": 80,
           "minimum": 1,
