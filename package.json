@@ -3,7 +3,7 @@
   "displayName": "Comment Doc Lens",
   "description": "Show definition comments and symbol documentation inline at reference sites.",
   "version": "0.0.5",
-  "publisher": "local",
+  "publisher": "tanzz",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,7 +13,24 @@
     "vscode": "^1.101.0"
   },
   "categories": [
+    "Programming Languages",
     "Other"
+  ],
+  "keywords": [
+    "comments",
+    "documentation",
+    "inlay hints",
+    "go",
+    "typescript",
+    "javascript",
+    "jsdoc",
+    "vscode extension"
+  ],
+  "files": [
+    "out/src/**/*.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "activationEvents": [
     "onLanguage:go",
@@ -112,7 +129,7 @@
     "test": "npm run compile && node --test out/test/*.test.js",
     "test:integration": "npm run compile && node out/test/integration/runTest.js",
     "test:all": "npm test && npm run test:integration",
-    "package": "vsce package --out comment-doc-lens-0.0.5.vsix",
+    "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {

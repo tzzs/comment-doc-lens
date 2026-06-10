@@ -8,6 +8,7 @@ interface PackageJson {
   displayName: string;
   description: string;
   main: string;
+  publisher: string;
   activationEvents: string[];
   contributes: {
     commands: Array<{ command: string; title: string }>;
@@ -27,6 +28,7 @@ test('project metadata uses Comment Doc Lens naming', () => {
 
   assert.equal(packageJson.name, 'comment-doc-lens');
   assert.equal(packageJson.displayName, 'Comment Doc Lens');
+  assert.equal(packageJson.publisher, 'tanzz');
   assert.equal(packageJson.description, 'Show definition comments and symbol documentation inline at reference sites.');
   assert.equal(packageJson.main, './out/src/extension.js');
 });

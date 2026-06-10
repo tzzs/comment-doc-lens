@@ -90,8 +90,8 @@ export async function run(): Promise<void> {
 }
 
 async function activateCommentDocLens(): Promise<void> {
-  const extension = vscode.extensions.getExtension('local.comment-doc-lens');
-  assert.ok(extension, 'Expected local.comment-doc-lens to be available in the extension host.');
+  const extension = vscode.extensions.getExtension('tanzz.comment-doc-lens');
+  assert.ok(extension, 'Expected tanzz.comment-doc-lens to be available in the extension host.');
   await extension.activate();
 }
 
