@@ -88,7 +88,6 @@ jobs:
     needs: [package, github_release]
     if: ${{ startsWith(github.event.release.tag_name, 'comment-doc-lens-v') }}
     runs-on: ubuntu-latest
-    environment: vsce
     env:
       VSCE_PAT: ${{ secrets.VSCE_PAT || secrets.VSCE_TOKEN }}
     steps:
@@ -101,7 +100,7 @@ jobs:
       - name: Ensure VSCE token present
         run: |
           if [ -z "${VSCE_PAT}" ]; then
-            echo "VSCE_PAT/VSCE_TOKEN is not configured in repository or environment 'vsce'." >&2
+            echo "VSCE_PAT/VSCE_TOKEN is not configured as a repository secret." >&2
             exit 1
           fi
 
@@ -112,7 +111,6 @@ jobs:
     needs: [package, github_release]
     if: ${{ startsWith(github.event.release.tag_name, 'comment-doc-lens-v') }}
     runs-on: ubuntu-latest
-    environment: vsce
     env:
       OVSX_PAT: ${{ secrets.OVSX_PAT || secrets.OPENVSX_TOKEN }}
     steps:
@@ -125,7 +123,7 @@ jobs:
       - name: Ensure Open VSX token present
         run: |
           if [ -z "${OVSX_PAT}" ]; then
-            echo "OVSX_PAT/OPENVSX_TOKEN is not configured in repository or environment 'vsce'." >&2
+            echo "OVSX_PAT/OPENVSX_TOKEN is not configured as a repository secret." >&2
             exit 1
           fi
 
