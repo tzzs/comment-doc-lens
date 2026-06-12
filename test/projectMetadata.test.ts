@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 
@@ -7,6 +7,7 @@ interface PackageJson {
   name: string;
   displayName: string;
   description: string;
+  icon: string;
   main: string;
   publisher: string;
   activationEvents: string[];
@@ -30,6 +31,8 @@ test('project metadata uses Comment Doc Lens naming', () => {
   assert.equal(packageJson.displayName, 'Comment Doc Lens');
   assert.equal(packageJson.publisher, 'tanzz');
   assert.equal(packageJson.description, 'Show definition comments and symbol documentation inline at reference sites.');
+  assert.equal(packageJson.icon, 'assets/icon.png');
+  assert.equal(existsSync(join(process.cwd(), packageJson.icon)), true);
   assert.equal(packageJson.main, './out/src/extension.js');
 });
 
