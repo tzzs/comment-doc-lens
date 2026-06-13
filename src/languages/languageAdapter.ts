@@ -22,8 +22,8 @@ export interface LanguageAdapter {
   languageIds: readonly string[];
   displayName: string;
   supportLevel: LanguageSupportLevel;
-  isDeclarationCandidate?(candidate: SymbolCandidate, line: string): boolean;
-  isNoisyCandidate?(candidate: SymbolCandidate, line: string): boolean;
+  isDeclarationCandidate?(candidate: SymbolCandidate, line: string, languageId?: string): boolean;
+  isNoisyCandidate?(candidate: SymbolCandidate, line: string, languageId?: string): boolean;
   sourceComment?: SourceCommentStrategy;
   resolveTimeoutMs?: number;
 }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DocumentationResolver, type DocumentationLookup } from '../src/documentationResolver';
+import { goLanguageAdapter } from '../src/languages/languageRegistry';
 
 test('uses documentation from hover at the reference position', async () => {
   const lookup: DocumentationLookup = {
@@ -70,12 +71,17 @@ test('falls back to source comments near the definition when hover has no docume
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
-  const result = await resolver.resolve({
-    word: 'OrderStatusPaid',
-    line: 8,
-    startCharacter: 12,
-    endCharacter: 27
-  });
+  const result = await resolver.resolve(
+    {
+      word: 'OrderStatusPaid',
+      line: 8,
+      startCharacter: 12,
+      endCharacter: 27
+    },
+    '',
+    0,
+    goLanguageAdapter
+  );
 
   assert.equal(result?.summary, 'Paid status from source comment.');
   assert.deepEqual(result?.location, { uri: 'file:///status.go', line: 3, character: 6 });
@@ -90,12 +96,17 @@ test('prefers go source comments over non-comment reference hover text', async (
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
-  const result = await resolver.resolve({
-    word: 'OrderStatusPaid',
-    line: 8,
-    startCharacter: 12,
-    endCharacter: 27
-  });
+  const result = await resolver.resolve(
+    {
+      word: 'OrderStatusPaid',
+      line: 8,
+      startCharacter: 12,
+      endCharacter: 27
+    },
+    '',
+    0,
+    goLanguageAdapter
+  );
 
   assert.equal(result?.summary, 'Paid status from source comment.');
   assert.deepEqual(result?.location, { uri: 'file:///status.go?version=1#L3', line: 3, character: 6 });
