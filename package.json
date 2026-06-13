@@ -49,7 +49,8 @@
     "onLanguage:rust",
     "onLanguage:csharp",
     "onCommand:commentDocLens.toggle",
-    "onCommand:commentDocLens.refresh"
+    "onCommand:commentDocLens.refresh",
+    "onCommand:commentDocLens.showLanguageStatus"
   ],
   "main": "./out/src/extension.js",
   "contributes": {
@@ -61,6 +62,10 @@
       {
         "command": "commentDocLens.refresh",
         "title": "Comment Doc Lens: Refresh"
+      },
+      {
+        "command": "commentDocLens.showLanguageStatus",
+        "title": "Comment Doc Lens: Show Language Status"
       }
     ],
     "configuration": {

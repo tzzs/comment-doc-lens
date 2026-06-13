@@ -15,6 +15,7 @@ export const goLanguageAdapter: LanguageAdapter = {
   languageIds: ['go'],
   displayName: 'Go',
   supportLevel: 'stable',
+  recommendedExtensions: ['golang.Go'],
   resolveTimeoutMs: 2500,
   isDeclarationCandidate(candidate, line) {
     return isGoDeclarationName(candidate, line) || isGoDeclarationContext(candidate, line);
@@ -48,6 +49,7 @@ export const pythonLanguageAdapter: LanguageAdapter = {
   languageIds: ['python'],
   displayName: 'Python',
   supportLevel: 'experimental',
+  recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
   isDeclarationCandidate(candidate, line) {
     return isPythonDeclarationName(candidate, line) || isPythonAssignmentName(candidate, line);
   },
@@ -68,6 +70,7 @@ export const javaLanguageAdapter: LanguageAdapter = {
   languageIds: ['java'],
   displayName: 'Java',
   supportLevel: 'experimental',
+  recommendedExtensions: ['vscjava.vscode-java-pack'],
   isDeclarationCandidate(candidate, line) {
     return isJavaDeclarationName(candidate, line);
   },
@@ -88,6 +91,7 @@ export const rustLanguageAdapter: LanguageAdapter = {
   languageIds: ['rust'],
   displayName: 'Rust',
   supportLevel: 'experimental',
+  recommendedExtensions: ['rust-lang.rust-analyzer'],
   isDeclarationCandidate(candidate, line) {
     return isRustDeclarationName(candidate, line);
   },
@@ -107,7 +111,8 @@ export const rustLanguageAdapter: LanguageAdapter = {
 export const csharpLanguageAdapter: LanguageAdapter = {
   languageIds: ['csharp'],
   displayName: 'C#',
-  supportLevel: 'hover-only'
+  supportLevel: 'hover-only',
+  recommendedExtensions: ['ms-dotnettools.csdevkit']
 };
 
 export const defaultLanguageAdapters = [

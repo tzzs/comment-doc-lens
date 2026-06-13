@@ -32,6 +32,19 @@ test('default registry maps current language ids to stable adapters', () => {
   );
 });
 
+test('default adapters expose recommended extension metadata for health checks', () => {
+  const registry = createLanguageRegistry(defaultLanguageAdapters);
+
+  assert.deepEqual(registry.getAdapter('go')?.recommendedExtensions, ['golang.Go']);
+  assert.deepEqual(registry.getAdapter('python')?.recommendedExtensions, [
+    'ms-python.python',
+    'ms-python.vscode-pylance'
+  ]);
+  assert.deepEqual(registry.getAdapter('csharp')?.recommendedExtensions, [
+    'ms-dotnettools.csdevkit'
+  ]);
+});
+
 test('default language ids are stable and ordered for activation and configuration', () => {
   assert.deepEqual(getDefaultLanguageIds(), [
     'go',

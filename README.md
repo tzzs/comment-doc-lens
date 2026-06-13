@@ -15,6 +15,12 @@ See [the language support matrix](docs/language-support.md) for support levels, 
 Hints are rendered at the end of the source line so they do not split expressions in the middle of a statement. The text prefix defaults to `// ` and can be customized with `commentDocLens.hintPrefix`.
 By default, the first useful documentation line is truncated to 120 characters. You can tune this with `commentDocLens.maxHintLength`.
 
+## Language service status
+
+Run `Comment Doc Lens: Show Language Status` from the command palette to inspect the active file's language-service readiness. The status check verifies recommended extensions, hover output, definition output, and whether the adapter has source-comment fallback support.
+
+The check is cached per language, file, and cursor position, and the cache is cleared when you refresh, toggle, or change Comment Doc Lens settings. A `missingDependency` status means at least one recommended extension is not installed. A `degraded` status means the language service is present but hover or definition output is not currently useful enough for inline documentation.
+
 ## Noise and performance controls
 
 The extension filters declaration names, JSX tag names, and intermediate property-chain segments by default. It also deduplicates repeated line summaries, limits concurrent documentation lookups, times out slow lookups, and bounds resolver cache growth.

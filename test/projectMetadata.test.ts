@@ -39,11 +39,12 @@ test('project metadata uses Comment Doc Lens naming', () => {
 test('extension contributions use commentDocLens identifiers', () => {
   const packageJson = readPackageJson();
 
-  assert.deepEqual(packageJson.activationEvents.slice(-2), [
+  assert.deepEqual(packageJson.activationEvents.slice(-3), [
     'onCommand:commentDocLens.toggle',
-    'onCommand:commentDocLens.refresh'
+    'onCommand:commentDocLens.refresh',
+    'onCommand:commentDocLens.showLanguageStatus'
   ]);
-  assert.deepEqual(packageJson.activationEvents.slice(0, -2), [
+  assert.deepEqual(packageJson.activationEvents.slice(0, -3), [
     'onLanguage:go',
     'onLanguage:typescript',
     'onLanguage:javascript',
@@ -57,7 +58,7 @@ test('extension contributions use commentDocLens identifiers', () => {
 
   assert.deepEqual(
     packageJson.contributes.commands.map((command) => command.command),
-    ['commentDocLens.toggle', 'commentDocLens.refresh']
+    ['commentDocLens.toggle', 'commentDocLens.refresh', 'commentDocLens.showLanguageStatus']
   );
   assert.equal(packageJson.contributes.configuration.title, 'Comment Doc Lens');
   assert.deepEqual(Object.keys(packageJson.contributes.configuration.properties), [

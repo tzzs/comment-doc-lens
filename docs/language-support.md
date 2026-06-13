@@ -25,6 +25,19 @@
 | Rust | `rust` | `experimental` | rust-analyzer | hover、definition hover、`///`、`//!` 文档注释 | 读取定义前连续 `///` 或 `//!` 文档注释 | Rust adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 doc comment 读取；fixture 已存在 |
 | C# | `csharp` | `hover-only` | C# Dev Kit 或 OmniSharp | hover、definition hover、XML docs | 暂不启用 source fallback；依赖语言服务 hover 输出 | C# adapter 单元测试覆盖 hover-only 元数据；fixture 已存在 |
 
+## 语言服务健康检查
+
+命令面板中的 `Comment Doc Lens: Show Language Status` 会对当前文件和光标位置执行轻量检查，并返回 `ready`、`degraded`、`missingDependency` 或 `unknown`。检查内容包括推荐扩展是否安装、hover provider 是否返回可用文档、definition provider 是否返回位置，以及 adapter 是否具备 source fallback。
+
+| 语言 | 推荐扩展 ID | 健康检查能力 | 期望状态 |
+| --- | --- | --- | --- |
+| Go | `golang.Go` | extension、hover、definition、source fallback | gopls 正常时为 `ready`；hover 缺失但 fallback 可用时为 `degraded` |
+| TypeScript / JavaScript / TSX / JSX | VS Code 内置 | hover、definition | 内置服务可返回 hover/definition 时为 `ready` |
+| Python | `ms-python.python`, `ms-python.vscode-pylance` | extension、hover、definition、source fallback | Python/Pylance 安装且当前位置有文档时为 `ready` |
+| Java | `vscjava.vscode-java-pack` | extension、hover、definition、source fallback | Java language server 就绪且 Javadoc 可解析时为 `ready` |
+| Rust | `rust-lang.rust-analyzer` | extension、hover、definition、source fallback | rust-analyzer 就绪且 doc comment 可解析时为 `ready` |
+| C# | `ms-dotnettools.csdevkit` | extension、hover、definition | C# Dev Kit 返回 XML docs hover 时为 `ready`；无 source fallback 时 definition 缺失会降级 |
+
 ## 第一批扩展语言
 
 | 语言 | VS Code language id | 初始等级 | 推荐依赖 | 注释/文档来源目标 | Fallback 目标 | 验证目标 |

@@ -8,6 +8,12 @@ import {
 } from './documentationResolver';
 import { buildCommentHints, type CommentDocLensConfig } from './hintBuilder';
 import { hoverContentsToMarkdownLines } from './hoverContent';
+import {
+  formatLanguageHealthStatus,
+  LanguageHealthService,
+  type LanguageHealthPosition,
+  type LanguageHealthProbe
+} from './languageHealth';
 import type { LanguageAdapter, SourceCommentStrategy } from './languages/languageAdapter';
 import {
   createLanguageRegistry,
@@ -20,6 +26,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const resolver = new DocumentationResolver(lookup, readResolverOptions());
   const languageRegistry = createLanguageRegistry(defaultLanguageAdapters);
   const hintProvider = new CommentDocLensInlayHintProvider(resolver, languageRegistry);
+  const languageHealth = new LanguageHealthService(new VscodeLanguageHealthProbe());
 
   const selector = languageRegistry.getLanguageIds().map((language) => ({ language, scheme: 'file' }));
   context.subscriptions.push(vscode.languages.registerInlayHintsProvider(selector, hintProvider));
@@ -27,6 +34,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('commentDocLens.refresh', () => {
       resolver.clearCache();
+      languageHealth.clearCache();
       hintProvider.refresh();
     })
   );
@@ -37,7 +45,36 @@ export function activate(context: vscode.ExtensionContext): void {
       const enabled = config.get<boolean>('enabled', true);
       await config.update('enabled', !enabled, vscode.ConfigurationTarget.Global);
       resolver.clearCache();
+      languageHealth.clearCache();
       hintProvider.refresh();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('commentDocLens.showLanguageStatus', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        await vscode.window.showInformationMessage('Comment Doc Lens: open a file to inspect language status.');
+        return;
+      }
+
+      const languageAdapter = languageRegistry.getAdapter(editor.document.languageId);
+      if (!languageAdapter) {
+        await vscode.window.showInformationMessage(`Comment Doc Lens: ${editor.document.languageId} is not supported.`);
+        return;
+      }
+
+      const status = await languageHealth.evaluate({
+        languageId: editor.document.languageId,
+        adapter: languageAdapter,
+        documentUri: editor.document.uri.toString(),
+        position: {
+          line: editor.selection.active.line,
+          character: editor.selection.active.character
+        }
+      });
+
+      await vscode.window.showInformationMessage(`Comment Doc Lens: ${formatLanguageHealthStatus(status)}`);
     })
   );
 
@@ -45,6 +82,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('commentDocLens')) {
         resolver.updateOptions(readResolverOptions());
+        languageHealth.clearCache();
         hintProvider.refresh();
       }
     })
@@ -52,6 +90,32 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {}
+
+class VscodeLanguageHealthProbe implements LanguageHealthProbe {
+  async isExtensionInstalled(extensionId: string): Promise<boolean> {
+    return vscode.extensions.getExtension(extensionId) !== undefined;
+  }
+
+  async hasHover(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
+    const lines = await getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(position.line, position.character));
+    return lines.some((line) => line.trim().length > 0);
+  }
+
+  async hasDefinition(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
+    let definitions: Array<vscode.Location | vscode.LocationLink> | undefined;
+    try {
+      definitions = await vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(
+        'vscode.executeDefinitionProvider',
+        vscode.Uri.parse(documentUri),
+        new vscode.Position(position.line, position.character)
+      );
+    } catch {
+      definitions = undefined;
+    }
+
+    return (definitions ?? []).length > 0;
+  }
+}
 
 class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   private readonly emitter = new vscode.EventEmitter<void>();
