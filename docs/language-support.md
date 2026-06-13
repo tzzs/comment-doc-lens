@@ -26,6 +26,10 @@
 | C# | `csharp` | `hover-only` | C# Dev Kit 或 OmniSharp | hover、definition hover、XML docs | 暂不启用 source fallback；依赖语言服务 hover 输出 | C# adapter 单元测试覆盖 hover-only 元数据；fixture 已存在 |
 | PHP | `php` | `experimental` | Intelephense | hover、definition hover、PHPDoc | 读取定义前 `/** ... */` PHPDoc | PHP adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 PHPDoc 读取 |
 | Ruby | `ruby` | `hover-only` | Ruby LSP | hover、definition hover、YARD/RDoc | 暂不启用 source fallback；依赖语言服务 hover 输出 | Ruby adapter 单元测试覆盖 hover-only 元数据 |
+| Kotlin | `kotlin` | `hover-only` | Kotlin | hover、definition hover、KDoc | 暂不启用 source fallback；依赖 Kotlin language server hover 输出 | Kotlin adapter 单元测试覆盖 hover-only 元数据和推荐扩展诊断 |
+| Swift | `swift` | `hover-only` | Swift | hover、definition hover、doc comment | 暂不启用 source fallback；依赖 SourceKit-LSP 和本机 Swift 工具链 | Swift adapter 单元测试覆盖 hover-only 元数据和推荐扩展诊断 |
+| C | `c` | `hover-only` | C/C++ | hover、definition hover、Doxygen | 暂不启用 source fallback；依赖 C/C++ 扩展索引配置 | C/C++ adapter 单元测试覆盖 `c`/`cpp` 双 language id 和推荐扩展诊断 |
+| C++ | `cpp` | `hover-only` | C/C++ | hover、definition hover、Doxygen | 暂不启用 source fallback；依赖 C/C++ 扩展索引配置 | 与 C 共用 C/C++ adapter |
 
 ## 语言服务健康检查
 
@@ -41,6 +45,9 @@
 | C# | `ms-dotnettools.csdevkit` | extension、hover、definition | C# Dev Kit 返回 XML docs hover 时为 `ready`；无 source fallback 时 definition 缺失会降级 |
 | PHP | `bmewburn.vscode-intelephense-client` | extension、hover、definition、source fallback | Intelephense 就绪且 PHPDoc 可解析时为 `ready` |
 | Ruby | `shopify.ruby-lsp` | extension、hover、definition | Ruby LSP 返回 YARD/RDoc hover 时为 `ready`；无 source fallback 时 definition 缺失会降级 |
+| Kotlin | `fwcd.kotlin` | extension、hover、definition | Kotlin language server 返回 KDoc hover 时为 `ready`；缺少扩展时为 `missingDependency` |
+| Swift | `swiftlang.swift-vscode` | extension、hover、definition | Swift 扩展和 SourceKit-LSP 可用时为 `ready`；缺少本机工具链时通常为 `degraded` |
+| C/C++ | `ms-vscode.cpptools` | extension、hover、definition | C/C++ 扩展索引到当前文件时为 `ready`；include path 或 compile commands 缺失时通常为 `degraded` |
 
 ## 文档质量与噪音过滤
 
@@ -49,7 +56,7 @@ Comment Doc Lens 现在在 formatter、resolver 和 hint builder 三层执行文
 - formatter 会跳过 signature-only code block，并可按最小词数过滤低价值摘要；
 - resolver 会合并全局 `commentDocLens.minimumDocumentationWords` 与 adapter 的 `documentationQuality.minimumWords`，采用更严格的值；
 - hint builder 会在最终展示前再次过滤 resolver 返回的短摘要，避免自定义 resolver 或 hover-only 语言绕过质量预算；
-- C# 和 Ruby adapter 默认使用 `minimumWords: 2`，用于减少 bare type name、signature-like hover 等低信号提示。
+- C#、Ruby、Kotlin、Swift 和 C/C++ adapter 默认使用 `minimumWords: 2`，用于减少 bare type name、signature-like hover 等低信号提示。
 
 新增语言时，如果 hover 输出常出现类型名、签名或单词摘要，应在 adapter 上声明 `documentationQuality.minimumWords`，并用单元测试覆盖该语言的噪音样例。
 
@@ -62,9 +69,9 @@ Comment Doc Lens 现在在 formatter、resolver 和 hint builder 三层执行文
 
 | 语言 | 预期等级 | 初步策略 | 接入前需要确认 |
 | --- | --- | --- | --- |
-| Kotlin | `hover-only` 或 `experimental` | 依赖 Kotlin language server hover/KDoc | VS Code Kotlin language server 成熟度 |
-| Swift | `hover-only` 或 `experimental` | 依赖 SourceKit-LSP hover/doc comment | macOS/SourceKit-LSP 环境要求 |
-| C/C++ | `hover-only` 或 `experimental` | 依赖 C/C++ 扩展 hover/Doxygen-style comments | 多扩展生态下的 provider 差异 |
+| Kotlin | `experimental` | 在 hover-only 稳定后补 KDoc source fallback | VS Code Kotlin language server 在 Gradle/Maven 项目内的输出质量 |
+| Swift | `experimental` | 在 hover-only 稳定后评估 doc comment source fallback | macOS/SourceKit-LSP 和 SwiftPM 项目环境要求 |
+| C/C++ | `experimental` | 在 hover-only 稳定后单独设计 Doxygen fallback | compile commands、include path 和多扩展 provider 差异 |
 
 详细评估见 [第二批语言接入评估](second-batch-language-evaluation.md)。
 

@@ -20,6 +20,10 @@ test('default registry maps current language ids to stable adapters', () => {
   assert.equal(registry.getAdapter('csharp')?.displayName, 'C#');
   assert.equal(registry.getAdapter('php')?.displayName, 'PHP');
   assert.equal(registry.getAdapter('ruby')?.displayName, 'Ruby');
+  assert.equal(registry.getAdapter('kotlin')?.displayName, 'Kotlin');
+  assert.equal(registry.getAdapter('swift')?.displayName, 'Swift');
+  assert.equal(registry.getAdapter('c')?.displayName, 'C/C++');
+  assert.equal(registry.getAdapter('cpp')?.displayName, 'C/C++');
 
   assert.deepEqual(
     registry.getAdapters().map((adapter) => [adapter.displayName, adapter.supportLevel]),
@@ -31,7 +35,10 @@ test('default registry maps current language ids to stable adapters', () => {
       ['Rust', 'experimental'],
       ['C#', 'hover-only'],
       ['PHP', 'experimental'],
-      ['Ruby', 'hover-only']
+      ['Ruby', 'hover-only'],
+      ['Kotlin', 'hover-only'],
+      ['Swift', 'hover-only'],
+      ['C/C++', 'hover-only']
     ]
   );
 });
@@ -53,6 +60,9 @@ test('default adapters expose recommended extension metadata for health checks',
   assert.deepEqual(registry.getAdapter('ruby')?.recommendedExtensions, [
     'shopify.ruby-lsp'
   ]);
+  assert.deepEqual(registry.getAdapter('kotlin')?.recommendedExtensions, ['fwcd.kotlin']);
+  assert.deepEqual(registry.getAdapter('swift')?.recommendedExtensions, ['swiftlang.swift-vscode']);
+  assert.deepEqual(registry.getAdapter('cpp')?.recommendedExtensions, ['ms-vscode.cpptools']);
 });
 
 test('default language ids are stable and ordered for activation and configuration', () => {
@@ -67,7 +77,11 @@ test('default language ids are stable and ordered for activation and configurati
     'rust',
     'csharp',
     'php',
-    'ruby'
+    'ruby',
+    'kotlin',
+    'swift',
+    'c',
+    'cpp'
   ]);
 });
 
@@ -75,8 +89,22 @@ test('registry filters enabled language ids through existing configuration seman
   const registry = createLanguageRegistry(defaultLanguageAdapters);
 
   assert.deepEqual(
-    registry.getEnabledLanguageIds(['javascript', 'go', 'python', 'java', 'rust', 'csharp', 'php', 'ruby', 'unknown']),
-    ['javascript', 'go', 'python', 'java', 'rust', 'csharp', 'php', 'ruby']
+    registry.getEnabledLanguageIds([
+      'javascript',
+      'go',
+      'python',
+      'java',
+      'rust',
+      'csharp',
+      'php',
+      'ruby',
+      'kotlin',
+      'swift',
+      'c',
+      'cpp',
+      'unknown'
+    ]),
+    ['javascript', 'go', 'python', 'java', 'rust', 'csharp', 'php', 'ruby', 'kotlin', 'swift', 'c', 'cpp']
   );
   assert.deepEqual(registry.getEnabledLanguageIds([]), []);
 });

@@ -2,13 +2,13 @@
 
 Comment Doc Lens displays definition comments and symbol documentation inline at reference sites as VS Code inlay hints.
 
-The first version targets Go, TypeScript, JavaScript, TSX, and JSX by reusing the language services already available in VS Code. Python, Java, Rust, and PHP support are experimental, while C# and Ruby start as hover-only support. These languages should use their recommended language extensions for best hover and definition results. Go projects should install the official Go extension with gopls enabled for best results.
+The first version targets Go, TypeScript, JavaScript, TSX, and JSX by reusing the language services already available in VS Code. Python, Java, Rust, and PHP support are experimental, while C#, Ruby, Kotlin, Swift, and C/C++ start as hover-only support. These languages should use their recommended language extensions for best hover and definition results. Go projects should install the official Go extension with gopls enabled for best results.
 
 ## What it shows
 
 Comment Doc Lens shows symbol documentation comments, not runtime values. It scans visible identifiers, asks the active VS Code language service for hover and definition information, then renders the first useful documentation line as an inlay hint.
 
-The default TypeScript and JavaScript path is verified for constants, variables, enum members, functions, class methods, object methods, TSX references, and JSDoc. Go support depends on the official Go extension and gopls. Python support can read function and class docstrings when definitions are available. Java support can read Javadoc-style block comments. Rust support can read `///` and `//!` doc comments. PHP support can read PHPDoc blocks near definitions. C# and Ruby currently rely on language-service hover output.
+The default TypeScript and JavaScript path is verified for constants, variables, enum members, functions, class methods, object methods, TSX references, and JSDoc. Go support depends on the official Go extension and gopls. Python support can read function and class docstrings when definitions are available. Java support can read Javadoc-style block comments. Rust support can read `///` and `//!` doc comments. PHP support can read PHPDoc blocks near definitions. C#, Ruby, Kotlin, Swift, and C/C++ currently rely on language-service hover output.
 
 See [the language support matrix](docs/language-support.md) for support levels, recommended language-service dependencies, fallback strategies, and planned language expansion.
 

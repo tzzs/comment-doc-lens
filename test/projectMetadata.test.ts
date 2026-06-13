@@ -55,7 +55,11 @@ test('extension contributions use commentDocLens identifiers', () => {
     'onLanguage:rust',
     'onLanguage:csharp',
     'onLanguage:php',
-    'onLanguage:ruby'
+    'onLanguage:ruby',
+    'onLanguage:kotlin',
+    'onLanguage:swift',
+    'onLanguage:c',
+    'onLanguage:cpp'
   ]);
 
   assert.deepEqual(
@@ -89,6 +93,10 @@ test('extension contributions use commentDocLens identifiers', () => {
     'rust',
     'csharp',
     'php',
-    'ruby'
+    'ruby',
+    'kotlin',
+    'swift',
+    'c',
+    'cpp'
   ]);
 });

@@ -3,12 +3,15 @@ import test from 'node:test';
 import type { SymbolCandidate } from '../src/candidateScanner';
 import {
   csharpLanguageAdapter,
+  cppLanguageAdapter,
   goLanguageAdapter,
   javaLanguageAdapter,
+  kotlinLanguageAdapter,
   phpLanguageAdapter,
   pythonLanguageAdapter,
   rubyLanguageAdapter,
   rustLanguageAdapter,
+  swiftLanguageAdapter,
   typescriptFamilyLanguageAdapter
 } from '../src/languages/languageRegistry';
 
@@ -174,6 +177,23 @@ test('ruby adapter is hover-only and exposes Ruby LSP metadata', () => {
   assert.deepEqual(rubyLanguageAdapter.languageIds, ['ruby']);
   assert.deepEqual(rubyLanguageAdapter.recommendedExtensions, ['shopify.ruby-lsp']);
   assert.equal(rubyLanguageAdapter.sourceComment, undefined);
+});
+
+test('planned hover-only adapters expose dependency diagnostics metadata', () => {
+  assert.equal(kotlinLanguageAdapter.supportLevel, 'hover-only');
+  assert.deepEqual(kotlinLanguageAdapter.languageIds, ['kotlin']);
+  assert.deepEqual(kotlinLanguageAdapter.recommendedExtensions, ['fwcd.kotlin']);
+  assert.equal(kotlinLanguageAdapter.sourceComment, undefined);
+
+  assert.equal(swiftLanguageAdapter.supportLevel, 'hover-only');
+  assert.deepEqual(swiftLanguageAdapter.languageIds, ['swift']);
+  assert.deepEqual(swiftLanguageAdapter.recommendedExtensions, ['swiftlang.swift-vscode']);
+  assert.equal(swiftLanguageAdapter.sourceComment, undefined);
+
+  assert.equal(cppLanguageAdapter.supportLevel, 'hover-only');
+  assert.deepEqual(cppLanguageAdapter.languageIds, ['c', 'cpp']);
+  assert.deepEqual(cppLanguageAdapter.recommendedExtensions, ['ms-vscode.cpptools']);
+  assert.equal(cppLanguageAdapter.sourceComment, undefined);
 });
 
 function candidate(word: string, startCharacter: number, line = 0): SymbolCandidate {

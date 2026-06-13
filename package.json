@@ -20,14 +20,17 @@
   "keywords": [
     "comments",
     "csharp",
+    "cpp",
     "documentation",
     "inlay hints",
     "go",
     "java",
+    "kotlin",
     "php",
     "python",
     "ruby",
     "rust",
+    "swift",
     "typescript",
     "javascript",
     "jsdoc",
@@ -52,6 +55,10 @@
     "onLanguage:csharp",
     "onLanguage:php",
     "onLanguage:ruby",
+    "onLanguage:kotlin",
+    "onLanguage:swift",
+    "onLanguage:c",
+    "onLanguage:cpp",
     "onCommand:commentDocLens.toggle",
     "onCommand:commentDocLens.refresh",
     "onCommand:commentDocLens.showLanguageStatus"
@@ -96,7 +103,11 @@
             "rust",
             "csharp",
             "php",
-            "ruby"
+            "ruby",
+            "kotlin",
+            "swift",
+            "c",
+            "cpp"
           ],
           "description": "Language identifiers where Comment Doc Lens runs."
         },

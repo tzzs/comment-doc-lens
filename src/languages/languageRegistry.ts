@@ -149,6 +149,36 @@ export const rubyLanguageAdapter: LanguageAdapter = {
   }
 };
 
+export const kotlinLanguageAdapter: LanguageAdapter = {
+  languageIds: ['kotlin'],
+  displayName: 'Kotlin',
+  supportLevel: 'hover-only',
+  recommendedExtensions: ['fwcd.kotlin'],
+  documentationQuality: {
+    minimumWords: 2
+  }
+};
+
+export const swiftLanguageAdapter: LanguageAdapter = {
+  languageIds: ['swift'],
+  displayName: 'Swift',
+  supportLevel: 'hover-only',
+  recommendedExtensions: ['swiftlang.swift-vscode'],
+  documentationQuality: {
+    minimumWords: 2
+  }
+};
+
+export const cppLanguageAdapter: LanguageAdapter = {
+  languageIds: ['c', 'cpp'],
+  displayName: 'C/C++',
+  supportLevel: 'hover-only',
+  recommendedExtensions: ['ms-vscode.cpptools'],
+  documentationQuality: {
+    minimumWords: 2
+  }
+};
+
 export const defaultLanguageAdapters = [
   goLanguageAdapter,
   typescriptFamilyLanguageAdapter,
@@ -157,7 +187,10 @@ export const defaultLanguageAdapters = [
   rustLanguageAdapter,
   csharpLanguageAdapter,
   phpLanguageAdapter,
-  rubyLanguageAdapter
+  rubyLanguageAdapter,
+  kotlinLanguageAdapter,
+  swiftLanguageAdapter,
+  cppLanguageAdapter
 ] as const satisfies readonly LanguageAdapter[];
 
 export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): LanguageRegistry {
