@@ -22,6 +22,7 @@
     "documentation",
     "inlay hints",
     "go",
+    "python",
     "typescript",
     "javascript",
     "jsdoc",
@@ -40,6 +41,7 @@
     "onLanguage:javascript",
     "onLanguage:typescriptreact",
     "onLanguage:javascriptreact",
+    "onLanguage:python",
     "onCommand:commentDocLens.toggle",
     "onCommand:commentDocLens.refresh"
   ],
@@ -73,7 +75,8 @@
             "typescript",
             "javascript",
             "typescriptreact",
-            "javascriptreact"
+            "javascriptreact",
+            "python"
           ],
           "description": "Language identifiers where Comment Doc Lens runs."
         },

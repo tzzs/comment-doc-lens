@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { SymbolCandidate } from '../src/candidateScanner';
-import { goLanguageAdapter, typescriptFamilyLanguageAdapter } from '../src/languages/languageRegistry';
+import {
+  goLanguageAdapter,
+  pythonLanguageAdapter,
+  typescriptFamilyLanguageAdapter
+} from '../src/languages/languageRegistry';
 
 test('go adapter owns declaration filtering and source comment fallback behavior', () => {
   assert.equal(goLanguageAdapter.resolveTimeoutMs, 2500);
@@ -21,11 +25,53 @@ test('typescript-family adapter owns declaration and jsx noise filtering behavio
   assert.equal(typescriptFamilyLanguageAdapter.isNoisyCandidate?.(candidate('status', 13), '<StatusBadge status={status} />'), true);
 });
 
-function candidate(word: string, startCharacter: number): SymbolCandidate {
+test('python adapter owns declaration filtering and docstring fallback behavior', () => {
+  assert.equal(pythonLanguageAdapter.supportLevel, 'experimental');
+  assert.equal(pythonLanguageAdapter.isDeclarationCandidate?.(candidate('format_status', 4), 'def format_status(status):'), true);
+  assert.equal(pythonLanguageAdapter.isDeclarationCandidate?.(candidate('OrderPresenter', 6), 'class OrderPresenter:'), true);
+  assert.equal(pythonLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.py', line: 0, character: 0 }), true);
+  assert.equal(pythonLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.ts', line: 0, character: 0 }), false);
+
+  const document = lines([
+    'def format_status(status):',
+    '    """Format the order status for display.',
+    '    Used by list views.',
+    '    """',
+    '    return status',
+    '',
+    'class OrderPresenter:',
+    "    '''Builds order labels.'''",
+    '    pass'
+  ]);
+
+  assert.equal(pythonLanguageAdapter.sourceComment?.findDefinitionLine?.(document, candidate('format_status', 8, 8), {
+    uri: 'file:///order.py',
+    line: 8,
+    character: 0
+  }), 0);
+  assert.deepEqual(pythonLanguageAdapter.sourceComment?.collectLeadingComments(document, 0), [
+    'Format the order status for display.',
+    'Used by list views.',
+  ]);
+  assert.deepEqual(pythonLanguageAdapter.sourceComment?.collectLeadingComments(document, 6), [
+    'Builds order labels.'
+  ]);
+});
+
+function candidate(word: string, startCharacter: number, line = 0): SymbolCandidate {
   return {
     word,
-    line: 0,
+    line,
     startCharacter,
     endCharacter: startCharacter + word.length
+  };
+}
+
+function lines(values: readonly string[]) {
+  return {
+    lineCount: values.length,
+    lineAt(line: number) {
+      return { text: values[line] ?? '' };
+    }
   };
 }

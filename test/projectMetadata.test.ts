@@ -15,7 +15,7 @@ interface PackageJson {
     commands: Array<{ command: string; title: string }>;
     configuration: {
       title: string;
-      properties: Record<string, unknown>;
+      properties: Record<string, { default?: unknown }>;
     };
   };
 }
@@ -43,6 +43,14 @@ test('extension contributions use commentDocLens identifiers', () => {
     'onCommand:commentDocLens.toggle',
     'onCommand:commentDocLens.refresh'
   ]);
+  assert.deepEqual(packageJson.activationEvents.slice(0, -2), [
+    'onLanguage:go',
+    'onLanguage:typescript',
+    'onLanguage:javascript',
+    'onLanguage:typescriptreact',
+    'onLanguage:javascriptreact',
+    'onLanguage:python'
+  ]);
 
   assert.deepEqual(
     packageJson.contributes.commands.map((command) => command.command),
@@ -60,5 +68,13 @@ test('extension contributions use commentDocLens identifiers', () => {
     'commentDocLens.resolveTimeoutMs',
     'commentDocLens.maxCacheEntries',
     'commentDocLens.hintPrefix'
+  ]);
+  assert.deepEqual(packageJson.contributes.configuration.properties['commentDocLens.languages'].default, [
+    'go',
+    'typescript',
+    'javascript',
+    'typescriptreact',
+    'javascriptreact',
+    'python'
   ]);
 });

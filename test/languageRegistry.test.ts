@@ -14,13 +14,14 @@ test('default registry maps current language ids to stable adapters', () => {
   assert.equal(registry.getAdapter('javascript')?.displayName, 'TypeScript family');
   assert.equal(registry.getAdapter('typescriptreact')?.displayName, 'TypeScript family');
   assert.equal(registry.getAdapter('javascriptreact')?.displayName, 'TypeScript family');
+  assert.equal(registry.getAdapter('python')?.displayName, 'Python');
 
-  assert.equal(registry.getAdapter('python'), undefined);
   assert.deepEqual(
     registry.getAdapters().map((adapter) => [adapter.displayName, adapter.supportLevel]),
     [
       ['Go', 'stable'],
-      ['TypeScript family', 'stable']
+      ['TypeScript family', 'stable'],
+      ['Python', 'experimental']
     ]
   );
 });
@@ -31,14 +32,15 @@ test('default language ids are stable and ordered for activation and configurati
     'typescript',
     'javascript',
     'typescriptreact',
-    'javascriptreact'
+    'javascriptreact',
+    'python'
   ]);
 });
 
 test('registry filters enabled language ids through existing configuration semantics', () => {
   const registry = createLanguageRegistry(defaultLanguageAdapters);
 
-  assert.deepEqual(registry.getEnabledLanguageIds(['javascript', 'go', 'python']), ['javascript', 'go']);
+  assert.deepEqual(registry.getEnabledLanguageIds(['javascript', 'go', 'python', 'unknown']), ['javascript', 'go', 'python']);
   assert.deepEqual(registry.getEnabledLanguageIds([]), []);
 });
 

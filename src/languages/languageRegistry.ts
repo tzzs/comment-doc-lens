@@ -44,9 +44,30 @@ export const typescriptFamilyLanguageAdapter: LanguageAdapter = {
   }
 };
 
+export const pythonLanguageAdapter: LanguageAdapter = {
+  languageIds: ['python'],
+  displayName: 'Python',
+  supportLevel: 'experimental',
+  isDeclarationCandidate(candidate, line) {
+    return isPythonDeclarationName(candidate, line) || isPythonAssignmentName(candidate, line);
+  },
+  sourceComment: {
+    canRead(location) {
+      return isFilePathWithExtension(location.uri, '.py');
+    },
+    findDefinitionLine(document, candidate) {
+      return findPythonDefinitionLine(document, candidate.word, candidate.line);
+    },
+    collectLeadingComments(document, definitionLine) {
+      return collectPythonDocstringLines(document, definitionLine);
+    }
+  }
+};
+
 export const defaultLanguageAdapters = [
   goLanguageAdapter,
-  typescriptFamilyLanguageAdapter
+  typescriptFamilyLanguageAdapter,
+  pythonLanguageAdapter
 ] as const satisfies readonly LanguageAdapter[];
 
 export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): LanguageRegistry {
@@ -198,4 +219,103 @@ function isFilePathWithExtension(uri: string, extension: string): boolean {
   } catch {
     return uri.split(/[?#]/, 1)[0].endsWith(extension);
   }
+}
+
+function isPythonDeclarationName(candidate: { startCharacter: number }, line: string): boolean {
+  const beforeCandidate = line.slice(0, candidate.startCharacter);
+  return /^\s*(?:def|class)\s+$/.test(beforeCandidate);
+}
+
+function isPythonAssignmentName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  const trimmedStart = line.search(/\S/);
+  if (trimmedStart !== candidate.startCharacter) {
+    return false;
+  }
+
+  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
+  return afterCandidate.startsWith('=') && !afterCandidate.startsWith('==');
+}
+
+function findPythonDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
+  const wordPattern = escapeRegExp(word);
+  const definitionPatterns = [
+    new RegExp(`^\\s*(?:def|class)\\s+${wordPattern}\\b`),
+    new RegExp(`^\\s*${wordPattern}\\s*=`)
+  ];
+
+  for (let line = 0; line < document.lineCount; line++) {
+    if (line === referenceLine) {
+      continue;
+    }
+
+    const text = document.lineAt(line).text;
+    if (definitionPatterns.some((pattern) => pattern.test(text))) {
+      return line;
+    }
+  }
+
+  return undefined;
+}
+
+function collectPythonDocstringLines(document: { lineAt(line: number): { text: string }; lineCount: number }, definitionLine: number): string[] {
+  for (let line = definitionLine + 1; line < document.lineCount; line++) {
+    const text = document.lineAt(line).text;
+    const trimmed = text.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+
+    return readPythonTripleQuotedString(document, line, trimmed);
+  }
+
+  return [];
+}
+
+function readPythonTripleQuotedString(
+  document: { lineAt(line: number): { text: string }; lineCount: number },
+  startLine: number,
+  firstTrimmedLine: string
+): string[] {
+  const quote = firstTrimmedLine.startsWith('"""')
+    ? '"""'
+    : firstTrimmedLine.startsWith("'''")
+      ? "'''"
+      : undefined;
+  if (!quote) {
+    return [];
+  }
+
+  const firstContent = firstTrimmedLine.slice(quote.length);
+  const closingOnFirstLine = firstContent.indexOf(quote);
+  if (closingOnFirstLine >= 0) {
+    const singleLine = firstContent.slice(0, closingOnFirstLine).trim();
+    return singleLine ? [singleLine] : [];
+  }
+
+  const lines: string[] = [];
+  if (firstContent.trim().length > 0) {
+    lines.push(firstContent.trim());
+  }
+
+  for (let line = startLine + 1; line < document.lineCount; line++) {
+    const trimmed = document.lineAt(line).text.trim();
+    const closingIndex = trimmed.indexOf(quote);
+    if (closingIndex >= 0) {
+      const beforeClosing = trimmed.slice(0, closingIndex).trim();
+      if (beforeClosing.length > 0) {
+        lines.push(beforeClosing);
+      }
+      return lines;
+    }
+
+    if (trimmed.length > 0) {
+      lines.push(trimmed);
+    }
+  }
+
+  return [];
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

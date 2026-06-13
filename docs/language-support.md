@@ -20,12 +20,12 @@
 | JavaScript | `javascript` | `stable` | VS Code 内置 TypeScript/JavaScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 单元测试和 integration fixture 覆盖 JSDoc 引用 |
 | TSX | `typescriptreact` | `stable` | VS Code 内置 TypeScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | integration fixture 覆盖 JSX tag 噪音过滤 |
 | JSX | `javascriptreact` | `stable` | VS Code 内置 JavaScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 与 TypeScript-family adapter 共用过滤规则和单元测试 |
+| Python | `python` | `experimental` | Python 扩展和 Pylance | hover、definition hover、function/class docstring | 读取定义后的 `"""..."""`、`'''...'''` docstring；缺少语言服务时安静降级 | Python adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 docstring 读取；fixture 已存在 |
 
 ## 第一批扩展语言
 
 | 语言 | VS Code language id | 初始等级 | 推荐依赖 | 注释/文档来源目标 | Fallback 目标 | 验证目标 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Python | `python` | `experimental` | Python 扩展和 Pylance | hover、definition hover、function/class docstring | 读取定义附近 `"""..."""`、`'''...'''` docstring；缺少语言服务时安静降级 | Python fixture 覆盖 function/class docstring、变量引用和缺失语言服务降级 |
 | Java | `java` | `experimental` | Extension Pack for Java 或等价 language server | hover、definition hover、Javadoc | 读取定义前 `/** ... */` Javadoc | Java fixture 覆盖 class、method、field Javadoc |
 | Rust | `rust` | `experimental` | rust-analyzer | hover、definition hover、`///` 文档注释 | 读取定义前连续 `///` 或 `//!` 文档注释 | Rust fixture 覆盖 function、struct、enum variant |
 | C# | `csharp` | `hover-only` | C# Dev Kit 或 OmniSharp | hover、definition hover、XML docs | 初始阶段不承诺 source fallback；后续评估 `/// <summary>` 读取 | C# fixture 覆盖可用 hover 输出；文档标注依赖差异 |
