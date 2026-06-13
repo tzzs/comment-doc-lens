@@ -40,6 +40,8 @@
 | Swift | `hover-only` 或 `experimental` | 依赖 SourceKit-LSP hover/doc comment | macOS/SourceKit-LSP 环境要求 |
 | C/C++ | `hover-only` 或 `experimental` | 依赖 C/C++ 扩展 hover/Doxygen-style comments | 多扩展生态下的 provider 差异 |
 
+详细评估见 [第二批语言接入评估](second-batch-language-evaluation.md)。
+
 ## 验证规则
 
 新增或升级语言时必须满足：
