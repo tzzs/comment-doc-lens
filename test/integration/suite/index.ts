@@ -75,6 +75,22 @@ export async function run(): Promise<void> {
     );
   });
 
+  await runTest('inlay hint interactions are opt-in', async () => {
+    const config = vscode.workspace.getConfiguration('commentDocLens');
+    await config.update('enableHintInteractions', true, vscode.ConfigurationTarget.Global);
+    try {
+      await vscode.commands.executeCommand('commentDocLens.refresh');
+      const hints = await getHintsForFixture('order.ts');
+      assert.ok(
+        hints.some((hint) => hint.labelTooltipCount > 0 && hint.labelLocationCount > 0),
+        `Expected at least one interactive hint: ${JSON.stringify(hints)}`
+      );
+    } finally {
+      await config.update('enableHintInteractions', undefined, vscode.ConfigurationTarget.Global);
+      await vscode.commands.executeCommand('commentDocLens.refresh');
+    }
+  });
+
   await runTest('Go documentation shows from local source fallback', async () => {
     if (!existsSync(resolve(FIXTURE_ROOT, 'order.go'))) {
       console.log('Skipping Go integration test: fixture file is not available.');

@@ -170,6 +170,15 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
 
     return hints.map((hint) => {
       const labelPart = new vscode.InlayHintLabelPart(hint.label);
+      if (config.enableHintInteractions) {
+        labelPart.tooltip = hint.tooltip;
+        if (hint.location) {
+          labelPart.location = new vscode.Location(
+            vscode.Uri.parse(hint.location.uri),
+            new vscode.Position(hint.location.line, hint.location.character)
+          );
+        }
+      }
 
       const inlayHint = new vscode.InlayHint(
         new vscode.Position(hint.line, hint.character),
@@ -294,7 +303,8 @@ function readCommentDocLensConfig(): CommentDocLensConfig {
     preferPropertyTail: config.get<boolean>('preferPropertyTail', true),
     dedupeLineHints: config.get<boolean>('dedupeLineHints', true),
     resolveTimeoutMs: config.get<number>('resolveTimeoutMs', 750),
-    hintPrefix: config.get<string>('hintPrefix', '// ')
+    hintPrefix: config.get<string>('hintPrefix', '// '),
+    enableHintInteractions: config.get<boolean>('enableHintInteractions', false)
   };
 }
 

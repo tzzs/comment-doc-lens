@@ -181,6 +181,11 @@
           "type": "string",
           "default": "// ",
           "description": "Prefix displayed before each inline documentation summary."
+        },
+        "commentDocLens.enableHintInteractions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable inlay hint label tooltips and definition locations when documentation lookup provides them."
         }
       }
     }

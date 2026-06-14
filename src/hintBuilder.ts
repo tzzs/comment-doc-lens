@@ -16,6 +16,7 @@ export interface CommentDocLensConfig {
   dedupeLineHints: boolean;
   resolveTimeoutMs: number;
   hintPrefix?: string;
+  enableHintInteractions?: boolean;
 }
 
 export interface CommentHint {

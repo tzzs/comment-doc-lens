@@ -80,7 +80,8 @@ test('extension contributions use commentDocLens identifiers', () => {
     'commentDocLens.dedupeLineHints',
     'commentDocLens.resolveTimeoutMs',
     'commentDocLens.maxCacheEntries',
-    'commentDocLens.hintPrefix'
+    'commentDocLens.hintPrefix',
+    'commentDocLens.enableHintInteractions'
   ]);
   assert.deepEqual(packageJson.contributes.configuration.properties['commentDocLens.languages'].default, [
     'go',
@@ -111,4 +112,20 @@ test('language configuration describes registered adapter semantics', () => {
 
   assert.match(setting.description, /registered adapter language identifiers/i);
   assert.match(setting.description, /filters/i);
+});
+
+test('hint interactions are opt-in', () => {
+  const packageJson = readPackageJson();
+  const setting = packageJson.contributes.configuration.properties[
+    'commentDocLens.enableHintInteractions'
+  ] as {
+    type: string;
+    default: boolean;
+    description: string;
+  };
+
+  assert.equal(setting.type, 'boolean');
+  assert.equal(setting.default, false);
+  assert.match(setting.description, /tooltip/i);
+  assert.match(setting.description, /definition/i);
 });
