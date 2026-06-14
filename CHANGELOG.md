@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.3.0...comment-doc-lens-v0.4.0) (2026-06-14)
+
+
+### Features
+
+* **inlay-hints:** add opt-in hint interactions ([47a2d16](https://github.com/tzzs/comment-doc-lens/commit/47a2d161aa377ddfb54574b7f365fcca848907bf))
+* **language:** strengthen php fallback coverage ([bef869a](https://github.com/tzzs/comment-doc-lens/commit/bef869a3670971af1ae98e8494e61cc4ae6c3471))
+* **status:** add actionable language health guidance ([6fc4168](https://github.com/tzzs/comment-doc-lens/commit/6fc41684e9e38768e7b26e06b58a205dbc82c49f))
+
 ## [0.3.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.2.1...comment-doc-lens-v0.3.0) (2026-06-14)
 
 
