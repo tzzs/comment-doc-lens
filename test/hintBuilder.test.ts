@@ -43,6 +43,36 @@ test('builds inlay hints from resolved candidate documentation', async () => {
   ]);
 });
 
+test('filters resolved documentation below the configured word budget', async () => {
+  const resolver: CommentHintResolver = {
+    resolve: async (candidate) => ({
+      summary: candidate.word === 'OrderStatusPaid' ? 'Status' : 'Useful order documentation',
+      fullText: candidate.word === 'OrderStatusPaid' ? 'Status' : 'Useful order documentation'
+    })
+  };
+
+  const hints = await buildCommentHints({
+    lines: ['const paid = OrderStatusPaid; const refund = RefundStatus;'],
+    range: { startLine: 0, endLineInclusive: 0 },
+    languageId: 'typescript',
+    documentUri: 'file:///order.ts',
+    documentVersion: 1,
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxHintsPerRequest: 20,
+      minIdentifierLength: 2,
+      minimumDocumentationWords: 2,
+      preferPropertyTail: true,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    resolver
+  });
+
+  assert.deepEqual(hints.map((hint) => hint.label), ['// Useful order documentation']);
+});
+
 test('returns no hints when disabled or language is not enabled', async () => {
   const resolver: CommentHintResolver = {
     resolve: async () => {
@@ -91,6 +121,67 @@ test('returns no hints when disabled or language is not enabled', async () => {
     }),
     []
   );
+});
+
+test('returns no hints when a per-language override disables the language', async () => {
+  const resolver: CommentHintResolver = {
+    resolve: async () => {
+      throw new Error('resolver should not be called');
+    }
+  };
+
+  assert.deepEqual(
+    await buildCommentHints({
+      lines: ['const status = OrderStatusPaid;'],
+      range: { startLine: 0, endLineInclusive: 0 },
+      languageId: 'typescript',
+      documentUri: 'file:///order.ts',
+      documentVersion: 1,
+      config: {
+        enabled: true,
+        languages: ['typescript'],
+        languageOverrides: {
+          typescript: { enabled: false }
+        },
+        maxHintsPerRequest: 20,
+        minIdentifierLength: 2,
+        preferPropertyTail: true,
+        dedupeLineHints: true,
+        resolveTimeoutMs: 750
+      },
+      resolver
+    }),
+    []
+  );
+});
+
+test('does not resolve candidates on lines beyond the configured length budget', async () => {
+  const resolver: CommentHintResolver = {
+    resolve: async () => {
+      throw new Error('resolver should not be called');
+    }
+  };
+
+  const hints = await buildCommentHints({
+    lines: [`${'x'.repeat(60)} usefulSymbol`],
+    range: { startLine: 0, endLineInclusive: 0 },
+    languageId: 'typescript',
+    documentUri: 'file:///order.ts',
+    documentVersion: 1,
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxLineLength: 40,
+      maxHintsPerRequest: 20,
+      minIdentifierLength: 2,
+      preferPropertyTail: true,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    resolver
+  });
+
+  assert.deepEqual(hints, []);
 });
 
 test('prefers the tail of property chains when configured', async () => {

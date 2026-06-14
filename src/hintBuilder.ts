@@ -1,11 +1,17 @@
 import { scanCandidateSymbols, type LineRange, type SymbolCandidate } from './candidateScanner';
+import { hasMinimumWordCount } from './documentationFormatter';
 import type { LocationLike, ResolvedDocumentation } from './documentationResolver';
+import type { LanguageAdapter } from './languages/languageAdapter';
+import { createLanguageRegistry, defaultLanguageAdapters } from './languages/languageRegistry';
 
 export interface CommentDocLensConfig {
   enabled: boolean;
   languages: readonly string[];
+  languageOverrides?: Readonly<Record<string, { enabled?: boolean }>>;
+  maxLineLength?: number;
   maxHintsPerRequest: number;
   minIdentifierLength: number;
+  minimumDocumentationWords?: number;
   preferPropertyTail: boolean;
   dedupeLineHints: boolean;
   resolveTimeoutMs: number;
@@ -35,6 +41,7 @@ export interface BuildCommentHintsInput {
   documentUri: string;
   documentVersion: number;
   config: CommentDocLensConfig;
+  languageAdapter?: LanguageAdapter;
   resolver: CommentHintResolver;
   isCancellationRequested?: () => boolean;
 }
@@ -42,10 +49,15 @@ export interface BuildCommentHintsInput {
 const MAX_CONCURRENT_RESOLVES = 4;
 const CANDIDATE_SCAN_MULTIPLIER = 3;
 const MIN_EXTRA_SCAN_CANDIDATES = 10;
-const GO_RESOLVE_TIMEOUT_MS = 2500;
+const DEFAULT_LANGUAGE_REGISTRY = createLanguageRegistry(defaultLanguageAdapters);
 
 export async function buildCommentHints(input: BuildCommentHintsInput): Promise<CommentHint[]> {
-  if (!input.config.enabled || !input.config.languages.includes(input.languageId)) {
+  if (!input.config.enabled || !isLanguageEnabled(input.config, input.languageId)) {
+    return [];
+  }
+
+  const languageAdapter = input.languageAdapter ?? DEFAULT_LANGUAGE_REGISTRY.getAdapter(input.languageId);
+  if (!languageAdapter) {
     return [];
   }
 
@@ -53,15 +65,16 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
     input.lines,
     input.range,
     input.languageId,
-    getCandidateScanLimit(input.config.maxHintsPerRequest)
+    getCandidateScanLimit(input.config.maxHintsPerRequest),
+    input.config.maxLineLength
   );
   const candidatesToResolve = dedupeCandidates(
-    candidates.filter((candidate) => shouldResolveCandidate(candidate, input))
+    candidates.filter((candidate) => shouldResolveCandidate(candidate, input, languageAdapter))
   ).slice(0, input.config.maxHintsPerRequest);
   const resolvedByCandidate = await mapWithConcurrency(
     candidatesToResolve,
     MAX_CONCURRENT_RESOLVES,
-    async (candidate) => resolveCandidate(candidate, input)
+    async (candidate) => resolveCandidate(candidate, input, languageAdapter)
   );
   const hints: CommentHint[] = [];
 
@@ -72,6 +85,10 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
 
     const { candidate, documentation } = resolved;
     if (candidate.word.length < input.config.minIdentifierLength && !documentation.location) {
+      continue;
+    }
+
+    if (!hasMinimumWordCount(documentation.summary, input.config.minimumDocumentationWords ?? 1)) {
       continue;
     }
 
@@ -89,6 +106,14 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
   }
 
   return hints;
+}
+
+function isLanguageEnabled(config: CommentDocLensConfig, languageId: string): boolean {
+  if (!config.languages.includes(languageId)) {
+    return false;
+  }
+
+  return config.languageOverrides?.[languageId]?.enabled !== false;
 }
 
 function getLineEndCharacter(lines: readonly string[], lineNumber: number): number {
@@ -120,7 +145,8 @@ function dedupeCandidates(candidates: readonly SymbolCandidate[]): SymbolCandida
 
 async function resolveCandidate(
   candidate: SymbolCandidate,
-  input: BuildCommentHintsInput
+  input: BuildCommentHintsInput,
+  languageAdapter: LanguageAdapter
 ): Promise<{ candidate: SymbolCandidate; documentation: ResolvedDocumentation } | undefined> {
   if (input.isCancellationRequested?.()) {
     return undefined;
@@ -128,7 +154,7 @@ async function resolveCandidate(
 
   const documentation = await withTimeout(
     input.resolver.resolve(candidate, input.documentUri, input.documentVersion),
-    getResolveTimeoutMs(input)
+    getResolveTimeoutMs(input, languageAdapter)
   );
   if (!documentation || input.isCancellationRequested?.()) {
     return undefined;
@@ -137,27 +163,23 @@ async function resolveCandidate(
   return { candidate, documentation };
 }
 
-function getResolveTimeoutMs(input: BuildCommentHintsInput): number {
-  if (input.languageId === 'go') {
-    return Math.max(input.config.resolveTimeoutMs, GO_RESOLVE_TIMEOUT_MS);
-  }
-
-  return input.config.resolveTimeoutMs;
+function getResolveTimeoutMs(input: BuildCommentHintsInput, languageAdapter: LanguageAdapter): number {
+  return Math.max(input.config.resolveTimeoutMs, languageAdapter.resolveTimeoutMs ?? 0);
 }
 
-function shouldResolveCandidate(candidate: SymbolCandidate, input: BuildCommentHintsInput): boolean {
+function shouldResolveCandidate(
+  candidate: SymbolCandidate,
+  input: BuildCommentHintsInput,
+  languageAdapter: LanguageAdapter
+): boolean {
   if (input.isCancellationRequested?.()) {
     return false;
   }
 
   const line = input.lines[candidate.line] ?? '';
   if (
-    isDeclarationName(candidate, line) ||
-    isGoDeclarationName(candidate, line, input.languageId) ||
-    isGoDeclarationContext(candidate, line, input.languageId) ||
-    isDeclarationContext(candidate, line) ||
-    isJsxTagName(candidate, line, input.languageId) ||
-    isJsxAttributeName(candidate, line, input.languageId)
+    languageAdapter.isDeclarationCandidate?.(candidate, line, input.languageId) ||
+    languageAdapter.isNoisyCandidate?.(candidate, line, input.languageId)
   ) {
     return false;
   }
@@ -167,116 +189,6 @@ function shouldResolveCandidate(candidate: SymbolCandidate, input: BuildCommentH
   }
 
   return line[candidate.endCharacter] !== '.';
-}
-
-function isDeclarationName(candidate: SymbolCandidate, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  return /\b(?:class|const|enum|function|interface|let|type|var)\s+$/.test(beforeCandidate);
-}
-
-function isGoDeclarationName(candidate: SymbolCandidate, line: string, languageId: string): boolean {
-  if (languageId !== 'go') {
-    return false;
-  }
-
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  if (/\bfunc(?:\s*\([^)]*\))?\s+$/.test(beforeCandidate)) {
-    return true;
-  }
-
-  const trimmedStart = line.search(/\S/);
-  if (trimmedStart !== candidate.startCharacter) {
-    return false;
-  }
-
-  const afterCandidate = line.slice(candidate.endCharacter);
-  return afterCandidate.includes('=') && !afterCandidate.trimStart().startsWith(':=');
-}
-
-function isGoDeclarationContext(candidate: SymbolCandidate, line: string, languageId: string): boolean {
-  if (languageId !== 'go') {
-    return false;
-  }
-
-  const trimmedLine = line.trimStart();
-  const leadingWhitespace = line.length - trimmedLine.length;
-  if (trimmedLine.startsWith('func ')) {
-    const bodyStart = line.indexOf('{');
-    if (bodyStart < 0 || candidate.startCharacter < bodyStart) {
-      return true;
-    }
-  }
-
-  const shortDeclaration = line.indexOf(':=');
-  if (shortDeclaration >= 0 && candidate.startCharacter >= leadingWhitespace && candidate.endCharacter <= shortDeclaration) {
-    return true;
-  }
-
-  const assignment = findGoAssignmentOperator(line);
-  if (assignment >= 0 && candidate.startCharacter >= leadingWhitespace && candidate.endCharacter <= assignment) {
-    return true;
-  }
-
-  return false;
-}
-
-function findGoAssignmentOperator(line: string): number {
-  for (let index = 0; index < line.length; index++) {
-    if (line[index] !== '=') {
-      continue;
-    }
-
-    const previous = line[index - 1];
-    const next = line[index + 1];
-    if (previous === ':' || previous === '=' || previous === '!' || previous === '<' || previous === '>' || next === '=') {
-      continue;
-    }
-
-    return index;
-  }
-
-  return -1;
-}
-
-function isDeclarationContext(candidate: SymbolCandidate, line: string): boolean {
-  const next = nextNonWhitespaceCharacter(line, candidate.endCharacter);
-  if (next !== ':') {
-    return false;
-  }
-
-  return !/\bcase\s+$/.test(line.slice(0, candidate.startCharacter));
-}
-
-function nextNonWhitespaceCharacter(line: string, startCharacter: number): string | undefined {
-  for (let character = startCharacter; character < line.length; character++) {
-    if (!/\s/.test(line[character])) {
-      return line[character];
-    }
-  }
-
-  return undefined;
-}
-
-function isJsxTagName(candidate: SymbolCandidate, line: string, languageId: string): boolean {
-  if (languageId !== 'typescriptreact' && languageId !== 'javascriptreact') {
-    return false;
-  }
-
-  const beforeCandidate = line.slice(0, candidate.startCharacter).trimEnd();
-  return beforeCandidate.endsWith('<') || beforeCandidate.endsWith('</');
-}
-
-function isJsxAttributeName(candidate: SymbolCandidate, line: string, languageId: string): boolean {
-  if (languageId !== 'typescriptreact' && languageId !== 'javascriptreact') {
-    return false;
-  }
-
-  if (line[candidate.endCharacter] !== '=') {
-    return false;
-  }
-
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  return beforeCandidate.lastIndexOf('<') > beforeCandidate.lastIndexOf('>');
 }
 
 function addHint(hints: CommentHint[], hint: CommentHint, dedupeLineHints: boolean): void {

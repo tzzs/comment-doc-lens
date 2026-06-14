@@ -75,13 +75,18 @@ export function scanCandidateSymbols(
   lines: readonly string[],
   range: LineRange,
   languageId: string,
-  maxCandidates: number
+  maxCandidates: number,
+  maxLineLength = Number.POSITIVE_INFINITY
 ): SymbolCandidate[] {
   const candidates: SymbolCandidate[] = [];
   let inBlockComment = false;
 
   for (let lineNumber = range.startLine; lineNumber <= range.endLineInclusive; lineNumber++) {
     const line = lines[lineNumber] ?? '';
+    if (line.length > maxLineLength) {
+      continue;
+    }
+
     let character = 0;
     let quote: '"' | "'" | '`' | undefined;
 

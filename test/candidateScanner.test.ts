@@ -44,6 +44,19 @@ test('respects max candidate limit', () => {
   assert.deepEqual(candidates.map((candidate) => candidate.word), ['a', 'one']);
 });
 
+test('skips lines longer than the configured line length budget', () => {
+  const longLine = `${'a'.repeat(30)} usefulSymbol`;
+
+  assert.deepEqual(
+    scanCandidateSymbols([longLine], { startLine: 0, endLineInclusive: 0 }, 'typescript', 20, 20),
+    []
+  );
+  assert.deepEqual(
+    scanCandidateSymbols([longLine], { startLine: 0, endLineInclusive: 0 }, 'typescript', 20, 200).map((candidate) => candidate.word),
+    ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'usefulSymbol']
+  );
+});
+
 test('scans property chains and jsx identifiers without treating tags as comments or strings', () => {
   const candidates = scanCandidateSymbols(
     [

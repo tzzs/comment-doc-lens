@@ -42,6 +42,13 @@ test('returns undefined for signature-only content', () => {
   assert.equal(result, undefined);
 });
 
+test('filters low-value summaries below the configured word budget', () => {
+  assert.equal(formatDocumentation(['Status'], 80, { minimumWords: 2 }), undefined);
+
+  const result = formatDocumentation(['Paid order status.'], 80, { minimumWords: 2 });
+  assert.equal(result?.summary, 'Paid order status.');
+});
+
 test('deduplicates repeated documentation lines from multiple hover providers', () => {
   const result = formatDocumentation(
     [

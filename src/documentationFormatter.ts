@@ -3,12 +3,21 @@ export interface FormattedDocumentation {
   fullText: string;
 }
 
+export interface DocumentationFormatOptions {
+  minimumWords?: number;
+}
+
 export function formatDocumentation(
   markdownLines: readonly string[],
-  maxHintLength: number
+  maxHintLength: number,
+  options: DocumentationFormatOptions = {}
 ): FormattedDocumentation | undefined {
   const normalized = normalizeDocumentation(markdownLines);
   if (normalized.length === 0) {
+    return undefined;
+  }
+
+  if (!hasMinimumWordCount(normalized[0], options.minimumWords ?? 1)) {
     return undefined;
   }
 
@@ -64,4 +73,13 @@ function truncate(value: string, maxLength: number): string {
   }
 
   return `${value.slice(0, maxLength - 3)}...`;
+}
+
+export function countDocumentationWords(value: string): number {
+  const matches = value.match(/[\p{L}\p{N}_]+/gu);
+  return matches?.length ?? 0;
+}
+
+export function hasMinimumWordCount(value: string, minimumWords: number): boolean {
+  return countDocumentationWords(value) >= minimumWords;
 }

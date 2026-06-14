@@ -19,9 +19,18 @@
   ],
   "keywords": [
     "comments",
+    "csharp",
+    "cpp",
     "documentation",
     "inlay hints",
     "go",
+    "java",
+    "kotlin",
+    "php",
+    "python",
+    "ruby",
+    "rust",
+    "swift",
     "typescript",
     "javascript",
     "jsdoc",
@@ -40,8 +49,19 @@
     "onLanguage:javascript",
     "onLanguage:typescriptreact",
     "onLanguage:javascriptreact",
+    "onLanguage:python",
+    "onLanguage:java",
+    "onLanguage:rust",
+    "onLanguage:csharp",
+    "onLanguage:php",
+    "onLanguage:ruby",
+    "onLanguage:kotlin",
+    "onLanguage:swift",
+    "onLanguage:c",
+    "onLanguage:cpp",
     "onCommand:commentDocLens.toggle",
-    "onCommand:commentDocLens.refresh"
+    "onCommand:commentDocLens.refresh",
+    "onCommand:commentDocLens.showLanguageStatus"
   ],
   "main": "./out/src/extension.js",
   "contributes": {
@@ -53,6 +73,10 @@
       {
         "command": "commentDocLens.refresh",
         "title": "Comment Doc Lens: Refresh"
+      },
+      {
+        "command": "commentDocLens.showLanguageStatus",
+        "title": "Comment Doc Lens: Show Language Status"
       }
     ],
     "configuration": {
@@ -73,9 +97,39 @@
             "typescript",
             "javascript",
             "typescriptreact",
-            "javascriptreact"
+            "javascriptreact",
+            "python",
+            "java",
+            "rust",
+            "csharp",
+            "php",
+            "ruby",
+            "kotlin",
+            "swift",
+            "c",
+            "cpp"
           ],
           "description": "Language identifiers where Comment Doc Lens runs."
+        },
+        "commentDocLens.languageOverrides": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable or disable Comment Doc Lens for this language."
+              }
+            }
+          },
+          "description": "Per-language Comment Doc Lens settings keyed by VS Code language identifier. For example: { \"python\": { \"enabled\": false } }."
+        },
+        "commentDocLens.maxLineLength": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 80,
+          "description": "Maximum source line length scanned for candidate symbols. Longer lines are skipped to avoid expensive lookups in generated or minified files."
         },
         "commentDocLens.maxHintLength": {
           "type": "number",
@@ -94,6 +148,12 @@
           "default": 2,
           "minimum": 1,
           "description": "Minimum identifier length before hints are shown unless documentation includes a definition location."
+        },
+        "commentDocLens.minimumDocumentationWords": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "description": "Minimum number of words required in a documentation summary before it can be shown."
         },
         "commentDocLens.preferPropertyTail": {
           "type": "boolean",

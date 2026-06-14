@@ -15,7 +15,7 @@ interface PackageJson {
     commands: Array<{ command: string; title: string }>;
     configuration: {
       title: string;
-      properties: Record<string, unknown>;
+      properties: Record<string, { default?: unknown }>;
     };
   };
 }
@@ -39,26 +39,64 @@ test('project metadata uses Comment Doc Lens naming', () => {
 test('extension contributions use commentDocLens identifiers', () => {
   const packageJson = readPackageJson();
 
-  assert.deepEqual(packageJson.activationEvents.slice(-2), [
+  assert.deepEqual(packageJson.activationEvents.slice(-3), [
     'onCommand:commentDocLens.toggle',
-    'onCommand:commentDocLens.refresh'
+    'onCommand:commentDocLens.refresh',
+    'onCommand:commentDocLens.showLanguageStatus'
+  ]);
+  assert.deepEqual(packageJson.activationEvents.slice(0, -3), [
+    'onLanguage:go',
+    'onLanguage:typescript',
+    'onLanguage:javascript',
+    'onLanguage:typescriptreact',
+    'onLanguage:javascriptreact',
+    'onLanguage:python',
+    'onLanguage:java',
+    'onLanguage:rust',
+    'onLanguage:csharp',
+    'onLanguage:php',
+    'onLanguage:ruby',
+    'onLanguage:kotlin',
+    'onLanguage:swift',
+    'onLanguage:c',
+    'onLanguage:cpp'
   ]);
 
   assert.deepEqual(
     packageJson.contributes.commands.map((command) => command.command),
-    ['commentDocLens.toggle', 'commentDocLens.refresh']
+    ['commentDocLens.toggle', 'commentDocLens.refresh', 'commentDocLens.showLanguageStatus']
   );
   assert.equal(packageJson.contributes.configuration.title, 'Comment Doc Lens');
   assert.deepEqual(Object.keys(packageJson.contributes.configuration.properties), [
     'commentDocLens.enabled',
     'commentDocLens.languages',
+    'commentDocLens.languageOverrides',
+    'commentDocLens.maxLineLength',
     'commentDocLens.maxHintLength',
     'commentDocLens.maxHintsPerRequest',
     'commentDocLens.minIdentifierLength',
+    'commentDocLens.minimumDocumentationWords',
     'commentDocLens.preferPropertyTail',
     'commentDocLens.dedupeLineHints',
     'commentDocLens.resolveTimeoutMs',
     'commentDocLens.maxCacheEntries',
     'commentDocLens.hintPrefix'
+  ]);
+  assert.deepEqual(packageJson.contributes.configuration.properties['commentDocLens.languages'].default, [
+    'go',
+    'typescript',
+    'javascript',
+    'typescriptreact',
+    'javascriptreact',
+    'python',
+    'java',
+    'rust',
+    'csharp',
+    'php',
+    'ruby',
+    'kotlin',
+    'swift',
+    'c',
+    'cpp'
   ]);
 });
