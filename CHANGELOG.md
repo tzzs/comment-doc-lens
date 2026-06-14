@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.2.1...comment-doc-lens-v0.3.0) (2026-06-14)
+
+
+### Features
+
+* add multilanguage adapter architecture ([#10](https://github.com/tzzs/comment-doc-lens/issues/10)) ([3c542b1](https://github.com/tzzs/comment-doc-lens/commit/3c542b18911f12c97672ab179a0ed07524d929c0))
+
 ## [0.2.1](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.2.0...comment-doc-lens-v0.2.1) (2026-06-12)
 
 
