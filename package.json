@@ -2,7 +2,7 @@
   "name": "comment-lens",
   "displayName": "Comment Lens",
   "description": "Show definition comments and symbol documentation inline at reference sites.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "icon": "assets/icon.png",
   "publisher": "tanzz",
   "license": "MIT",

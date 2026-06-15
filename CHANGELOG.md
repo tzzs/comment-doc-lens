@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/tzzs/comment-lens/compare/comment-lens-v0.4.0...comment-lens-v0.4.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* align publish workflow with comment-lens releases ([#17](https://github.com/tzzs/comment-lens/issues/17)) ([0134469](https://github.com/tzzs/comment-lens/commit/013446925c8ffc46645780bb2633597c1ff6706f))
+
 ## [0.4.0](https://github.com/tzzs/comment-lens/compare/comment-lens-v0.3.0...comment-lens-v0.4.0) (2026-06-15)
 
 
