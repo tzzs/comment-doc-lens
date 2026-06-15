@@ -38,8 +38,11 @@
   ],
   "files": [
     "assets/icon.png",
+    "assets/social-preview.png",
+    "assets/social-preview.svg",
     "out/src/**/*.js",
     "README.md",
+    "README_CN.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
