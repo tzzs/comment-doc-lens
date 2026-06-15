@@ -28,7 +28,7 @@ test('project metadata uses Comment Lens naming', () => {
   const packageJson = readPackageJson();
 
   assert.equal(packageJson.name, 'comment-lens');
-  assert.equal(packageJson.displayName, 'Comment Lens');
+  assert.equal(packageJson.displayName, 'Comment Lens Inline Docs');
   assert.equal(packageJson.publisher, 'tanzz');
   assert.equal(packageJson.description, 'Show definition comments and symbol documentation inline at reference sites.');
   assert.equal(packageJson.icon, 'assets/icon.png');
