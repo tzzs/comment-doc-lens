@@ -48,7 +48,7 @@ export const typescriptFamilyLanguageAdapter: LanguageAdapter = {
 export const pythonLanguageAdapter: LanguageAdapter = {
   languageIds: ['python'],
   displayName: 'Python',
-  supportLevel: 'experimental',
+  supportLevel: 'stable',
   recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
   isDeclarationCandidate(candidate, line) {
     return isPythonDeclarationName(candidate, line) || isPythonAssignmentName(candidate, line);
@@ -69,7 +69,7 @@ export const pythonLanguageAdapter: LanguageAdapter = {
 export const javaLanguageAdapter: LanguageAdapter = {
   languageIds: ['java'],
   displayName: 'Java',
-  supportLevel: 'experimental',
+  supportLevel: 'stable',
   recommendedExtensions: ['vscjava.vscode-java-pack'],
   isDeclarationCandidate(candidate, line) {
     return isJavaDeclarationName(candidate, line);
@@ -90,7 +90,7 @@ export const javaLanguageAdapter: LanguageAdapter = {
 export const rustLanguageAdapter: LanguageAdapter = {
   languageIds: ['rust'],
   displayName: 'Rust',
-  supportLevel: 'experimental',
+  supportLevel: 'stable',
   recommendedExtensions: ['rust-lang.rust-analyzer'],
   isDeclarationCandidate(candidate, line) {
     return isRustDeclarationName(candidate, line);
@@ -111,8 +111,22 @@ export const rustLanguageAdapter: LanguageAdapter = {
 export const csharpLanguageAdapter: LanguageAdapter = {
   languageIds: ['csharp'],
   displayName: 'C#',
-  supportLevel: 'hover-only',
+  supportLevel: 'experimental',
   recommendedExtensions: ['ms-dotnettools.csdevkit'],
+  isDeclarationCandidate(candidate, line) {
+    return isCSharpDeclarationName(candidate, line);
+  },
+  sourceComment: {
+    canRead(location) {
+      return isFilePathWithExtension(location.uri, '.cs');
+    },
+    findDefinitionLine(document, candidate) {
+      return findCSharpDefinitionLine(document, candidate.word, candidate.line);
+    },
+    collectLeadingComments(document, definitionLine) {
+      return collectLeadingLineCommentLines(document, definitionLine, ['///']);
+    }
+  },
   documentationQuality: {
     minimumWords: 2
   }
@@ -121,7 +135,7 @@ export const csharpLanguageAdapter: LanguageAdapter = {
 export const phpLanguageAdapter: LanguageAdapter = {
   languageIds: ['php'],
   displayName: 'PHP',
-  supportLevel: 'experimental',
+  supportLevel: 'stable',
   recommendedExtensions: ['bmewburn.vscode-intelephense-client'],
   isDeclarationCandidate(candidate, line) {
     return isPhpDeclarationName(candidate, line);
@@ -142,8 +156,22 @@ export const phpLanguageAdapter: LanguageAdapter = {
 export const rubyLanguageAdapter: LanguageAdapter = {
   languageIds: ['ruby'],
   displayName: 'Ruby',
-  supportLevel: 'hover-only',
+  supportLevel: 'experimental',
   recommendedExtensions: ['shopify.ruby-lsp'],
+  isDeclarationCandidate(candidate, line) {
+    return isRubyDeclarationName(candidate, line);
+  },
+  sourceComment: {
+    canRead(location) {
+      return isFilePathWithExtension(location.uri, '.rb');
+    },
+    findDefinitionLine(document, candidate) {
+      return findRubyDefinitionLine(document, candidate.word, candidate.line);
+    },
+    collectLeadingComments(document, definitionLine) {
+      return collectLeadingLineCommentLines(document, definitionLine, ['#']);
+    }
+  },
   documentationQuality: {
     minimumWords: 2
   }
@@ -152,8 +180,22 @@ export const rubyLanguageAdapter: LanguageAdapter = {
 export const kotlinLanguageAdapter: LanguageAdapter = {
   languageIds: ['kotlin'],
   displayName: 'Kotlin',
-  supportLevel: 'hover-only',
+  supportLevel: 'experimental',
   recommendedExtensions: ['fwcd.kotlin'],
+  isDeclarationCandidate(candidate, line) {
+    return isKotlinDeclarationName(candidate, line);
+  },
+  sourceComment: {
+    canRead(location) {
+      return isFilePathWithExtension(location.uri, '.kt');
+    },
+    findDefinitionLine(document, candidate) {
+      return findKotlinDefinitionLine(document, candidate.word, candidate.line);
+    },
+    collectLeadingComments(document, definitionLine) {
+      return collectLeadingBlockCommentLines(document, definitionLine);
+    }
+  },
   documentationQuality: {
     minimumWords: 2
   }
@@ -162,8 +204,22 @@ export const kotlinLanguageAdapter: LanguageAdapter = {
 export const swiftLanguageAdapter: LanguageAdapter = {
   languageIds: ['swift'],
   displayName: 'Swift',
-  supportLevel: 'hover-only',
+  supportLevel: 'experimental',
   recommendedExtensions: ['swiftlang.swift-vscode'],
+  isDeclarationCandidate(candidate, line) {
+    return isSwiftDeclarationName(candidate, line);
+  },
+  sourceComment: {
+    canRead(location) {
+      return isFilePathWithExtension(location.uri, '.swift');
+    },
+    findDefinitionLine(document, candidate) {
+      return findSwiftDefinitionLine(document, candidate.word, candidate.line);
+    },
+    collectLeadingComments(document, definitionLine) {
+      return collectLeadingDocCommentLines(document, definitionLine);
+    }
+  },
   documentationQuality: {
     minimumWords: 2
   }
@@ -172,8 +228,22 @@ export const swiftLanguageAdapter: LanguageAdapter = {
 export const cppLanguageAdapter: LanguageAdapter = {
   languageIds: ['c', 'cpp'],
   displayName: 'C/C++',
-  supportLevel: 'hover-only',
+  supportLevel: 'experimental',
   recommendedExtensions: ['ms-vscode.cpptools'],
+  isDeclarationCandidate(candidate, line) {
+    return isCppDeclarationName(candidate, line);
+  },
+  sourceComment: {
+    canRead(location) {
+      return isFilePathWithAnyExtension(location.uri, ['.c', '.cc', '.cpp', '.cxx', '.h', '.hh', '.hpp', '.hxx']);
+    },
+    findDefinitionLine(document, candidate) {
+      return findCppDefinitionLine(document, candidate.word, candidate.line);
+    },
+    collectLeadingComments(document, definitionLine) {
+      return collectLeadingDocCommentLines(document, definitionLine);
+    }
+  },
   documentationQuality: {
     minimumWords: 2
   }
@@ -342,6 +412,10 @@ function isFilePathWithExtension(uri: string, extension: string): boolean {
   } catch {
     return uri.split(/[?#]/, 1)[0].endsWith(extension);
   }
+}
+
+function isFilePathWithAnyExtension(uri: string, extensions: readonly string[]): boolean {
+  return extensions.some((extension) => isFilePathWithExtension(uri, extension));
 }
 
 function isPythonDeclarationName(candidate: { startCharacter: number }, line: string): boolean {
@@ -618,4 +692,150 @@ function findPhpDefinitionLine(document: { lineAt(line: number): { text: string 
   }
 
   return undefined;
+}
+
+function isCSharpDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
+  const beforeCandidate = line.slice(0, candidate.startCharacter);
+  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
+  if (/\b(?:class|enum|interface|record|struct)\s+$/.test(beforeCandidate)) {
+    return true;
+  }
+
+  return afterCandidate.startsWith('(');
+}
+
+function findCSharpDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
+  const wordPattern = escapeRegExp(word);
+  return findDefinitionLine(document, referenceLine, [
+    new RegExp(`\\b(?:class|enum|interface|record|struct)\\s+${wordPattern}\\b`),
+    new RegExp(`\\b${wordPattern}\\s*\\(`),
+    new RegExp(`\\b${wordPattern}\\s*(?:=>|\\{|;)`)
+  ]);
+}
+
+function isRubyDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  const beforeCandidate = line.slice(0, candidate.startCharacter);
+  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
+  return /^\s*(?:def|class|module)\s+$/.test(beforeCandidate) || afterCandidate.startsWith('=');
+}
+
+function findRubyDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
+  const wordPattern = escapeRegExp(word);
+  return findDefinitionLine(document, referenceLine, [
+    new RegExp(`^\\s*(?:def|class|module)\\s+${wordPattern}\\b`),
+    new RegExp(`^\\s*${wordPattern}\\s*=`)
+  ]);
+}
+
+function isKotlinDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  const beforeCandidate = line.slice(0, candidate.startCharacter);
+  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
+  if (/\b(?:class|interface|object|fun|val|var)\s+$/.test(beforeCandidate)) {
+    return true;
+  }
+
+  return afterCandidate.startsWith('(') || afterCandidate.startsWith(':') || afterCandidate.startsWith('=');
+}
+
+function findKotlinDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
+  const wordPattern = escapeRegExp(word);
+  return findDefinitionLine(document, referenceLine, [
+    new RegExp(`\\b(?:class|interface|object)\\s+${wordPattern}\\b`),
+    new RegExp(`\\bfun\\s+${wordPattern}\\s*\\(`),
+    new RegExp(`\\b(?:val|var)\\s+${wordPattern}\\b`)
+  ]);
+}
+
+function isSwiftDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  const beforeCandidate = line.slice(0, candidate.startCharacter);
+  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
+  if (/\b(?:actor|class|enum|func|let|protocol|struct|var|case)\s+$/.test(beforeCandidate)) {
+    return true;
+  }
+
+  return afterCandidate.startsWith('(') || afterCandidate.startsWith(':') || afterCandidate.startsWith('=');
+}
+
+function findSwiftDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
+  const wordPattern = escapeRegExp(word);
+  return findDefinitionLine(document, referenceLine, [
+    new RegExp(`\\b(?:actor|class|enum|protocol|struct)\\s+${wordPattern}\\b`),
+    new RegExp(`\\bfunc\\s+${wordPattern}\\s*\\(`),
+    new RegExp(`\\b(?:let|var)\\s+${wordPattern}\\b`),
+    new RegExp(`\\bcase\\s+${wordPattern}\\b`)
+  ]);
+}
+
+function isCppDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
+  const beforeCandidate = line.slice(0, candidate.startCharacter);
+  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
+  if (/\b(?:class|enum|struct|typedef)\s+$/.test(beforeCandidate)) {
+    return true;
+  }
+
+  return afterCandidate.startsWith('(') || afterCandidate.startsWith(';') || afterCandidate.startsWith('=');
+}
+
+function findCppDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
+  const wordPattern = escapeRegExp(word);
+  return findDefinitionLine(document, referenceLine, [
+    new RegExp(`\\b(?:class|enum|struct)\\s+${wordPattern}\\b`),
+    new RegExp(`\\b${wordPattern}\\s*\\(`),
+    new RegExp(`^\\s*#define\\s+${wordPattern}\\b`),
+    new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
+  ]);
+}
+
+function findDefinitionLine(
+  document: { lineAt(line: number): { text: string }; lineCount: number },
+  referenceLine: number,
+  definitionPatterns: readonly RegExp[]
+): number | undefined {
+  for (let line = 0; line < document.lineCount; line++) {
+    if (line === referenceLine) {
+      continue;
+    }
+
+    const text = document.lineAt(line).text;
+    if (definitionPatterns.some((pattern) => pattern.test(text))) {
+      return line;
+    }
+  }
+
+  return undefined;
+}
+
+function collectLeadingDocCommentLines(
+  document: { lineAt(line: number): { text: string }; lineCount: number },
+  definitionLine: number
+): string[] {
+  const lineComments = collectLeadingLineCommentLines(document, definitionLine, ['///', '//!']);
+  if (lineComments.length > 0) {
+    return lineComments;
+  }
+
+  return collectLeadingBlockCommentLines(document, definitionLine);
+}
+
+function collectLeadingLineCommentLines(
+  document: { lineAt(line: number): { text: string }; lineCount: number },
+  definitionLine: number,
+  prefixes: readonly string[]
+): string[] {
+  const collected: string[] = [];
+  for (let line = definitionLine - 1; line >= 0; line--) {
+    const text = document.lineAt(line).text.trim();
+    if (prefixes.some((prefix) => text.startsWith(prefix))) {
+      collected.unshift(text);
+      continue;
+    }
+
+    if (text.length === 0 && collected.length === 0) {
+      continue;
+    }
+
+    break;
+  }
+
+  return collected;
 }

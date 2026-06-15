@@ -39,9 +39,9 @@ Hints are rendered at the end of the source line so they do not split expression
 
 | Level | Languages | Notes |
 | --- | --- | --- |
-| Stable | Go, TypeScript, JavaScript, TSX, JSX | Covered by the core path and automated fixtures. |
-| Experimental | Python, Java, Rust, PHP | Uses adapter-backed behavior with source-comment fallback where available. |
-| Hover-only | C#, Ruby, Kotlin, Swift, C, C++ | Depends on the installed language service's hover and definition quality. |
+| Stable | Go, TypeScript, JavaScript, TSX, JSX, Python, Java, Rust, PHP | Covered by adapter tests, representative fixtures, and source-comment fallback where available. |
+| Experimental | C#, Ruby, Kotlin, Swift, C, C++ | Uses language-service hover first and local source-comment fallback for common XML docs, YARD/RDoc, KDoc, Swift doc comments, and Doxygen comments. |
+| Hover-only | None currently | New languages start here only when Comment Lens depends entirely on installed language-service hover/definition output. |
 
 Install the recommended language extensions for non-built-in languages. Go works best with the official Go extension and `gopls`; Python works best with Python plus Pylance; Rust works best with rust-analyzer.
 

@@ -30,15 +30,15 @@ test('default registry maps current language ids to stable adapters', () => {
     [
       ['Go', 'stable'],
       ['TypeScript family', 'stable'],
-      ['Python', 'experimental'],
-      ['Java', 'experimental'],
-      ['Rust', 'experimental'],
-      ['C#', 'hover-only'],
-      ['PHP', 'experimental'],
-      ['Ruby', 'hover-only'],
-      ['Kotlin', 'hover-only'],
-      ['Swift', 'hover-only'],
-      ['C/C++', 'hover-only']
+      ['Python', 'stable'],
+      ['Java', 'stable'],
+      ['Rust', 'stable'],
+      ['C#', 'experimental'],
+      ['PHP', 'stable'],
+      ['Ruby', 'experimental'],
+      ['Kotlin', 'experimental'],
+      ['Swift', 'experimental'],
+      ['C/C++', 'experimental']
     ]
   );
 });
