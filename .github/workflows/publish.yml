@@ -6,13 +6,19 @@ env:
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to publish, for example comment-lens-v0.4.0
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   package:
-    if: ${{ startsWith(github.event.release.tag_name, 'comment-doc-lens-v') }}
+    if: ${{ startsWith(github.event.release.tag_name || inputs.release_tag, 'comment-lens-v') }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.pkg.outputs.version }}
@@ -20,7 +26,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
           fetch-depth: 0
 
       - name: Use Node.js
@@ -39,9 +45,9 @@ jobs:
         id: pkg
         shell: bash
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
         run: |
-          VERSION="${RELEASE_TAG#comment-doc-lens-v}"
+          VERSION="${RELEASE_TAG#comment-lens-v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Verify package version matches release tag
@@ -56,18 +62,18 @@ jobs:
           fi
 
       - name: Package VSIX
-        run: npx @vscode/vsce package -o comment-doc-lens-${{ steps.pkg.outputs.version }}.vsix
+        run: npx @vscode/vsce package -o comment-lens-${{ steps.pkg.outputs.version }}.vsix
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
           name: vsix-artifact
-          path: comment-doc-lens-${{ steps.pkg.outputs.version }}.vsix
+          path: comment-lens-${{ steps.pkg.outputs.version }}.vsix
           if-no-files-found: error
 
   github_release:
     needs: package
-    if: ${{ startsWith(github.event.release.tag_name, 'comment-doc-lens-v') }}
+    if: ${{ startsWith(github.event.release.tag_name || inputs.release_tag, 'comment-lens-v') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download VSIX artifact
@@ -79,14 +85,14 @@ jobs:
       - name: Upload VSIX to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: comment-doc-lens-${{ needs.package.outputs.version }}.vsix
-          tag_name: ${{ github.event.release.tag_name }}
+          files: comment-lens-${{ needs.package.outputs.version }}.vsix
+          tag_name: ${{ github.event.release.tag_name || inputs.release_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   vsce_publish:
     needs: [package, github_release]
-    if: ${{ startsWith(github.event.release.tag_name, 'comment-doc-lens-v') }}
+    if: ${{ startsWith(github.event.release.tag_name || inputs.release_tag, 'comment-lens-v') }}
     runs-on: ubuntu-latest
     env:
       VSCE_PAT: ${{ secrets.VSCE_PAT || secrets.VSCE_TOKEN }}
@@ -105,11 +111,11 @@ jobs:
           fi
 
       - name: Publish to VS Code Marketplace
-        run: npx @vscode/vsce publish --skip-duplicate --packagePath comment-doc-lens-${{ needs.package.outputs.version }}.vsix
+        run: npx @vscode/vsce publish --skip-duplicate --packagePath comment-lens-${{ needs.package.outputs.version }}.vsix
 
   openvsx_publish:
     needs: [package, github_release]
-    if: ${{ startsWith(github.event.release.tag_name, 'comment-doc-lens-v') }}
+    if: ${{ startsWith(github.event.release.tag_name || inputs.release_tag, 'comment-lens-v') }}
     runs-on: ubuntu-latest
     env:
       OVSX_PAT: ${{ secrets.OVSX_PAT || secrets.OPENVSX_TOKEN }}
@@ -128,4 +134,4 @@ jobs:
           fi
 
       - name: Publish to Open VSX
-        run: npx ovsx publish --skip-duplicate --packagePath comment-doc-lens-${{ needs.package.outputs.version }}.vsix
+        run: npx ovsx publish --skip-duplicate --packagePath comment-lens-${{ needs.package.outputs.version }}.vsix
