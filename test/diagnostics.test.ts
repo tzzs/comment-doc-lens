@@ -89,6 +89,30 @@ test('summarizes workspace language readiness', () => {
   assert.match(summary, /ms-python\.python/);
 });
 
+test('escapes markdown table backslashes before pipe characters', () => {
+  const summary = summarizeWorkspaceDiagnosis([
+    {
+      uri: 'file:///workspace/order.go',
+      languageId: 'go',
+      status: {
+        languageId: 'go',
+        adapterDisplayName: 'Go',
+        supportLevel: 'stable',
+        state: 'degraded',
+        reason: 'Path C:\\docs|generated returned no hover.',
+        recommendedExtensions: ['golang.Go'],
+        checkedCapabilities: {
+          hover: false,
+          definition: true,
+          sourceFallback: true
+        }
+      }
+    }
+  ]);
+
+  assert.equal(summary.includes('C:\\\\docs\\|generated'), true);
+});
+
 test('explains why hints are hidden for common skip reasons', () => {
   assert.match(
     createHiddenHintExplanation({
