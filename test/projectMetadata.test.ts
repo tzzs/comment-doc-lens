@@ -24,11 +24,11 @@ function readPackageJson(): PackageJson {
   return JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as PackageJson;
 }
 
-test('project metadata uses Comment Doc Lens naming', () => {
+test('project metadata uses Comment Lens naming', () => {
   const packageJson = readPackageJson();
 
   assert.equal(packageJson.name, 'comment-doc-lens');
-  assert.equal(packageJson.displayName, 'Comment Doc Lens');
+  assert.equal(packageJson.displayName, 'Comment Lens');
   assert.equal(packageJson.publisher, 'tanzz');
   assert.equal(packageJson.description, 'Show definition comments and symbol documentation inline at reference sites.');
   assert.equal(packageJson.icon, 'assets/icon.png');
@@ -66,7 +66,11 @@ test('extension contributions use commentDocLens identifiers', () => {
     packageJson.contributes.commands.map((command) => command.command),
     ['commentDocLens.toggle', 'commentDocLens.refresh', 'commentDocLens.showLanguageStatus']
   );
-  assert.equal(packageJson.contributes.configuration.title, 'Comment Doc Lens');
+  assert.deepEqual(
+    packageJson.contributes.commands.map((command) => command.title),
+    ['Comment Lens: Toggle', 'Comment Lens: Refresh', 'Comment Lens: Show Language Status']
+  );
+  assert.equal(packageJson.contributes.configuration.title, 'Comment Lens');
   assert.deepEqual(Object.keys(packageJson.contributes.configuration.properties), [
     'commentDocLens.enabled',
     'commentDocLens.languages',

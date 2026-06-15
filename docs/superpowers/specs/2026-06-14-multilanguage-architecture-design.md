@@ -1,8 +1,8 @@
-# Comment Doc Lens 多语言架构设计
+# Comment Lens 多语言架构设计
 
 ## 背景
 
-Comment Doc Lens 当前通过 VS Code inlay hints 在引用位置展示定义注释和符号文档。当前版本已经支持 Go、TypeScript、JavaScript、TSX 和 JSX，主要流程如下：
+Comment Lens 当前通过 VS Code inlay hints 在引用位置展示定义注释和符号文档。当前版本已经支持 Go、TypeScript、JavaScript、TSX 和 JSX，主要流程如下：
 
 - 扫描可见范围内的标识符；
 - 通过 VS Code hover 和 definition provider 解析文档；
@@ -214,7 +214,7 @@ registry 需要：
 后续实现时可使用以下目标描述：
 
 ```md
-将 Comment Doc Lens 升级为可扩展的多语言架构。
+将 Comment Lens 升级为可扩展的多语言架构。
 
 第一步，引入 language adapter 和 registry 层。将现有 Go、TypeScript、JavaScript、TSX、JSX 行为迁移到 adapters 中，同时保持所有当前用户可见行为不变。现有测试和 integration 预期不能回退。
 

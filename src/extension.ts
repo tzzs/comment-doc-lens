@@ -54,13 +54,13 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('commentDocLens.showLanguageStatus', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
-        await vscode.window.showInformationMessage('Comment Doc Lens: open a file to inspect language status.');
+        await vscode.window.showInformationMessage('Comment Lens: open a file to inspect language status.');
         return;
       }
 
       const languageAdapter = languageRegistry.getAdapter(editor.document.languageId);
       if (!languageAdapter) {
-        await vscode.window.showInformationMessage(`Comment Doc Lens: ${editor.document.languageId} is not supported.`);
+        await vscode.window.showInformationMessage(`Comment Lens: ${editor.document.languageId} is not supported.`);
         return;
       }
 
@@ -74,7 +74,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
       });
 
-      await vscode.window.showInformationMessage(`Comment Doc Lens Language Status: ${formatLanguageHealthStatus(status)}`);
+      await vscode.window.showInformationMessage(`Comment Lens Language Status: ${formatLanguageHealthStatus(status)}`);
     })
   );
 

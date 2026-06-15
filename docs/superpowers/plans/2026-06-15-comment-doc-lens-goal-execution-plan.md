@@ -1,8 +1,8 @@
-# Comment Doc Lens 0.3.0 后续目标执行计划
+# Comment Lens 0.3.0 后续目标执行计划
 
 > **给 agentic workers：** 必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 按任务执行本计划。所有步骤使用 checkbox（`- [ ]`）语法追踪。
 
-**目标：** 基于已经合入的 0.3.0 多语言架构，继续打磨 Comment Doc Lens 的文档、配置语义、可选交互能力、第二批语言质量和发布验证流程。
+**目标：** 基于已经合入的 0.3.0 多语言架构，继续打磨 Comment Lens 的文档、配置语义、可选交互能力、第二批语言质量和发布验证流程。
 
 **架构：** 当前主分支已经包含 language adapter、语言支持等级、语言健康检查、语言支持矩阵、Python/Java/Rust/PHP experimental 支持，以及 C#/Ruby/Kotlin/Swift/C/C++ hover-only 支持。本计划不重复这些已完成工作，而是在现有 adapter 边界、`LanguageHealthService` 和 README/docs 用户契约之上做收敛。
 
@@ -30,7 +30,7 @@
 - 已有 `commentDocLens.languageOverrides`
 - 已有 `commentDocLens.maxLineLength`
 - 已有 `commentDocLens.minimumDocumentationWords`
-- 已有命令 `Comment Doc Lens: Show Language Status`
+- 已有命令 `Comment Lens: Show Language Status`
 
 ## Goal 模式契约
 
@@ -117,14 +117,14 @@ test('language configuration describes registered adapter semantics', () => {
 npm test -- test/projectMetadata.test.ts
 ```
 
-预期：失败。当前描述仍是 `Language identifiers where Comment Doc Lens runs.`
+预期：失败。当前描述仍是 `Language identifiers where Comment Lens runs.`
 
 - [ ] **步骤 3：更新 `package.json` 配置描述**
 
 把 `commentDocLens.languages.description` 改为：
 
 ```json
-"Registered adapter language identifiers where Comment Doc Lens runs. This setting filters supported adapter languages; unknown language identifiers are ignored."
+"Registered adapter language identifiers where Comment Lens runs. This setting filters supported adapter languages; unknown language identifiers are ignored."
 ```
 
 - [ ] **步骤 4：修正 README 中过期的语言支持说明**
@@ -132,7 +132,7 @@ npm test -- test/projectMetadata.test.ts
 在 `README.md` 中，把当前类似 “The first version targets...” 的段落替换为：
 
 ```md
-Comment Doc Lens supports a stable core for Go, TypeScript, JavaScript, TSX, and JSX. Python, Java, Rust, and PHP are experimental adapter-backed languages with source-comment fallback where available. C#, Ruby, Kotlin, Swift, and C/C++ are hover-only languages that depend on their language service's hover and definition quality.
+Comment Lens supports a stable core for Go, TypeScript, JavaScript, TSX, and JSX. Python, Java, Rust, and PHP are experimental adapter-backed languages with source-comment fallback where available. C#, Ruby, Kotlin, Swift, and C/C++ are hover-only languages that depend on their language service's hover and definition quality.
 
 Install the recommended language extensions for non-built-in languages. Go works best with the official Go extension and `gopls`; Python works best with Python plus Pylance; Rust works best with rust-analyzer.
 ```
@@ -144,7 +144,7 @@ Install the recommended language extensions for non-built-in languages. Go works
 ```md
 ## What it is not
 
-Comment Doc Lens does not generate comments, rewrite source files, highlight TODO tags, or index comment anchors. It keeps source unchanged and projects existing symbol documentation from definitions to references.
+Comment Lens does not generate comments, rewrite source files, highlight TODO tags, or index comment anchors. It keeps source unchanged and projects existing symbol documentation from definitions to references.
 ```
 
 - [ ] **步骤 6：更新第二批语言评估文档**
@@ -528,7 +528,7 @@ const guidance =
 在 `src/extension.ts` 中把 language status message 改为：
 
 ```ts
-await vscode.window.showInformationMessage(`Comment Doc Lens Language Status: ${formatLanguageHealthStatus(status)}`);
+await vscode.window.showInformationMessage(`Comment Lens Language Status: ${formatLanguageHealthStatus(status)}`);
 ```
 
 - [ ] **步骤 5：更新 README**

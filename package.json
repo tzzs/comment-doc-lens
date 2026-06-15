@@ -1,6 +1,6 @@
 {
   "name": "comment-doc-lens",
-  "displayName": "Comment Doc Lens",
+  "displayName": "Comment Lens",
   "description": "Show definition comments and symbol documentation inline at reference sites.",
   "version": "0.3.0",
   "icon": "assets/icon.png",
@@ -68,24 +68,24 @@
     "commands": [
       {
         "command": "commentDocLens.toggle",
-        "title": "Comment Doc Lens: Toggle"
+        "title": "Comment Lens: Toggle"
       },
       {
         "command": "commentDocLens.refresh",
-        "title": "Comment Doc Lens: Refresh"
+        "title": "Comment Lens: Refresh"
       },
       {
         "command": "commentDocLens.showLanguageStatus",
-        "title": "Comment Doc Lens: Show Language Status"
+        "title": "Comment Lens: Show Language Status"
       }
     ],
     "configuration": {
-      "title": "Comment Doc Lens",
+      "title": "Comment Lens",
       "properties": {
         "commentDocLens.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable Comment Doc Lens inlay hints."
+          "description": "Enable Comment Lens inlay hints."
         },
         "commentDocLens.languages": {
           "type": "array",
@@ -109,7 +109,7 @@
             "c",
             "cpp"
           ],
-          "description": "Registered adapter language identifiers where Comment Doc Lens runs. This setting filters supported adapter languages; unknown language identifiers are ignored."
+          "description": "Registered adapter language identifiers where Comment Lens runs. This setting filters supported adapter languages; unknown language identifiers are ignored."
         },
         "commentDocLens.languageOverrides": {
           "type": "object",
@@ -119,11 +119,11 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "Enable or disable Comment Doc Lens for this language."
+                "description": "Enable or disable Comment Lens for this language."
               }
             }
           },
-          "description": "Per-language Comment Doc Lens settings keyed by VS Code language identifier. For example: { \"python\": { \"enabled\": false } }."
+          "description": "Per-language Comment Lens settings keyed by VS Code language identifier. For example: { \"python\": { \"enabled\": false } }."
         },
         "commentDocLens.maxLineLength": {
           "type": "number",

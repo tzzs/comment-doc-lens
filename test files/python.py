@@ -1,4 +1,4 @@
-"""Python fixture for Comment Doc Lens."""
+"""Python fixture for Comment Lens."""
 
 
 def format_order_status(status):

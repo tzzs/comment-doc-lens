@@ -1,6 +1,6 @@
-# Comment Doc Lens 语言支持矩阵
+# Comment Lens 语言支持矩阵
 
-本文档记录 Comment Doc Lens 的语言支持等级、依赖、注释策略、fallback 策略和验证状态。后续新增语言必须先进入本矩阵，或与实现同一提交进入本矩阵。
+本文档记录 Comment Lens 的语言支持等级、依赖、注释策略、fallback 策略和验证状态。后续新增语言必须先进入本矩阵，或与实现同一提交进入本矩阵。
 
 ## 支持等级
 
@@ -33,7 +33,7 @@
 
 ## 语言服务健康检查
 
-命令面板中的 `Comment Doc Lens: Show Language Status` 会对当前文件和光标位置执行轻量检查，并返回 `ready`、`degraded`、`missingDependency` 或 `unknown`。检查内容包括推荐扩展是否安装、hover provider 是否返回可用文档、definition provider 是否返回位置，以及 adapter 是否具备 source fallback。
+命令面板中的 `Comment Lens: Show Language Status` 会对当前文件和光标位置执行轻量检查，并返回 `ready`、`degraded`、`missingDependency` 或 `unknown`。检查内容包括推荐扩展是否安装、hover provider 是否返回可用文档、definition provider 是否返回位置，以及 adapter 是否具备 source fallback。
 
 | 语言 | 推荐扩展 ID | 健康检查能力 | 期望状态 |
 | --- | --- | --- | --- |
@@ -51,7 +51,7 @@
 
 ## 文档质量与噪音过滤
 
-Comment Doc Lens 现在在 formatter、resolver 和 hint builder 三层执行文档质量控制：
+Comment Lens 现在在 formatter、resolver 和 hint builder 三层执行文档质量控制：
 
 - formatter 会跳过 signature-only code block，并可按最小词数过滤低价值摘要；
 - resolver 会合并全局 `commentDocLens.minimumDocumentationWords` 与 adapter 的 `documentationQuality.minimumWords`，采用更严格的值；

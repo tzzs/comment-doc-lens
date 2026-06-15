@@ -36,4 +36,4 @@
 
 ## 0.0.5
 
-- Prepare Comment Doc Lens for Marketplace and Open VSX release automation.
+- Prepare Comment Lens for Marketplace and Open VSX release automation.
