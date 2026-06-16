@@ -126,3 +126,103 @@ test('deduplicates repeated documentation lines from multiple hover providers', 
   assert.equal(result?.summary, 'Formats an order status.');
   assert.equal(result?.fullText, 'Formats an order status.\nReturns a display label.');
 });
+
+test('prefers prose summaries over doc tag lines when tags appear first', () => {
+  const result = formatDocumentation(
+    [
+      '```js',
+      'function formatOrderStatus(status: string): string',
+      '```',
+      '@param {string} status',
+      '@returns {string}',
+      'Formats an order status label.'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, 'Formats an order status label.');
+  assert.equal(result?.fullText, 'Formats an order status label.\n@param {string} status\n@returns {string}');
+});
+
+test('keeps doc tag lines when no prose summary exists', () => {
+  const result = formatDocumentation(
+    [
+      '```js',
+      'function formatOrderStatus(status: string): string',
+      '```',
+      '@param {string} status'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, '@param {string} status');
+  assert.equal(result?.fullText, '@param {string} status');
+});
+
+test('prefers doxygen prose over param and return commands', () => {
+  const result = formatDocumentation(
+    [
+      '\\param status order status value',
+      '\\return formatted label',
+      'Formats an order status label.'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, 'Formats an order status label.');
+  assert.equal(result?.fullText, 'Formats an order status label.\n\\param status order status value\n\\return formatted label');
+});
+
+test('uses doxygen brief commands as summaries', () => {
+  const result = formatDocumentation(
+    [
+      '\\brief Formats an order status label.',
+      '\\param status order status value'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, 'Formats an order status label.');
+  assert.equal(result?.fullText, 'Formats an order status label.\n\\param status order status value');
+});
+
+test('extracts csharp xml doc summaries before param tags', () => {
+  const result = formatDocumentation(
+    [
+      '/// <param name="status">Order status value.</param>',
+      '/// <summary>',
+      '/// Formats an order status label.',
+      '/// </summary>'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, 'Formats an order status label.');
+  assert.equal(result?.fullText, 'Formats an order status label.\n@param status Order status value.');
+});
+
+test('strips triple-slash and bang doc comment markers', () => {
+  const result = formatDocumentation(
+    [
+      '/// Formats an order status label.',
+      '//! Used by generated status bindings.'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, 'Formats an order status label.');
+  assert.equal(result?.fullText, 'Formats an order status label.\nUsed by generated status bindings.');
+});
+
+test('prefers yard prose over param tags after stripping hash markers', () => {
+  const result = formatDocumentation(
+    [
+      '# @param status [String]',
+      '# Formats an order status label.'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, 'Formats an order status label.');
+  assert.equal(result?.fullText, 'Formats an order status label.\n@param status [String]');
+});
