@@ -197,6 +197,7 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "test": "npm run compile && node --test out/test/*.test.js",
+    "test:coverage": "npm run compile && node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=80 out/test/*.test.js",
     "test:integration": "npm run compile && node out/test/integration/runTest.js",
     "test:all": "npm test && npm run test:integration",
     "package": "vsce package",

@@ -14,6 +14,7 @@ interface ReleasePleaseConfig {
 
 interface PackageJson {
   name: string;
+  displayName: string;
 }
 
 function readJson<T>(path: string): T {
@@ -57,4 +58,17 @@ test('publish workflow can be rerun manually for an existing release tag', () =>
   assert.match(publishWorkflow, /workflow_dispatch:/);
   assert.match(publishWorkflow, /release_tag:/);
   assert.match(publishWorkflow, /github\.event\.release\.tag_name \|\| inputs\.release_tag/);
+});
+
+test('marketplace display-name conflicts fail instead of rewriting metadata', () => {
+  const packageJson = readJson<PackageJson>('package.json');
+  const publishWorkflow = readPublishWorkflow();
+  const rejectedWorkaroundDisplayName = ['Comment', 'Lens Inline Docs'].join(' ');
+
+  assert.equal(packageJson.displayName, 'Comment Doc Lens');
+  assert.match(publishWorkflow, /npx @vscode\/vsce publish --skip-duplicate --packagePath/);
+  assert.doesNotMatch(publishWorkflow, /displayName/i);
+  assert.doesNotMatch(publishWorkflow, new RegExp(escapeRegExp(rejectedWorkaroundDisplayName)));
+  assert.doesNotMatch(publishWorkflow, /\bgit\s+(commit|push)\b/);
+  assert.doesNotMatch(publishWorkflow, /\b(jq|sed|perl|node)\b[^\n]*displayName/i);
 });

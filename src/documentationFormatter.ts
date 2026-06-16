@@ -68,11 +68,35 @@ function cleanCommentMarker(line: string): string {
 }
 
 function isUiChromeLine(line: string): boolean {
-  if (/^[-*_]{3,}$/.test(line)) {
+  if (isSeparatorOnly(line)) {
     return true;
   }
 
-  return line.replace(/\[[^\]]+\]\(\s*command:[^)]+\)/gi, '').trim().length === 0;
+  const withoutCommandLinks = line.replace(/\[[^\]]+\]\(\s*command:[^)]+\)/gi, '').trim();
+  if (withoutCommandLinks.length === 0 || isSeparatorOnly(withoutCommandLinks)) {
+    return true;
+  }
+
+  if (!/\$\([^)]+\)/.test(withoutCommandLinks)) {
+    return false;
+  }
+
+  const withoutCodicons = withoutCommandLinks.replace(/\$\([^)]+\)/g, '').trim();
+  return isKnownHoverActionText(withoutCodicons);
+}
+
+function isSeparatorOnly(line: string): boolean {
+  return line.replace(/[\s|*_—–-]/g, '').length === 0;
+}
+
+function isKnownHoverActionText(value: string): boolean {
+  const parts = value
+    .split('|')
+    .map((part) => part.replace(/\s+/g, ' ').trim().toLowerCase())
+    .filter((part) => part.length > 0);
+
+  return parts.length > 0
+    && parts.every((part) => /^(peek|go to|show|open) (definition|declaration|implementation|type definition|references)$/.test(part));
 }
 
 function truncate(value: string, maxLength: number): string {

@@ -57,6 +57,54 @@ test('ignores vscode hover command links without documentation', () => {
   assert.equal(result, undefined);
 });
 
+test('keeps documentation while dropping vscode hover command links', () => {
+  const result = formatDocumentation(
+    [
+      '```ts',
+      'function formatStatus(status: OrderStatus): string',
+      '```',
+      'Formats the order status label.',
+      '[$(eye) Peek Definition](command:editor.action.peekDefinition)',
+      '[Go to Definition](command:editor.action.revealDefinition)'
+    ],
+    80
+  );
+
+  assert.equal(result?.summary, 'Formats the order status label.');
+  assert.equal(result?.fullText, 'Formats the order status label.');
+});
+
+test('ignores vscode hover action text without documentation', () => {
+  const result = formatDocumentation(
+    [
+      '```ts',
+      'const OrderStatusPaid: OrderStatus',
+      '```',
+      '$(eye) Peek Definition',
+      '$(location) Go to Definition'
+    ],
+    80
+  );
+
+  assert.equal(result, undefined);
+});
+
+test('ignores markdown separators around vscode hover actions', () => {
+  const result = formatDocumentation(
+    [
+      '```ts',
+      'const OrderStatusPaid: OrderStatus',
+      '```',
+      '---',
+      '[$(eye) Peek Definition](command:editor.action.peekDefinition) | [Go to Definition](command:editor.action.revealDefinition)',
+      '***'
+    ],
+    80
+  );
+
+  assert.equal(result, undefined);
+});
+
 test('filters low-value summaries below the configured word budget', () => {
   assert.equal(formatDocumentation(['Status'], 80, { minimumWords: 2 }), undefined);
 
