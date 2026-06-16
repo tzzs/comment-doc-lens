@@ -1,6 +1,6 @@
-# Comment Lens Maintenance Metrics
+# Comment Doc Lens Maintenance Metrics
 
-Comment Lens should move on a predictable product-quality cadence instead of accumulating unrelated features.
+Comment Doc Lens should move on a predictable product-quality cadence instead of accumulating unrelated features.
 
 ## Cadence
 
@@ -17,7 +17,7 @@ Track these after each release:
 - Marketplace Ratings & Reviews.
 - Open VSX downloads.
 - GitHub stars, forks, issues, and support requests.
-- Legacy package downloads versus new `comment-lens` downloads.
+- Legacy package downloads versus current `comment-doc-lens` downloads.
 
 ## Quality Metrics
 

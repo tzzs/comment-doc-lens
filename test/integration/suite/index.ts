@@ -51,10 +51,10 @@ export async function run(): Promise<void> {
   });
 
   await runTest('custom hint prefix is applied through VS Code configuration', async () => {
-    const config = vscode.workspace.getConfiguration('commentLens');
+    const config = vscode.workspace.getConfiguration('commentDocLens');
     await config.update('hintPrefix', 'doc: ', vscode.ConfigurationTarget.Global);
     try {
-      await vscode.commands.executeCommand('commentLens.refresh');
+      await vscode.commands.executeCommand('commentDocLens.refresh');
       const hints = await getHintsForFixture('order.js');
       assert.ok(
         hints.some((hint) => hint.label.startsWith('doc: ')),
@@ -62,7 +62,7 @@ export async function run(): Promise<void> {
       );
     } finally {
       await config.update('hintPrefix', undefined, vscode.ConfigurationTarget.Global);
-      await vscode.commands.executeCommand('commentLens.refresh');
+      await vscode.commands.executeCommand('commentDocLens.refresh');
     }
   });
 
@@ -76,10 +76,10 @@ export async function run(): Promise<void> {
   });
 
   await runTest('inlay hint interactions are opt-in', async () => {
-    const config = vscode.workspace.getConfiguration('commentLens');
+    const config = vscode.workspace.getConfiguration('commentDocLens');
     await config.update('enableHintInteractions', true, vscode.ConfigurationTarget.Global);
     try {
-      await vscode.commands.executeCommand('commentLens.refresh');
+      await vscode.commands.executeCommand('commentDocLens.refresh');
       const hints = await getHintsForFixture('order.ts');
       assert.ok(
         hints.some((hint) => hint.labelTooltipCount > 0 && hint.labelLocationCount > 0),
@@ -87,7 +87,7 @@ export async function run(): Promise<void> {
       );
     } finally {
       await config.update('enableHintInteractions', undefined, vscode.ConfigurationTarget.Global);
-      await vscode.commands.executeCommand('commentLens.refresh');
+      await vscode.commands.executeCommand('commentDocLens.refresh');
     }
   });
 
@@ -106,8 +106,8 @@ export async function run(): Promise<void> {
 }
 
 async function activateCommentDocLens(): Promise<void> {
-  const extension = vscode.extensions.getExtension('tanzz.comment-lens');
-  assert.ok(extension, 'Expected tanzz.comment-lens to be available in the extension host.');
+  const extension = vscode.extensions.getExtension('tanzz.comment-doc-lens');
+  assert.ok(extension, 'Expected tanzz.comment-doc-lens to be available in the extension host.');
   await extension.activate();
 }
 

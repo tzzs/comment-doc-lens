@@ -29,7 +29,7 @@ import {
 } from './languages/languageRegistry';
 
 export function activate(context: vscode.ExtensionContext): void {
-  const outputChannel = vscode.window.createOutputChannel('Comment Lens');
+  const outputChannel = vscode.window.createOutputChannel('Comment Doc Lens');
   const diagnostics = new CommentLensDiagnostics(outputChannel);
   const lookup = new VscodeDocumentationLookup();
   const resolver = new DocumentationResolver(lookup, readResolverOptions());
@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(outputChannel);
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.refresh', () => {
+    vscode.commands.registerCommand('commentDocLens.refresh', () => {
       resolver.clearCache();
       languageHealth.clearCache();
       hintProvider.refresh();
@@ -51,28 +51,28 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.toggle', async () => {
-      const config = vscode.workspace.getConfiguration('commentLens');
+    vscode.commands.registerCommand('commentDocLens.toggle', async () => {
+      const config = vscode.workspace.getConfiguration('commentDocLens');
       const enabled = config.get<boolean>('enabled', true);
       await config.update('enabled', !enabled, vscode.ConfigurationTarget.Global);
       resolver.clearCache();
       languageHealth.clearCache();
       hintProvider.refresh();
-      diagnostics.record('info', `Toggled Comment Lens ${enabled ? 'off' : 'on'}.`);
+      diagnostics.record('info', `Toggled Comment Doc Lens ${enabled ? 'off' : 'on'}.`);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.showLanguageStatus', async () => {
+    vscode.commands.registerCommand('commentDocLens.showLanguageStatus', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
-        await vscode.window.showInformationMessage('Comment Lens: open a file to inspect language status.');
+        await vscode.window.showInformationMessage('Comment Doc Lens: open a file to inspect language status.');
         return;
       }
 
       const languageAdapter = languageRegistry.getAdapter(editor.document.languageId);
       if (!languageAdapter) {
-        await vscode.window.showInformationMessage(`Comment Lens: ${editor.document.languageId} is not supported.`);
+        await vscode.window.showInformationMessage(`Comment Doc Lens: ${editor.document.languageId} is not supported.`);
         diagnostics.record('warn', 'Language status requested for unsupported language.', {
           languageId: editor.document.languageId
         });
@@ -97,12 +97,12 @@ export function activate(context: vscode.ExtensionContext): void {
         checkedCapabilities: status.checkedCapabilities,
         recommendedExtensions: status.recommendedExtensions
       });
-      await vscode.window.showInformationMessage(`Comment Lens Language Status: ${message}`);
+      await vscode.window.showInformationMessage(`Comment Doc Lens Language Status: ${message}`);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.diagnoseWorkspace', async () => {
+    vscode.commands.registerCommand('commentDocLens.diagnoseWorkspace', async () => {
       const diagnoses = await diagnoseWorkspace(languageRegistry, languageHealth, diagnostics);
       const summary = summarizeWorkspaceDiagnosis(diagnoses);
       outputChannel.appendLine(summary);
@@ -111,12 +111,12 @@ export function activate(context: vscode.ExtensionContext): void {
         fileCount: diagnoses.length,
         states: countDiagnosisStates(diagnoses)
       });
-      await vscode.window.showInformationMessage(`Comment Lens: diagnosed ${diagnoses.length} workspace files.`);
+      await vscode.window.showInformationMessage(`Comment Doc Lens: diagnosed ${diagnoses.length} workspace files.`);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.copyDiagnosticsForIssue', async () => {
+    vscode.commands.registerCommand('commentDocLens.copyDiagnosticsForIssue', async () => {
       const report = createDiagnosticsReport({
         extensionVersion: context.extension.packageJSON.version,
         workspaceName: vscode.workspace.name,
@@ -126,15 +126,15 @@ export function activate(context: vscode.ExtensionContext): void {
       });
       await vscode.env.clipboard.writeText(report);
       diagnostics.record('info', 'Copied diagnostics report for issue.');
-      await vscode.window.showInformationMessage('Comment Lens: diagnostics copied to clipboard.');
+      await vscode.window.showInformationMessage('Comment Doc Lens: diagnostics copied to clipboard.');
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.explainHiddenHint', async () => {
+    vscode.commands.registerCommand('commentDocLens.explainHiddenHint', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
-        await vscode.window.showInformationMessage('Comment Lens: open a file to explain hidden hints.');
+        await vscode.window.showInformationMessage('Comment Doc Lens: open a file to explain hidden hints.');
         return;
       }
 
@@ -163,12 +163,12 @@ export function activate(context: vscode.ExtensionContext): void {
       });
       outputChannel.appendLine(explanation);
       outputChannel.show(true);
-      await vscode.window.showInformationMessage(`Comment Lens: ${explanation}`);
+      await vscode.window.showInformationMessage(`Comment Doc Lens: ${explanation}`);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.openSampleGallery', async () => {
+    vscode.commands.registerCommand('commentDocLens.openSampleGallery', async () => {
       const galleryUri = vscode.Uri.joinPath(context.extensionUri, 'docs', 'sample-gallery.md');
       const document = await vscode.workspace.openTextDocument(galleryUri);
       await vscode.window.showTextDocument(document, { preview: true });
@@ -180,7 +180,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('commentLens')) {
+      if (event.affectsConfiguration('commentDocLens')) {
         resolver.updateOptions(readResolverOptions());
         languageHealth.clearCache();
         hintProvider.refresh();
@@ -547,7 +547,7 @@ function getFirstLabelPart(inlayHint: vscode.InlayHint): vscode.InlayHintLabelPa
 }
 
 function readCommentDocLensConfig(): CommentDocLensConfig {
-  const config = vscode.workspace.getConfiguration('commentLens');
+  const config = vscode.workspace.getConfiguration('commentDocLens');
   return {
     enabled: config.get<boolean>('enabled', true),
     languages: config.get<string[]>('languages', getDefaultLanguageIds()),
@@ -565,7 +565,7 @@ function readCommentDocLensConfig(): CommentDocLensConfig {
 }
 
 function readResolverOptions(): DocumentationResolverOptions {
-  const config = vscode.workspace.getConfiguration('commentLens');
+  const config = vscode.workspace.getConfiguration('commentDocLens');
   return {
     maxHintLength: config.get<number>('maxHintLength', 120),
     maxCacheEntries: config.get<number>('maxCacheEntries', 1000),

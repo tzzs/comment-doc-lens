@@ -41,7 +41,7 @@ const STATE_ORDER: Array<LanguageHealthStatus['state']> = [
 
 export function createDiagnosticsReport(input: DiagnosticsReportInput): string {
   const lines = [
-    '## Comment Lens Diagnostics',
+    '## Comment Doc Lens Diagnostics',
     '',
     `- Extension version: \`${input.extensionVersion}\``,
     `- Workspace: \`${input.workspaceName ?? 'unknown'}\``,
@@ -77,7 +77,7 @@ export function summarizeWorkspaceDiagnosis(diagnoses: readonly WorkspaceLanguag
   }
 
   const lines = [
-    '# Comment Lens Workspace Language Diagnosis',
+    '# Comment Doc Lens Workspace Language Diagnosis',
     '',
     STATE_ORDER.map((state) => `${state}: ${counts.get(state) ?? 0}`).join(', '),
     '',
@@ -106,26 +106,26 @@ export function summarizeWorkspaceDiagnosis(diagnoses: readonly WorkspaceLanguag
 
 export function createHiddenHintExplanation(input: HiddenHintExplanationInput): string {
   if (!input.enabled) {
-    return 'Comment Lens is disabled globally. Enable `commentLens.enabled` to show inline documentation hints.';
+    return 'Comment Doc Lens is disabled globally. Enable `commentDocLens.enabled` to show inline documentation hints.';
   }
 
   if (!input.configuredLanguages.includes(input.languageId)) {
-    return `The current language \`${input.languageId}\` is not enabled in \`commentLens.languages\`. Add it to the setting or reset the setting to defaults.`;
+    return `The current language \`${input.languageId}\` is not enabled in \`commentDocLens.languages\`. Add it to the setting or reset the setting to defaults.`;
   }
 
   if (input.languageOverrideEnabled === false) {
-    return `The current language \`${input.languageId}\` is disabled by \`commentLens.languageOverrides\`.`;
+    return `The current language \`${input.languageId}\` is disabled by \`commentDocLens.languageOverrides\`.`;
   }
 
   if (input.lineTooLong) {
-    return 'The current line is longer than `commentLens.maxLineLength`, so Comment Lens skips it to avoid expensive lookups.';
+    return 'The current line is longer than `commentDocLens.maxLineLength`, so Comment Doc Lens skips it to avoid expensive lookups.';
   }
 
   if (input.candidateCount === 0) {
     return 'No symbol candidates were found on the inspected line or visible range.';
   }
 
-  return 'Comment Lens found symbol candidates, but none resolved to useful documentation. Check language service indexing, recommended extensions, and the Output Channel diagnostics.';
+  return 'Comment Doc Lens found symbol candidates, but none resolved to useful documentation. Check language service indexing, recommended extensions, and the Output Channel diagnostics.';
 }
 
 function indent(value: string, prefix: string): string {

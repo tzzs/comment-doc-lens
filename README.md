@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Comment Lens icon" width="96" height="96">
+  <img src="assets/icon.png" alt="Comment Doc Lens icon" width="96" height="96">
 </p>
 
-<h1 align="center">Comment Lens</h1>
+<h1 align="center">Comment Doc Lens</h1>
 
 <p align="center">
   Show definition comments and symbol documentation inline at reference sites as VS Code inlay hints.
@@ -13,18 +13,18 @@
 </p>
 
 <p align="center">
-  <img src="assets/social-preview.png" alt="Comment Lens preview showing inline symbol documentation in VS Code">
+  <img src="assets/social-preview.png" alt="Comment Doc Lens preview showing inline symbol documentation in VS Code">
 </p>
 
 ## Why
 
-Comment Lens keeps useful documentation close to the code you are reading. When a referenced symbol has a doc comment, JSDoc, docstring, Javadoc, PHPDoc, or language-service hover documentation, the extension renders the first useful summary at the end of the reference line.
+Comment Doc Lens keeps useful documentation close to the code you are reading. When a referenced symbol has a doc comment, JSDoc, docstring, Javadoc, PHPDoc, or language-service hover documentation, the extension renders the first useful summary at the end of the reference line.
 
-It is designed for reading and navigation, not for changing your source. Comment Lens does not generate comments, rewrite files, highlight TODO tags, or index comment anchors.
+It is designed for reading and navigation, not for changing your source. Comment Doc Lens does not generate comments, rewrite files, highlight TODO tags, or index comment anchors.
 
 ## What It Shows
 
-Comment Lens scans visible identifiers, asks the active VS Code language service for hover and definition information, then renders concise documentation as an inlay hint.
+Comment Doc Lens scans visible identifiers, asks the active VS Code language service for hover and definition information, then renders concise documentation as an inlay hint.
 
 It is useful for:
 
@@ -41,7 +41,7 @@ Hints are rendered at the end of the source line so they do not split expression
 | --- | --- | --- |
 | Stable | Go, TypeScript, JavaScript, TSX, JSX, Python, Java, Rust, PHP | Covered by adapter tests, representative fixtures, and source-comment fallback where available. |
 | Experimental | C#, Ruby, Kotlin, Swift, C, C++ | Uses language-service hover first and local source-comment fallback for common XML docs, YARD/RDoc, KDoc, Swift doc comments, and Doxygen comments. |
-| Hover-only | None currently | New languages start here only when Comment Lens depends entirely on installed language-service hover/definition output. |
+| Hover-only | None currently | New languages start here only when Comment Doc Lens depends entirely on installed language-service hover/definition output. |
 
 Install the recommended language extensions for non-built-in languages. Go works best with the official Go extension and `gopls`; Python works best with Python plus Pylance; Rust works best with rust-analyzer.
 
@@ -51,18 +51,22 @@ See the [language support matrix](docs/language-support.md) for support levels, 
 
 | Command | Purpose |
 | --- | --- |
-| `Comment Lens: Toggle` | Enable or disable inline documentation hints. |
-| `Comment Lens: Refresh` | Clear cached lookup results and refresh hints. |
-| `Comment Lens: Show Language Status` | Inspect whether the current file's language service is ready, degraded, missing dependencies, or unknown. |
+| `Comment Doc Lens: Toggle` | Enable or disable inline documentation hints. |
+| `Comment Doc Lens: Refresh` | Clear cached lookup results and refresh hints. |
+| `Comment Doc Lens: Show Language Status` | Inspect whether the current file's language service is ready, degraded, missing dependencies, or unknown. |
+| `Comment Doc Lens: Diagnose Workspace` | Scan representative workspace files and write a language-service health report. |
+| `Comment Doc Lens: Copy Diagnostics for Issue` | Copy recent diagnostic events as Markdown for a GitHub issue. |
+| `Comment Doc Lens: Explain Hidden Hint` | Explain why the current line does not show an inline documentation hint. |
+| `Comment Doc Lens: Open Sample Gallery` | Open representative inline documentation examples. |
 
 ## Language Service Status
 
-Run `Comment Lens: Show Language Status` from the command palette to inspect the active file. The status check verifies recommended extensions, hover output, definition output, and whether the adapter has source-comment fallback support.
+Run `Comment Doc Lens: Show Language Status` from the command palette to inspect the active file. The status check verifies recommended extensions, hover output, definition output, and whether the adapter has source-comment fallback support.
 
 - `ready`: the language service can provide useful documentation.
 - `missingDependency`: a recommended extension is not installed or enabled.
 - `degraded`: the language service is present, but hover or definition output is not currently useful enough.
-- `unknown`: Comment Lens cannot determine the current language-service state.
+- `unknown`: Comment Doc Lens cannot determine the current language-service state.
 
 For `missingDependency`, install or enable the listed recommended extension. For `degraded`, put the cursor on a documented symbol and ensure the project has finished indexing.
 
@@ -70,24 +74,24 @@ For `missingDependency`, install or enable the listed recommended extension. For
 
 | Setting | Purpose |
 | --- | --- |
-| `commentLens.enabled` | Enable Comment Lens. |
-| `commentLens.languages` | Registered adapter languages where Comment Lens runs. |
-| `commentLens.languageOverrides` | Enable or disable Comment Lens per language. |
-| `commentLens.maxHintsPerRequest` | Limit hints produced for one inlay-hint request. |
-| `commentLens.maxLineLength` | Skip long generated or minified lines. |
-| `commentLens.maxHintLength` | Limit the visible summary length. |
-| `commentLens.minimumDocumentationWords` | Suppress very short low-signal summaries. |
-| `commentLens.minIdentifierLength` | Ignore very short identifiers unless documentation has a definition location. |
-| `commentLens.preferPropertyTail` | Prefer the final identifier in property chains such as `foo.bar.baz`. |
-| `commentLens.dedupeLineHints` | Deduplicate repeated summaries on the same line. |
-| `commentLens.resolveTimeoutMs` | Bound each documentation lookup. |
-| `commentLens.maxCacheEntries` | Bound resolver cache growth. |
-| `commentLens.hintPrefix` | Customize the displayed prefix before summaries. |
-| `commentLens.enableHintInteractions` | Opt into inlay-hint tooltips and definition locations. |
+| `commentDocLens.enabled` | Enable Comment Doc Lens. |
+| `commentDocLens.languages` | Registered adapter languages where Comment Doc Lens runs. |
+| `commentDocLens.languageOverrides` | Enable or disable Comment Doc Lens per language. |
+| `commentDocLens.maxHintsPerRequest` | Limit hints produced for one inlay-hint request. |
+| `commentDocLens.maxLineLength` | Skip long generated or minified lines. |
+| `commentDocLens.maxHintLength` | Limit the visible summary length. |
+| `commentDocLens.minimumDocumentationWords` | Suppress very short low-signal summaries. |
+| `commentDocLens.minIdentifierLength` | Ignore very short identifiers unless documentation has a definition location. |
+| `commentDocLens.preferPropertyTail` | Prefer the final identifier in property chains such as `foo.bar.baz`. |
+| `commentDocLens.dedupeLineHints` | Deduplicate repeated summaries on the same line. |
+| `commentDocLens.resolveTimeoutMs` | Bound each documentation lookup. |
+| `commentDocLens.maxCacheEntries` | Bound resolver cache growth. |
+| `commentDocLens.hintPrefix` | Customize the displayed prefix before summaries. |
+| `commentDocLens.enableHintInteractions` | Opt into inlay-hint tooltips and definition locations. |
 
 ## Known Limits
 
-Comment Lens only runs for `file` documents in registered adapter languages enabled by configuration. Coverage and wording depend on each language service's hover and definition providers.
+Comment Doc Lens only runs for `file` documents in registered adapter languages enabled by configuration. Coverage and wording depend on each language service's hover and definition providers.
 
 When hover has no usable documentation, adapters with source fallback can read leading source comments near the definition. Timeout handling prevents stale hints from being displayed, but VS Code command calls already in flight cannot be forcibly cancelled by the extension.
 

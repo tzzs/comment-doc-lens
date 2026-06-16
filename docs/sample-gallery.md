@@ -1,8 +1,8 @@
-# Comment Lens Sample Gallery
+# Comment Doc Lens Sample Gallery
 
 **Read existing docs where symbols are used.**
 
-This gallery shows the intended reading experience across representative languages. Comment Lens keeps source unchanged: it reads existing documentation from doc comments, docstrings, Javadoc, PHPDoc, XML docs, YARD/RDoc, KDoc, Swift documentation comments, Doxygen comments, or language-service hover output, then renders a short summary at the reference line.
+This gallery shows the intended reading experience across representative languages. Comment Doc Lens keeps source unchanged: it reads existing documentation from doc comments, docstrings, Javadoc, PHPDoc, XML docs, YARD/RDoc, KDoc, Swift documentation comments, Doxygen comments, or language-service hover output, then renders a short summary at the reference line.
 
 ## Go
 
@@ -69,6 +69,6 @@ $label = formatStatus(PAID_STATUS); // Formats a PHP order status.
 
 ## C#, Ruby, Kotlin, Swift, and C/C++
 
-These languages are currently `experimental`: Comment Lens uses language-service hover first and source fallback when it can identify a nearby XML docs, YARD/RDoc, KDoc, Swift doc comment, or Doxygen comment.
+These languages are currently `experimental`: Comment Doc Lens uses language-service hover first and source fallback when it can identify a nearby XML docs, YARD/RDoc, KDoc, Swift doc comment, or Doxygen comment.
 
-Use `Comment Lens: Diagnose Workspace` when a language does not show hints, then copy the report with `Comment Lens: Copy Diagnostics for Issue`.
+Use `Comment Doc Lens: Diagnose Workspace` when a language does not show hints, then copy the report with `Comment Doc Lens: Copy Diagnostics for Issue`.

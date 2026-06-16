@@ -1,8 +1,8 @@
-# Comment Lens 多语言架构设计
+# Comment Doc Lens 多语言架构设计
 
 ## 背景
 
-Comment Lens 当前通过 VS Code inlay hints 在引用位置展示定义注释和符号文档。当前版本已经支持 Go、TypeScript、JavaScript、TSX 和 JSX，主要流程如下：
+Comment Doc Lens 当前通过 VS Code inlay hints 在引用位置展示定义注释和符号文档。当前版本已经支持 Go、TypeScript、JavaScript、TSX 和 JSX，主要流程如下：
 
 - 扫描可见范围内的标识符；
 - 通过 VS Code hover 和 definition provider 解析文档；
@@ -77,7 +77,7 @@ registry 需要：
 
 - 暴露完整的支持语言 id 列表，用于 activation 和 provider registration；
 - 根据 `languageId` 解析唯一 adapter；
-- 兼容现有 `commentLens.languages` 配置；
+- 兼容现有 `commentDocLens.languages` 配置；
 - 让文档和测试可以读取支持等级与依赖元数据。
 
 初始 registry 应包含：
@@ -160,12 +160,12 @@ registry 需要：
 
 计划中的 UX 优化：
 
-- 保持 `commentLens.languages` 向后兼容；
+- 保持 `commentDocLens.languages` 向后兼容；
 - registry 建立后再增加 per-language 配置；
 - 文档中说明每种语言的依赖和支持等级；
 - 通过 adapter-specific 规则减少噪音 hint；
 - 保持 display-only hint 行为；
-- 保持 `commentLens.toggle` 和 `commentLens.refresh` 行为稳定；
+- 保持 `commentDocLens.toggle` 和 `commentDocLens.refresh` 行为稳定；
 - 在支持等级建立后，优化设置项描述。
 
 ## 错误处理和降级
@@ -214,7 +214,7 @@ registry 需要：
 后续实现时可使用以下目标描述：
 
 ```md
-将 Comment Lens 升级为可扩展的多语言架构。
+将 Comment Doc Lens 升级为可扩展的多语言架构。
 
 第一步，引入 language adapter 和 registry 层。将现有 Go、TypeScript、JavaScript、TSX、JSX 行为迁移到 adapters 中，同时保持所有当前用户可见行为不变。现有测试和 integration 预期不能回退。
 

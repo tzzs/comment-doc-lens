@@ -1,4 +1,4 @@
-# Comment Lens Release Quality Checklist
+# Comment Doc Lens Release Quality Checklist
 
 Use this checklist before every release PR and again after Marketplace/Open VSX publication.
 
@@ -23,7 +23,7 @@ Use this checklist before every release PR and again after Marketplace/Open VSX 
 - [ ] Record Marketplace Ratings & Reviews.
 - [ ] Confirm the Open VSX API returns the new version.
 - [ ] Record Open VSX downloads.
-- [ ] Check whether the legacy package still points users to `comment-lens`.
+- [ ] Check whether legacy marketplace entries point users to `comment-doc-lens`.
 
 ## Post-Release Watch
 

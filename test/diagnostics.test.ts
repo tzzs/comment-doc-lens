@@ -24,7 +24,7 @@ test('creates copyable diagnostics reports for GitHub issues', () => {
       level: 'warn',
       message: 'Hint skipped by configuration.',
       details: {
-        reason: 'language disabled by commentLens.languages'
+        reason: 'language disabled by commentDocLens.languages'
       }
     }
   ];
@@ -37,11 +37,11 @@ test('creates copyable diagnostics reports for GitHub issues', () => {
     events
   });
 
-  assert.match(report, /## Comment Lens Diagnostics/);
+  assert.match(report, /## Comment Doc Lens Diagnostics/);
   assert.match(report, /Extension version: `0\.3\.0`/);
   assert.match(report, /Active language: `python`/);
   assert.match(report, /ms-python\.vscode-pylance/);
-  assert.match(report, /language disabled by commentLens\.languages/);
+  assert.match(report, /language disabled by commentDocLens\.languages/);
 });
 
 test('summarizes workspace language readiness', () => {
@@ -131,7 +131,7 @@ test('explains why hints are hidden for common skip reasons', () => {
       configuredLanguages: ['go'],
       candidateCount: 1
     }),
-    /not enabled in `commentLens.languages`/
+    /not enabled in `commentDocLens.languages`/
   );
 
   assert.match(

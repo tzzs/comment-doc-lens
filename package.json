@@ -1,6 +1,6 @@
 {
-  "name": "comment-lens",
-  "displayName": "Comment Lens Inline Docs",
+  "name": "comment-doc-lens",
+  "displayName": "Comment Doc Lens",
   "description": "Show definition comments and symbol documentation inline at reference sites.",
   "version": "0.4.2",
   "icon": "assets/icon.png",
@@ -8,7 +8,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tzzs/comment-lens.git"
+    "url": "https://github.com/tzzs/comment-doc-lens.git"
   },
   "engines": {
     "vscode": "^1.101.0"
@@ -65,55 +65,55 @@
     "onLanguage:swift",
     "onLanguage:c",
     "onLanguage:cpp",
-    "onCommand:commentLens.toggle",
-    "onCommand:commentLens.refresh",
-    "onCommand:commentLens.showLanguageStatus",
-    "onCommand:commentLens.diagnoseWorkspace",
-    "onCommand:commentLens.copyDiagnosticsForIssue",
-    "onCommand:commentLens.explainHiddenHint",
-    "onCommand:commentLens.openSampleGallery"
+    "onCommand:commentDocLens.toggle",
+    "onCommand:commentDocLens.refresh",
+    "onCommand:commentDocLens.showLanguageStatus",
+    "onCommand:commentDocLens.diagnoseWorkspace",
+    "onCommand:commentDocLens.copyDiagnosticsForIssue",
+    "onCommand:commentDocLens.explainHiddenHint",
+    "onCommand:commentDocLens.openSampleGallery"
   ],
   "main": "./out/src/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "commentLens.toggle",
-        "title": "%commentLens.commands.toggle.title%"
+        "command": "commentDocLens.toggle",
+        "title": "%commentDocLens.commands.toggle.title%"
       },
       {
-        "command": "commentLens.refresh",
-        "title": "%commentLens.commands.refresh.title%"
+        "command": "commentDocLens.refresh",
+        "title": "%commentDocLens.commands.refresh.title%"
       },
       {
-        "command": "commentLens.showLanguageStatus",
-        "title": "%commentLens.commands.showLanguageStatus.title%"
+        "command": "commentDocLens.showLanguageStatus",
+        "title": "%commentDocLens.commands.showLanguageStatus.title%"
       },
       {
-        "command": "commentLens.diagnoseWorkspace",
-        "title": "%commentLens.commands.diagnoseWorkspace.title%"
+        "command": "commentDocLens.diagnoseWorkspace",
+        "title": "%commentDocLens.commands.diagnoseWorkspace.title%"
       },
       {
-        "command": "commentLens.copyDiagnosticsForIssue",
-        "title": "%commentLens.commands.copyDiagnosticsForIssue.title%"
+        "command": "commentDocLens.copyDiagnosticsForIssue",
+        "title": "%commentDocLens.commands.copyDiagnosticsForIssue.title%"
       },
       {
-        "command": "commentLens.explainHiddenHint",
-        "title": "%commentLens.commands.explainHiddenHint.title%"
+        "command": "commentDocLens.explainHiddenHint",
+        "title": "%commentDocLens.commands.explainHiddenHint.title%"
       },
       {
-        "command": "commentLens.openSampleGallery",
-        "title": "%commentLens.commands.openSampleGallery.title%"
+        "command": "commentDocLens.openSampleGallery",
+        "title": "%commentDocLens.commands.openSampleGallery.title%"
       }
     ],
     "configuration": {
-      "title": "Comment Lens",
+      "title": "Comment Doc Lens",
       "properties": {
-        "commentLens.enabled": {
+        "commentDocLens.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "%commentLens.configuration.enabled.description%"
+          "description": "%commentDocLens.configuration.enabled.description%"
         },
-        "commentLens.languages": {
+        "commentDocLens.languages": {
           "type": "array",
           "items": {
             "type": "string"
@@ -135,9 +135,9 @@
             "c",
             "cpp"
           ],
-          "description": "%commentLens.configuration.languages.description%"
+          "description": "%commentDocLens.configuration.languages.description%"
         },
-        "commentLens.languageOverrides": {
+        "commentDocLens.languageOverrides": {
           "type": "object",
           "default": {},
           "additionalProperties": {
@@ -145,73 +145,73 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-              "description": "%commentLens.configuration.languageOverrides.enabled.description%"
+                "description": "%commentDocLens.configuration.languageOverrides.enabled.description%"
               }
             }
           },
-          "description": "%commentLens.configuration.languageOverrides.description%"
+          "description": "%commentDocLens.configuration.languageOverrides.description%"
         },
-        "commentLens.maxLineLength": {
+        "commentDocLens.maxLineLength": {
           "type": "number",
           "default": 2000,
           "minimum": 80,
-          "description": "%commentLens.configuration.maxLineLength.description%"
+          "description": "%commentDocLens.configuration.maxLineLength.description%"
         },
-        "commentLens.maxHintLength": {
+        "commentDocLens.maxHintLength": {
           "type": "number",
           "default": 120,
           "minimum": 20,
-          "description": "%commentLens.configuration.maxHintLength.description%"
+          "description": "%commentDocLens.configuration.maxHintLength.description%"
         },
-        "commentLens.maxHintsPerRequest": {
+        "commentDocLens.maxHintsPerRequest": {
           "type": "number",
           "default": 80,
           "minimum": 1,
-          "description": "%commentLens.configuration.maxHintsPerRequest.description%"
+          "description": "%commentDocLens.configuration.maxHintsPerRequest.description%"
         },
-        "commentLens.minIdentifierLength": {
+        "commentDocLens.minIdentifierLength": {
           "type": "number",
           "default": 2,
           "minimum": 1,
-          "description": "%commentLens.configuration.minIdentifierLength.description%"
+          "description": "%commentDocLens.configuration.minIdentifierLength.description%"
         },
-        "commentLens.minimumDocumentationWords": {
+        "commentDocLens.minimumDocumentationWords": {
           "type": "number",
           "default": 1,
           "minimum": 1,
-          "description": "%commentLens.configuration.minimumDocumentationWords.description%"
+          "description": "%commentDocLens.configuration.minimumDocumentationWords.description%"
         },
-        "commentLens.preferPropertyTail": {
+        "commentDocLens.preferPropertyTail": {
           "type": "boolean",
           "default": true,
-          "description": "%commentLens.configuration.preferPropertyTail.description%"
+          "description": "%commentDocLens.configuration.preferPropertyTail.description%"
         },
-        "commentLens.dedupeLineHints": {
+        "commentDocLens.dedupeLineHints": {
           "type": "boolean",
           "default": true,
-          "description": "%commentLens.configuration.dedupeLineHints.description%"
+          "description": "%commentDocLens.configuration.dedupeLineHints.description%"
         },
-        "commentLens.resolveTimeoutMs": {
+        "commentDocLens.resolveTimeoutMs": {
           "type": "number",
           "default": 750,
           "minimum": 100,
-          "description": "%commentLens.configuration.resolveTimeoutMs.description%"
+          "description": "%commentDocLens.configuration.resolveTimeoutMs.description%"
         },
-        "commentLens.maxCacheEntries": {
+        "commentDocLens.maxCacheEntries": {
           "type": "number",
           "default": 1000,
           "minimum": 100,
-          "description": "%commentLens.configuration.maxCacheEntries.description%"
+          "description": "%commentDocLens.configuration.maxCacheEntries.description%"
         },
-        "commentLens.hintPrefix": {
+        "commentDocLens.hintPrefix": {
           "type": "string",
           "default": "// ",
-          "description": "%commentLens.configuration.hintPrefix.description%"
+          "description": "%commentDocLens.configuration.hintPrefix.description%"
         },
-        "commentLens.enableHintInteractions": {
+        "commentDocLens.enableHintInteractions": {
           "type": "boolean",
           "default": false,
-          "description": "%commentLens.configuration.enableHintInteractions.description%"
+          "description": "%commentDocLens.configuration.enableHintInteractions.description%"
         }
       }
     }
@@ -220,6 +220,7 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "test": "npm run compile && node --test out/test/*.test.js",
+    "test:coverage": "npm run compile && node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=80 out/test/*.test.js",
     "test:integration": "npm run compile && node out/test/integration/runTest.js",
     "test:all": "npm test && npm run test:integration",
     "package": "vsce package",
