@@ -7,8 +7,8 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "comment-lens",
-      "component": "comment-lens",
+      "package-name": "comment-doc-lens",
+      "component": "comment-doc-lens",
       "changelog-path": "CHANGELOG.md"
     }
   }

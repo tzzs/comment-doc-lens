@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(vscode.languages.registerInlayHintsProvider(selector, hintProvider));
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.refresh', () => {
+    vscode.commands.registerCommand('commentDocLens.refresh', () => {
       resolver.clearCache();
       languageHealth.clearCache();
       hintProvider.refresh();
@@ -40,8 +40,8 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.toggle', async () => {
-      const config = vscode.workspace.getConfiguration('commentLens');
+    vscode.commands.registerCommand('commentDocLens.toggle', async () => {
+      const config = vscode.workspace.getConfiguration('commentDocLens');
       const enabled = config.get<boolean>('enabled', true);
       await config.update('enabled', !enabled, vscode.ConfigurationTarget.Global);
       resolver.clearCache();
@@ -51,16 +51,16 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('commentLens.showLanguageStatus', async () => {
+    vscode.commands.registerCommand('commentDocLens.showLanguageStatus', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
-        await vscode.window.showInformationMessage('Comment Lens: open a file to inspect language status.');
+        await vscode.window.showInformationMessage('Comment Doc Lens: open a file to inspect language status.');
         return;
       }
 
       const languageAdapter = languageRegistry.getAdapter(editor.document.languageId);
       if (!languageAdapter) {
-        await vscode.window.showInformationMessage(`Comment Lens: ${editor.document.languageId} is not supported.`);
+        await vscode.window.showInformationMessage(`Comment Doc Lens: ${editor.document.languageId} is not supported.`);
         return;
       }
 
@@ -74,13 +74,13 @@ export function activate(context: vscode.ExtensionContext): void {
         }
       });
 
-      await vscode.window.showInformationMessage(`Comment Lens Language Status: ${formatLanguageHealthStatus(status)}`);
+      await vscode.window.showInformationMessage(`Comment Doc Lens Language Status: ${formatLanguageHealthStatus(status)}`);
     })
   );
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('commentLens')) {
+      if (event.affectsConfiguration('commentDocLens')) {
         resolver.updateOptions(readResolverOptions());
         languageHealth.clearCache();
         hintProvider.refresh();
@@ -291,7 +291,7 @@ function collectLines(document: vscode.TextDocument, range: vscode.Range): strin
 }
 
 function readCommentDocLensConfig(): CommentDocLensConfig {
-  const config = vscode.workspace.getConfiguration('commentLens');
+  const config = vscode.workspace.getConfiguration('commentDocLens');
   return {
     enabled: config.get<boolean>('enabled', true),
     languages: config.get<string[]>('languages', getDefaultLanguageIds()),
@@ -309,7 +309,7 @@ function readCommentDocLensConfig(): CommentDocLensConfig {
 }
 
 function readResolverOptions(): DocumentationResolverOptions {
-  const config = vscode.workspace.getConfiguration('commentLens');
+  const config = vscode.workspace.getConfiguration('commentDocLens');
   return {
     maxHintLength: config.get<number>('maxHintLength', 120),
     maxCacheEntries: config.get<number>('maxCacheEntries', 1000),
