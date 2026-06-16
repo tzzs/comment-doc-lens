@@ -2,7 +2,7 @@
 
 ## 背景
 
-当前 Comment Doc Lens 已完成多语言 adapter/registry 架构，并支持 Go、TypeScript、JavaScript、TSX、JSX、Python、Java、Rust 和 C#。其中 Go、TypeScript-family 为 `stable`，Python、Java、Rust 为 `experimental`，C# 为 `hover-only`。
+当前 Comment Doc Lens 已完成多语言 adapter/registry 架构，并支持 Go、TypeScript、JavaScript、TSX、JSX、Python、Java、Rust、PHP、C#、Ruby、Kotlin、Swift、C 和 C++。其中 Go、TypeScript-family、Python、Java、Rust 和 PHP 为 `stable`，C#、Ruby、Kotlin、Swift、C/C++ 为 `experimental`，暂无 `hover-only` 语言。
 
 对照 VS Code 官方语言扩展和 VS Code Language Features API 后，可以看到官方扩展通常覆盖完整 IDE 能力：IntelliSense、hover、definition、references、diagnostics、CodeLens、Code Actions、refactoring、testing、debugging、project/environment management 等。Comment Doc Lens 不应复制这些能力，而应继续保持清晰定位：复用语言服务，把“符号文档和定义注释”更轻量地展示在引用位置。
 
@@ -13,6 +13,8 @@
 3. C：继续扩展语言支持。
 
 本设计文档用于 Codex 目标模式执行：明确需要修改的内容、验证方式和最终实现目标。
+
+> 2026-06-17 状态更新：优先级 A 已完成；优先级 B 已完成 formatter 质量规则、adapter-level 文档质量阈值、timeout/cache 保护和 source fallback 证据，document symbols / references 辅助过滤仍作为后续可选增强；优先级 C 已完成 PHP、Ruby、Kotlin、Swift、C/C++ 的接入和 fallback 第一轮验证。
 
 ## 官方能力对标结论
 
@@ -124,23 +126,33 @@
 
 ## 优先级 C：继续扩语言
 
+### 当前执行状态
+
+该优先级的第一轮已经完成，并超过了原始目标：
+
+- PHP 已从 `experimental` 升级为 `stable`，覆盖 class/function/method/property/const PHPDoc 与 source fallback。
+- Ruby 已具备 YARD/RDoc source fallback，并进入 `experimental`。
+- Kotlin 已具备 KDoc source fallback，并进入 `experimental`。
+- Swift 已具备 `///` 和 block doc comment fallback，并进入 `experimental`。
+- C/C++ 已具备 Doxygen-style source fallback，并进入 `experimental`。
+
+剩余工作不是继续盲目加语言，而是为 experimental 语言补真实语言服务 integration 证据、截图或手工验证记录。
+
 ### 需要修改的内容
 
-1. 先接入 PHP。
-   - 增加 `phpLanguageAdapter`，初始等级建议 `experimental`。
-   - 支持 PHP docblock `/** ... */` fallback。
-   - 注册 `php` language id 和 fixture。
-   - 文档标注推荐 PHP language server。
+1. 补真实语言服务验证。
+   - PHP：在安装 Intelephense 的环境中验证 hover 输出和 source fallback 行为。
+   - Ruby：在 Ruby LSP 或 Solargraph 环境中验证 YARD/RDoc hover 与 fallback 互补关系。
+   - Kotlin：在 Gradle/Maven fixture 中验证 Kotlin language server 的 KDoc hover 输出。
+   - Swift：在 macOS/SwiftPM + SourceKit-LSP 环境中记录可重复验证条件。
+   - C/C++：在包含 compile commands 或 include path 配置的 fixture 中验证 C/C++ 扩展输出。
 
-2. 再接入 Ruby。
-   - 增加 `rubyLanguageAdapter`，初始等级建议 `hover-only`。
-   - 暂不承诺 YARD fallback，先依赖 Ruby LSP/Solargraph hover。
-   - 文档标注依赖差异。
+2. 补截图或手工验证记录。
+   - 每个 experimental 语言至少保留一个可复现 fixture、截图或验证说明。
+   - 截图/GIF 应进入 README、sample gallery 或发布记录，而不是只留在 PR 评论中。
 
-3. Kotlin、Swift、C/C++ 进入 planned 或 hover-only 阶段。
-   - Kotlin：先 hover-only，后续评估 KDoc。
-   - Swift：先 hover-only，明确 SourceKit-LSP/Xcode toolchain 依赖。
-   - C/C++：先 hover-only，明确 C/C++ 扩展、compiler、include path/compile commands 依赖；Doxygen fallback 后续单独设计。
+3. 再决定晋级。
+   - 只有当真实语言服务证据、fallback 测试、噪音过滤和文档都闭环后，才把 experimental 语言提升到 `stable`。
 
 4. 支持矩阵更新。
    - 每种新增语言必须同步更新 `docs/language-support.md`。
@@ -150,8 +162,9 @@
 
 | 验证项 | 命令/方式 | 通过标准 |
 | --- | --- | --- |
-| PHP adapter | 单元测试 + fixture | docblock fallback、definition 查找、declaration filtering 可用 |
-| Ruby hover-only | 单元测试 + fixture | adapter metadata、language id、安静降级可用 |
+| PHP stable 证据 | 单元测试 + fixture + Intelephense 手工记录 | docblock fallback、definition 查找、declaration filtering 和 hover 互补关系可解释 |
+| Ruby experimental 证据 | 单元测试 + fixture + Ruby LSP/Solargraph 手工记录 | YARD/RDoc fallback 可用，语言服务依赖和限制清楚 |
+| Kotlin/Swift/C/C++ experimental 证据 | 单元测试 + fixture + 手工记录 | KDoc、Swift doc comments、Doxygen fallback 可用，环境限制清楚 |
 | package metadata | metadata 测试 | activationEvents 和默认 languages 与支持等级一致 |
 | 支持矩阵 | 文档检查 | 每种语言有等级、依赖、fallback、验证状态 |
 | 全量验证 | `npm run compile`、`npm test`、`npm run package` | 全部通过 |
@@ -160,29 +173,32 @@
 
 | 阶段 | 目标 | 原因 | 产物 |
 | --- | --- | --- | --- |
-| P0 | 健康检查基础 | 先解决“为什么没显示”的用户困惑，也为 B/C 提供诊断依据 | health model、health service、status command、文档 |
-| P1 | 文档质量控制 | 提升现有语言体验，比继续堆语言更能改善核心价值 | symbol-aware filter、formatter quality rules、reference budget |
-| P2 | PHP + Ruby | PHP docblock 与现有 Java/JSDoc 类似，Ruby 可先 hover-only 低风险进入 | adapters、fixtures、tests、docs |
-| P3 | Kotlin/Swift/C/C++ 规划或 hover-only | 依赖环境更复杂，必须在健康检查成熟后推进 | planned/hover-only matrix、依赖诊断 |
+| P0 | 健康检查基础 | 已完成 | health model、health service、status command、文档 |
+| P1 | 文档质量控制 | 已完成第一轮；symbol/reference 辅助过滤后置 | formatter quality rules、adapter quality rules、timeout/cache 保护 |
+| P2 | PHP + Ruby | 已完成并更新等级 | PHP stable、Ruby experimental、fixtures、tests、docs |
+| P3 | Kotlin/Swift/C/C++ | 已完成第一轮 experimental fallback | Kotlin/Swift/C/C++ source fallback、依赖诊断、支持矩阵 |
+| P4 | 真实语言服务证据 | 当前下一步 | experimental 语言截图、手工验证记录、sample gallery 更新 |
 
 ## Codex 目标模式最终目标
 
 ```md
-基于 Comment Doc Lens 当前多语言 adapter 架构，完成下一阶段“语言服务质量路线”优化。
+基于 Comment Doc Lens 当前多语言 adapter 架构，推进下一阶段“语言服务质量证据”优化。
 
-优先级 A：实现语言服务健康检查与用户提示。新增健康模型、健康检查服务和 `commentDocLens.showLanguageStatus` 命令，能够报告当前语言的支持等级、推荐依赖、hover/definition/source fallback 可用性和降级原因。README 与语言支持矩阵必须同步更新。
+当前健康检查、copyable diagnostics、formatter 质量规则、PHP stable 支持，以及 Ruby/Kotlin/Swift/C/C++ experimental fallback 已完成。下一步目标不再是继续注册更多 language id，而是补齐真实语言服务 integration 证据、截图或手工验证记录。
 
-优先级 B：实现文档质量与噪音过滤增强。引入可选的 document symbols / references 辅助过滤，增加 adapter-level symbol kind 与质量规则，增强 formatter 对 signature-only 和低价值文档的过滤。必须保持现有 display-only inlay hints 产品边界。
+优先级 A：为 C#、Ruby、Kotlin、Swift、C/C++ 各补一份真实语言服务验证记录，说明推荐扩展、项目环境、hover/definition 输出质量和 source fallback 兜底行为。
 
-优先级 C：继续扩展语言。优先新增 PHP experimental 支持和 Ruby hover-only 支持；Kotlin、Swift、C/C++ 至少进入支持矩阵的 planned/hover-only 评估状态。每种新增语言必须包含 adapter metadata、fixture、测试、文档和降级说明。
+优先级 B：将验证证据同步到 README、sample gallery、language-support matrix 或 release notes。保持 support level 保守，未完成真实语言服务证据前不要把 experimental 语言升到 stable。
 
-每个子项完成后单独 commit。最终必须运行并记录：
+优先级 C：根据 diagnostics 数据决定是否引入 document symbols / references 辅助过滤。只有当现有 adapter/filter 无法解释真实噪音问题时再引入，且必须受预算、timeout 和 cache 保护。
+
+最终必须运行并记录：
 - npm run compile
 - npm test
 - npm run package
 - npm run test:integration，如 Electron 宿主失败，需要记录精确失败原因
 
-完成后创建 PR，并检查 GitHub CI 是否通过。
+完成后更新 PR，并检查 GitHub CI 是否通过。
 ```
 
 ## 参考资料
