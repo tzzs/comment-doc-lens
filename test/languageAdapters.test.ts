@@ -345,6 +345,109 @@ test('planned adapters expose fallback and dependency diagnostics metadata', () 
   ]);
 });
 
+test('language adapters skip declaration signatures while keeping call-site references', () => {
+  const cases = [
+    {
+      name: 'go',
+      adapter: goLanguageAdapter,
+      declarationLine: 'func FormatOrderStatus(status OrderStatus) string {',
+      declarationWords: ['FormatOrderStatus', 'status', 'OrderStatus'],
+      callLine: 'label := FormatOrderStatus(status)',
+      callWords: ['FormatOrderStatus', 'status']
+    },
+    {
+      name: 'python',
+      adapter: pythonLanguageAdapter,
+      declarationLine: 'def render_label(status):',
+      declarationWords: ['render_label', 'status'],
+      callLine: 'label = render_label(status)',
+      callWords: ['render_label', 'status']
+    },
+    {
+      name: 'java',
+      adapter: javaLanguageAdapter,
+      declarationLine: '  public String formatStatus(String status) {',
+      declarationWords: ['String', 'formatStatus', 'status'],
+      callLine: 'return formatStatus(status);',
+      callWords: ['formatStatus', 'status']
+    },
+    {
+      name: 'rust',
+      adapter: rustLanguageAdapter,
+      declarationLine: 'pub fn render_label(status: &str) -> String {',
+      declarationWords: ['render_label', 'status', 'String'],
+      callLine: 'let label = render_label(status);',
+      callWords: ['render_label', 'status']
+    },
+    {
+      name: 'csharp',
+      adapter: csharpLanguageAdapter,
+      declarationLine: '    public string FormatStatus(string status)',
+      declarationWords: ['FormatStatus', 'status'],
+      callLine: 'return FormatStatus(status);',
+      callWords: ['FormatStatus', 'status']
+    },
+    {
+      name: 'php',
+      adapter: phpLanguageAdapter,
+      declarationLine: 'function formatStatus(string $status): string {',
+      declarationWords: ['formatStatus', 'status'],
+      callLine: '$label = formatStatus($status);',
+      callWords: ['formatStatus', 'status']
+    },
+    {
+      name: 'ruby',
+      adapter: rubyLanguageAdapter,
+      declarationLine: 'def render_label(status)',
+      declarationWords: ['render_label', 'status'],
+      callLine: 'label = render_label(status)',
+      callWords: ['render_label', 'status']
+    },
+    {
+      name: 'kotlin',
+      adapter: kotlinLanguageAdapter,
+      declarationLine: 'fun formatStatus(status: String): String = status',
+      declarationWords: ['formatStatus', 'status', 'String'],
+      callLine: 'val label = formatStatus(status)',
+      callWords: ['formatStatus', 'status']
+    },
+    {
+      name: 'swift',
+      adapter: swiftLanguageAdapter,
+      declarationLine: 'func formatStatus(_ status: String) -> String {',
+      declarationWords: ['formatStatus', 'status', 'String'],
+      callLine: 'let label = formatStatus(status)',
+      callWords: ['formatStatus', 'status']
+    },
+    {
+      name: 'cpp',
+      adapter: cppLanguageAdapter,
+      declarationLine: 'std::string formatStatus(std::string status) {',
+      declarationWords: ['std', 'formatStatus', 'status'],
+      callLine: 'return formatStatus(status);',
+      callWords: ['formatStatus', 'status']
+    }
+  ];
+
+  for (const { name, adapter, declarationLine, declarationWords, callLine, callWords } of cases) {
+    for (const word of declarationWords) {
+      assert.equal(
+        adapter.isDeclarationCandidate?.(candidateInLine(word, declarationLine), declarationLine),
+        true,
+        `${name} should skip ${word} in declaration signature`
+      );
+    }
+
+    for (const word of callWords) {
+      assert.equal(
+        adapter.isDeclarationCandidate?.(candidateInLine(word, callLine), callLine),
+        false,
+        `${name} should keep ${word} at call site`
+      );
+    }
+  }
+});
+
 function candidate(word: string, startCharacter: number, line = 0): SymbolCandidate {
   return {
     word,
@@ -352,6 +455,12 @@ function candidate(word: string, startCharacter: number, line = 0): SymbolCandid
     startCharacter,
     endCharacter: startCharacter + word.length
   };
+}
+
+function candidateInLine(word: string, line: string, occurrence: 'first' | 'last' = 'first'): SymbolCandidate {
+  const startCharacter = occurrence === 'first' ? line.indexOf(word) : line.lastIndexOf(word);
+  assert.notEqual(startCharacter, -1);
+  return candidate(word, startCharacter);
 }
 
 function lines(values: readonly string[]) {

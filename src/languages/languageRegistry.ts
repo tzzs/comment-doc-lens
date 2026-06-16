@@ -54,7 +54,9 @@ export const pythonLanguageAdapter: LanguageAdapter = {
   supportLevel: 'stable',
   recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
   isDeclarationCandidate(candidate, line) {
-    return isPythonDeclarationName(candidate, line) || isPythonAssignmentName(candidate, line);
+    return isPythonDeclarationName(candidate, line)
+      || isPythonFunctionSignatureCandidate(candidate, line)
+      || isPythonAssignmentName(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -75,7 +77,7 @@ export const javaLanguageAdapter: LanguageAdapter = {
   supportLevel: 'stable',
   recommendedExtensions: ['vscjava.vscode-java-pack'],
   isDeclarationCandidate(candidate, line) {
-    return isJavaDeclarationName(candidate, line);
+    return isJavaDeclarationName(candidate, line) || isJavaMethodSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -96,7 +98,7 @@ export const rustLanguageAdapter: LanguageAdapter = {
   supportLevel: 'stable',
   recommendedExtensions: ['rust-lang.rust-analyzer'],
   isDeclarationCandidate(candidate, line) {
-    return isRustDeclarationName(candidate, line);
+    return isRustDeclarationName(candidate, line) || isRustFunctionSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -117,7 +119,7 @@ export const csharpLanguageAdapter: LanguageAdapter = {
   supportLevel: 'experimental',
   recommendedExtensions: ['ms-dotnettools.csdevkit'],
   isDeclarationCandidate(candidate, line) {
-    return isCSharpDeclarationName(candidate, line);
+    return isCSharpDeclarationName(candidate, line) || isCSharpMethodSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -141,7 +143,7 @@ export const phpLanguageAdapter: LanguageAdapter = {
   supportLevel: 'stable',
   recommendedExtensions: ['bmewburn.vscode-intelephense-client'],
   isDeclarationCandidate(candidate, line) {
-    return isPhpDeclarationName(candidate, line);
+    return isPhpDeclarationName(candidate, line) || isPhpFunctionSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -162,7 +164,7 @@ export const rubyLanguageAdapter: LanguageAdapter = {
   supportLevel: 'experimental',
   recommendedExtensions: ['shopify.ruby-lsp'],
   isDeclarationCandidate(candidate, line) {
-    return isRubyDeclarationName(candidate, line);
+    return isRubyDeclarationName(candidate, line) || isRubyFunctionSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -186,7 +188,7 @@ export const kotlinLanguageAdapter: LanguageAdapter = {
   supportLevel: 'experimental',
   recommendedExtensions: ['fwcd.kotlin'],
   isDeclarationCandidate(candidate, line) {
-    return isKotlinDeclarationName(candidate, line);
+    return isKotlinDeclarationName(candidate, line) || isKotlinFunctionSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -210,7 +212,7 @@ export const swiftLanguageAdapter: LanguageAdapter = {
   supportLevel: 'experimental',
   recommendedExtensions: ['swiftlang.swift-vscode'],
   isDeclarationCandidate(candidate, line) {
-    return isSwiftDeclarationName(candidate, line);
+    return isSwiftDeclarationName(candidate, line) || isSwiftFunctionSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -234,7 +236,7 @@ export const cppLanguageAdapter: LanguageAdapter = {
   supportLevel: 'experimental',
   recommendedExtensions: ['ms-vscode.cpptools'],
   isDeclarationCandidate(candidate, line) {
-    return isCppDeclarationName(candidate, line);
+    return isCppDeclarationName(candidate, line) || isCppFunctionSignatureCandidate(candidate, line);
   },
   sourceComment: {
     canRead(location) {
@@ -381,6 +383,99 @@ function findMatchingCloseParen(line: string, openParen: number): number {
   return -1;
 }
 
+function isCandidateInRange(
+  candidate: { startCharacter: number; endCharacter: number },
+  startCharacter: number,
+  endCharacter: number
+): boolean {
+  return candidate.startCharacter >= startCharacter && candidate.endCharacter <= endCharacter;
+}
+
+function firstNonWhitespaceIndex(line: string): number {
+  const index = line.search(/\S/);
+  return index >= 0 ? index : line.length;
+}
+
+function findFirstTokenIndex(line: string, tokens: readonly string[], startCharacter: number): number {
+  let firstIndex = -1;
+  for (const token of tokens) {
+    const index = line.indexOf(token, startCharacter);
+    if (index >= 0 && (firstIndex < 0 || index < firstIndex)) {
+      firstIndex = index;
+    }
+  }
+
+  return firstIndex;
+}
+
+function isKeywordFunctionSignatureCandidate(
+  candidate: { startCharacter: number; endCharacter: number },
+  line: string,
+  keywordPattern: RegExp,
+  bodyMarkers: readonly string[]
+): boolean {
+  const keywordMatch = keywordPattern.exec(line);
+  if (!keywordMatch) {
+    return false;
+  }
+
+  const bodyStart = findFirstTokenIndex(line, bodyMarkers, keywordMatch.index + keywordMatch[0].length);
+  const signatureEnd = bodyStart >= 0 ? bodyStart : line.length;
+  return isCandidateInRange(candidate, keywordMatch.index, signatureEnd);
+}
+
+function isCStyleMethodSignatureCandidate(
+  candidate: { startCharacter: number; endCharacter: number },
+  line: string,
+  tailPattern: RegExp
+): boolean {
+  const openParen = line.indexOf('(');
+  if (openParen < 0) {
+    return false;
+  }
+
+  const closeParen = findMatchingCloseParen(line, openParen);
+  if (closeParen < 0) {
+    return false;
+  }
+
+  const afterCloseParen = line.slice(closeParen + 1).trimStart();
+  if (!tailPattern.test(afterCloseParen)) {
+    return false;
+  }
+
+  const beforeOpenParen = line.slice(0, openParen).trimEnd();
+  const nameMatch = /[$_\p{L}][$_\p{L}\p{N}]*$/u.exec(beforeOpenParen);
+  if (!nameMatch) {
+    return false;
+  }
+
+  const prefix = beforeOpenParen.slice(0, nameMatch.index).trimEnd();
+  if (!isCStyleDeclarationPrefix(prefix)) {
+    return false;
+  }
+
+  const signatureEnd = findCStyleSignatureEnd(line, closeParen);
+  return isCandidateInRange(candidate, firstNonWhitespaceIndex(line), signatureEnd);
+}
+
+function isCStyleDeclarationPrefix(prefix: string): boolean {
+  if (prefix.length === 0 || prefix.includes('=') || prefix.includes('.')) {
+    return false;
+  }
+
+  if (/^(?:return|throw|new|if|for|while|switch|catch|using)$/.test(prefix)) {
+    return false;
+  }
+
+  return /\s/.test(prefix) || !prefix.endsWith('::');
+}
+
+function findCStyleSignatureEnd(line: string, closeParen: number): number {
+  const bodyStart = findFirstTokenIndex(line, ['{', ';', '=>'], closeParen + 1);
+  return bodyStart >= 0 ? bodyStart : line.length;
+}
+
 function nextNonWhitespaceCharacter(line: string, startCharacter: number): string | undefined {
   for (let character = startCharacter; character < line.length; character++) {
     if (!/\s/.test(line[character])) {
@@ -494,6 +589,23 @@ function isPythonDeclarationName(candidate: { startCharacter: number }, line: st
   return /^\s*(?:def|class)\s+$/.test(beforeCandidate);
 }
 
+function isPythonFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  const definitionMatch = /^\s*def\s+/.exec(line);
+  if (!definitionMatch) {
+    return false;
+  }
+
+  const openParen = line.indexOf('(', definitionMatch[0].length);
+  if (openParen < 0) {
+    return false;
+  }
+
+  const closeParen = findMatchingCloseParen(line, openParen);
+  const colon = closeParen >= 0 ? line.indexOf(':', closeParen + 1) : -1;
+  const signatureEnd = colon >= 0 ? colon : line.length;
+  return isCandidateInRange(candidate, definitionMatch.index, signatureEnd);
+}
+
 function isPythonAssignmentName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
   const trimmedStart = line.search(/\S/);
   if (trimmedStart !== candidate.startCharacter) {
@@ -590,12 +702,11 @@ function escapeRegExp(value: string): string {
 
 function isJavaDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
   const beforeCandidate = line.slice(0, candidate.startCharacter);
-  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
-  if (/\b(?:class|enum|interface|record)\s+$/.test(beforeCandidate)) {
-    return true;
-  }
+  return /\b(?:class|enum|interface|record)\s+$/.test(beforeCandidate);
+}
 
-  return afterCandidate.startsWith('(');
+function isJavaMethodSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  return isCStyleMethodSignatureCandidate(candidate, line, /^(?:$|[;{]|\bthrows\b)/);
 }
 
 function findJavaDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
@@ -658,7 +769,24 @@ function isRustDeclarationName(candidate: { startCharacter: number; endCharacter
     return true;
   }
 
-  return afterCandidate.startsWith(',') || afterCandidate.startsWith('(') || afterCandidate.startsWith('{') || afterCandidate.startsWith(';');
+  return afterCandidate.startsWith(',')
+    || isRustTupleVariantDeclaration(candidate, line)
+    || afterCandidate.startsWith('{')
+    || afterCandidate.startsWith(';');
+}
+
+function isRustFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  return isKeywordFunctionSignatureCandidate(candidate, line, /\bfn\b/, ['{', ';']);
+}
+
+function isRustTupleVariantDeclaration(candidate: { endCharacter: number }, line: string): boolean {
+  const openParen = line.indexOf('(', candidate.endCharacter);
+  if (openParen < 0) {
+    return false;
+  }
+
+  const closeParen = findMatchingCloseParen(line, openParen);
+  return closeParen > openParen && line.slice(closeParen + 1).trimStart().startsWith(',');
 }
 
 function findRustDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
@@ -722,6 +850,17 @@ function isPhpDeclarationName(candidate: { startCharacter: number; endCharacter:
   return isPhpVariableAssignmentName(candidate, line);
 }
 
+function isPhpFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  const functionMatch = /\bfunction\s+&?\s*[$_\p{L}][$_\p{L}\p{N}]*\s*\(/u.exec(line);
+  if (!functionMatch) {
+    return false;
+  }
+
+  const bodyStart = findFirstTokenIndex(line, ['{', ';'], functionMatch.index + functionMatch[0].length);
+  const signatureEnd = bodyStart >= 0 ? bodyStart : line.length;
+  return isCandidateInRange(candidate, functionMatch.index, signatureEnd);
+}
+
 function isPhpPropertyDeclaration(candidate: { startCharacter: number }, line: string): boolean {
   const beforeCandidate = line.slice(0, candidate.startCharacter);
   if (!beforeCandidate.endsWith('$')) {
@@ -767,12 +906,11 @@ function findPhpDefinitionLine(document: { lineAt(line: number): { text: string 
 
 function isCSharpDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
   const beforeCandidate = line.slice(0, candidate.startCharacter);
-  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
-  if (/\b(?:class|enum|interface|record|struct)\s+$/.test(beforeCandidate)) {
-    return true;
-  }
+  return /\b(?:class|enum|interface|record|struct)\s+$/.test(beforeCandidate);
+}
 
-  return afterCandidate.startsWith('(');
+function isCSharpMethodSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  return isCStyleMethodSignatureCandidate(candidate, line, /^(?:$|[;{]|=>|\bwhere\b)/);
 }
 
 function findCSharpDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
@@ -790,6 +928,22 @@ function isRubyDeclarationName(candidate: { startCharacter: number; endCharacter
   return /^\s*(?:def|class|module)\s+$/.test(beforeCandidate) || afterCandidate.startsWith('=');
 }
 
+function isRubyFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  const definitionMatch = /^\s*def\s+/.exec(line);
+  if (!definitionMatch) {
+    return false;
+  }
+
+  const methodStart = definitionMatch[0].length;
+  const methodMatch = /(?:self\.)?[$_\p{L}][$_\p{L}\p{N}_]*[?!=]?/u.exec(line.slice(methodStart));
+  if (!methodMatch) {
+    return false;
+  }
+
+  const methodEnd = methodStart + methodMatch.index + methodMatch[0].length;
+  return candidate.startCharacter > methodEnd;
+}
+
 function findRubyDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(document, referenceLine, [
@@ -805,7 +959,11 @@ function isKotlinDeclarationName(candidate: { startCharacter: number; endCharact
     return true;
   }
 
-  return afterCandidate.startsWith('(') || afterCandidate.startsWith(':') || afterCandidate.startsWith('=');
+  return afterCandidate.startsWith(':') || afterCandidate.startsWith('=');
+}
+
+function isKotlinFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  return isKeywordFunctionSignatureCandidate(candidate, line, /\bfun\b/, ['{', '=']);
 }
 
 function findKotlinDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
@@ -824,7 +982,11 @@ function isSwiftDeclarationName(candidate: { startCharacter: number; endCharacte
     return true;
   }
 
-  return afterCandidate.startsWith('(') || afterCandidate.startsWith(':') || afterCandidate.startsWith('=');
+  return afterCandidate.startsWith(':') || afterCandidate.startsWith('=');
+}
+
+function isSwiftFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  return isKeywordFunctionSignatureCandidate(candidate, line, /\bfunc\b/, ['{']);
 }
 
 function findSwiftDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
@@ -844,7 +1006,15 @@ function isCppDeclarationName(candidate: { word: string; startCharacter: number;
     return true;
   }
 
-  return afterCandidate.startsWith('(') || afterCandidate.startsWith(';') || afterCandidate.startsWith('=');
+  return afterCandidate.startsWith(';') || afterCandidate.startsWith('=');
+}
+
+function isCppFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  return isCStyleMethodSignatureCandidate(
+    candidate,
+    line,
+    /^(?:$|[;{:]|->|\b(?:const|noexcept|override|final|requires)\b|=\s*(?:0|default|delete)\b)/
+  );
 }
 
 function findCppDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
