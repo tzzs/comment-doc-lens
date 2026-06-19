@@ -76,6 +76,8 @@ Run `Comment Doc Lens: Show Language Status` from the command palette to inspect
 
 For `missingDependency`, install or enable the listed recommended extension. For `degraded`, put the cursor on a documented symbol and ensure the project has finished indexing.
 
+`sourceFallback=true` means the adapter can try to recover nearby source comments when hover output is missing. It does not replace the recommended language extension: a status such as `missingDependency` with `sourceFallback=true` is expected when Java, C#, or another external language service is not installed. For real projects, install the listed extension and toolchain; for manual same-file fixtures, make sure you are on a call-site line, refresh Comment Doc Lens, and use the latest installed VSIX.
+
 ## Settings
 
 | Setting | Purpose |

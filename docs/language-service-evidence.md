@@ -75,6 +75,8 @@ For each fixture:
 7. Run `Comment Doc Lens: Refresh` and capture the inlay hint.
 8. Paste the captured result into the relevant section below.
 
+If `Show Language Status` reports `missingDependency` with `sourceFallback=true`, record it as a missing recommended extension, not as language-service evidence. Install the listed extension and required toolchain, reload VS Code, and rerun the capture before marking the language service path verified.
+
 ## C# Evidence
 
 Fixture: `test-fixtures/language-service/csharp`

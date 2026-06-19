@@ -4,8 +4,8 @@ This index is the repository-local map for product decisions, support evidence, 
 
 | Document | Use when | Current status | Verification signal |
 | --- | --- | --- | --- |
-| [Language support matrix](language-support.md) | Changing adapters, language ids, recommended extensions, support levels, or fallback behavior | Current source of truth | `npm test` plus adapter/registry tests |
-| [Experimental language service evidence](language-service-evidence.md) | Capturing C#, Ruby, Kotlin, Swift, or C/C++ real hover/definition evidence | Current evidence gate and fixture map | `test-fixtures/language-service/*` plus copied diagnostics |
+| [Language support matrix](language-support.md) | Changing adapters, language ids, recommended extensions, support levels, fallback behavior, or language-status troubleshooting | Current source of truth | `npm test` plus adapter/registry tests |
+| [Experimental language service evidence](language-service-evidence.md) | Capturing C#, Ruby, Kotlin, Swift, or C/C++ real hover/definition evidence | Current evidence gate and fixture map | `test-fixtures/language-service/*`, `Show Language Status`, and copied diagnostics |
 | [Optimization plan status](2026-06-16-comment-lens-optimization-plan.md) | Checking completed work, pending work, and the next roadmap | Current completed/pending plan | `npm run harness:check` checks the file is indexed |
 | [Second-batch language evaluation](second-batch-language-evaluation.md) | Working on PHP, Ruby, Kotlin, Swift, C, or C++ evidence | Updated for PHP stable and second-batch experimental fallback | `npm test` plus language adapter tests |
 | [Sample gallery](sample-gallery.md) | Adding examples, screenshots, or marketplace demo material | Current packaged sample reference | `test/projectMetadata.test.ts` checks package inclusion |

@@ -76,6 +76,8 @@ Comment Doc Lens 会扫描当前可见的标识符，调用 VS Code 当前语言
 
 如果状态是 `missingDependency`，请安装或启用提示中的推荐扩展。如果状态是 `degraded`，请把光标放在带文档的符号上，并确认项目索引已经完成。
 
+`sourceFallback=true` 表示 adapter 可以在 hover 缺失时尝试读取定义附近的源码注释，但它不能替代推荐语言扩展。Java、C# 或其他外部语言服务未安装时，`missingDependency` 加 `sourceFallback=true` 是预期状态。真实项目请安装提示中的扩展和工具链；手工同文件 fixture 请确认光标在调用点、运行 `Comment Doc Lens: Refresh`，并使用最新安装的 VSIX。
+
 ## 配置项
 
 | 配置 | 用途 |

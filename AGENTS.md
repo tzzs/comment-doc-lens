@@ -7,6 +7,7 @@ Comment Doc Lens is a VS Code extension that shows existing documentation at sym
 - Product overview: [README.md](README.md) and [README_CN.md](README_CN.md).
 - Documentation index: [docs/README.md](docs/README.md).
 - Language support source of truth: [docs/language-support.md](docs/language-support.md).
+- Language status and fallback troubleshooting: [docs/language-support.md](docs/language-support.md#语言状态排查).
 - Current optimization status: [docs/2026-06-16-comment-lens-optimization-plan.md](docs/2026-06-16-comment-lens-optimization-plan.md).
 - Release checks: [docs/release-quality-checklist.md](docs/release-quality-checklist.md).
 
@@ -28,6 +29,7 @@ Run `npm run test:integration` only when a GUI-capable VS Code/Electron host is 
 - User-facing product name is `Comment Doc Lens`.
 - Default inlay hints are display-first. Tooltip and definition locations stay behind `commentDocLens.enableHintInteractions`.
 - Language support levels live in [docs/language-support.md](docs/language-support.md); do not promote a language without fixtures, tests, and docs evidence.
+- `missingDependency` with `sourceFallback=true` is expected when a recommended language extension is absent; document the dependency state before changing adapter behavior.
 - Publication uses `comment-doc-lens-v*` release tags. Keep `release-please-config.json`, `.github/workflows/publish.yml`, and `package.json` aligned.
 
 ## Validation Notes

@@ -7,4 +7,8 @@ public class OrderPresenter {
 
   /** Shared order label. */
   public static final String ORDER_LABEL = "order";
+
+  public String displayLabel() {
+    return ORDER_LABEL + ": " + formatStatus("paid");
+  }
 }

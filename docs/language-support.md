@@ -49,6 +49,25 @@
 | Swift | `swiftlang.swift-vscode` | extension、hover、definition、source fallback | Swift 扩展和 SourceKit-LSP 可用时为 `ready`；缺少本机工具链时通常为 `degraded` |
 | C/C++ | `ms-vscode.cpptools` | extension、hover、definition、source fallback | C/C++ 扩展索引到当前文件时为 `ready`；include path 或 compile commands 缺失时通常为 `degraded` |
 
+## 语言状态排查
+
+`Show Language Status` 是保守的环境检查。只要推荐扩展缺失，状态会先返回 `missingDependency`，即使 adapter 已经具备 `sourceFallback=true`。这是预期行为：source fallback 只能在可识别的本地定义附近读取注释，完整项目、跨文件跳转和稳定 hover/definition 仍依赖语言服务。
+
+| 状态片段 | 含义 | 用户下一步 |
+| --- | --- | --- |
+| `missingDependency` + `sourceFallback=true` | 推荐扩展未安装或未启用；Comment Doc Lens 有本地注释 fallback，但健康检查不会把它当成完整语言服务 | 安装提示中的扩展；如果只是验证同文件手工 fixture，确认使用最新 VSIX、打开调用点并运行 `Comment Doc Lens: Refresh` |
+| `hover=false, definition=false, sourceFallback=true` | VS Code 当前没有返回 hover/definition；fallback 只能尝试本地扫描支持的定义形态 | 对真实项目安装扩展和工具链，等待索引完成；对 fixture 确认文件包含引用点而不是只有声明 |
+| `degraded` + `sourceFallback=true` | 推荐扩展存在，但 hover 或 definition 暂时没有可用输出；fallback 可能仍可展示同文件/本地定义注释 | 把光标放在带文档的引用点，等待索引完成，运行 `Explain Hidden Hint` 或 `Copy Diagnostics for Issue` |
+| `ready` | 推荐扩展和语言服务能力可用 | 若仍无提示，检查 `commentDocLens.enabled`、`commentDocLens.languages`、可见范围、最小词数和行长配置 |
+
+Java 和 C# 的常见排查顺序：
+
+1. 确认打开的是调用点，而不是定义行。手工 fixture 中 Java 使用 `displayLabel()` 里的 `ORDER_LABEL` / `formatStatus("paid")`，C# 使用 `DisplayLabel()` 里的 `FormatStatus("paid")`。
+2. 确认安装的是当前构建的 VSIX，或 Extension Development Host 已重启。
+3. 确认 VS Code language mode 分别是 `java` 和 `csharp`，且 `commentDocLens.languages` 没有排除对应 id。
+4. Java 真实项目安装 `vscjava.vscode-java-pack` 和 JDK；C# 真实项目安装 C# Dev Kit 或 OmniSharp，并安装 .NET SDK。
+5. 仍无法展示时，运行 `Comment Doc Lens: Show Language Status`、`Comment Doc Lens: Explain Hidden Hint` 和 `Comment Doc Lens: Copy Diagnostics for Issue`，把当前行、状态输出和诊断一起附到 issue。
+
 ## 文档质量与噪音过滤
 
 Comment Doc Lens 现在在 formatter、resolver 和 hint builder 三层执行文档质量控制：

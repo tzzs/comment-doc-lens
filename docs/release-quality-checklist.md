@@ -8,8 +8,9 @@ Use this checklist before every release PR and again after Marketplace/Open VSX 
 - [ ] Run `npm run package`.
 - [ ] Run `npm run test:integration` when a VS Code/Electron host is available.
 - [ ] Confirm README and README_CN match the current command set and language levels.
-- [ ] Confirm `docs/language-support.md` matches adapter support levels.
+- [ ] Confirm `docs/language-support.md` matches adapter support levels and explains any `missingDependency` / `sourceFallback` status changes.
 - [ ] Confirm `docs/sample-gallery.md` covers the promoted languages.
+- [ ] Confirm manual fixtures that advertise source fallback include call-site references, not only declarations.
 - [ ] Confirm `package.nls.json` and `package.nls.zh-cn.json` include new commands/settings.
 - [ ] Confirm `package.json` keywords and categories still match the positioning.
 - [ ] Confirm privacy wording still says local-only, no upload, no LLM, no generated comments.
@@ -28,6 +29,6 @@ Use this checklist before every release PR and again after Marketplace/Open VSX 
 ## Post-Release Watch
 
 - [ ] Watch issues for missing hints in newly promoted languages.
-- [ ] Ask users to attach `Copy Diagnostics for Issue` output when language-service state is unclear.
+- [ ] Ask users to attach `Show Language Status`, `Explain Hidden Hint`, and `Copy Diagnostics for Issue` output when language-service state is unclear.
 - [ ] Check Output Channel reports for timeouts, missing dependencies, and degraded language-service states.
 - [ ] If registry UI looks stale, verify API responses before diagnosing a failed publish.
