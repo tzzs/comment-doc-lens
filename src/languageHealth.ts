@@ -17,6 +17,7 @@ export interface LanguageHealthStatus {
   languageId: string;
   adapterDisplayName: string;
   supportLevel: LanguageAdapter['supportLevel'];
+  documentationSource: LanguageAdapter['documentationSource'];
   state: LanguageHealthState;
   reason: string;
   recommendedExtensions: readonly string[];
@@ -55,6 +56,7 @@ export class LanguageHealthService {
       input.position.line,
       input.position.character,
       input.adapter.supportLevel,
+      input.adapter.documentationSource,
       ...(input.adapter.recommendedExtensions ?? [])
     ].join(':');
 
@@ -102,10 +104,17 @@ export function formatLanguageHealthStatus(status: LanguageHealthStatus): string
     `${status.adapterDisplayName} (${status.languageId}) is ${status.state}.`,
     status.reason,
     `Support: ${status.supportLevel}.`,
+    `Documentation source: ${formatDocumentationSource(status.documentationSource)}.`,
     `Extensions: ${recommendedExtensions}.`,
     `Checks: hover=${status.checkedCapabilities.hover}, definition=${status.checkedCapabilities.definition}, sourceFallback=${status.checkedCapabilities.sourceFallback}.`,
     guidance
   ].join(' ');
+}
+
+export function formatDocumentationSource(source: LanguageAdapter['documentationSource']): string {
+  return source === 'language-service-with-source-fallback'
+    ? 'language service with source fallback'
+    : 'language service';
 }
 
 function createStatus(
@@ -118,6 +127,7 @@ function createStatus(
     languageId: input.languageId,
     adapterDisplayName: input.adapter.displayName,
     supportLevel: input.adapter.supportLevel,
+    documentationSource: input.adapter.documentationSource,
     state,
     reason,
     recommendedExtensions: input.adapter.recommendedExtensions ?? [],

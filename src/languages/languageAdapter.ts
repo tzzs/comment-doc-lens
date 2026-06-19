@@ -1,7 +1,8 @@
 import type { SymbolCandidate } from '../candidateScanner';
 import type { LocationLike } from '../documentationResolver';
 
-export type LanguageSupportLevel = 'stable' | 'experimental' | 'hover-only';
+export type LanguageSupportLevel = 'stable' | 'experimental';
+export type DocumentationSourceCapability = 'language-service' | 'language-service-with-source-fallback';
 
 export interface SourceDocument {
   lineAt(line: number): { text: string };
@@ -26,6 +27,7 @@ export interface LanguageAdapter {
   languageIds: readonly string[];
   displayName: string;
   supportLevel: LanguageSupportLevel;
+  documentationSource: DocumentationSourceCapability;
   recommendedExtensions?: readonly string[];
   documentationQuality?: DocumentationQualityRules;
   isDeclarationCandidate?(candidate: SymbolCandidate, line: string, languageId?: string): boolean;

@@ -127,6 +127,7 @@ test('formats missing dependency status with install guidance', () => {
     languageId: 'python',
     adapterDisplayName: 'Python',
     supportLevel: 'experimental',
+    documentationSource: 'language-service-with-source-fallback',
     state: 'missingDependency',
     reason: 'Missing recommended extensions: ms-python.python, ms-python.vscode-pylance.',
     recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
@@ -141,6 +142,7 @@ test('formats missing dependency status with install guidance', () => {
   assert.match(message, /ms-python.python/);
   assert.match(message, /ms-python.vscode-pylance/);
   assert.match(message, /Install or enable/i);
+  assert.match(message, /Documentation source: language service with source fallback\./);
 });
 
 test('formats degraded and unknown status with recovery guidance', () => {
@@ -148,6 +150,7 @@ test('formats degraded and unknown status with recovery guidance', () => {
     languageId: 'go',
     adapterDisplayName: 'Go',
     supportLevel: 'stable',
+    documentationSource: 'language-service-with-source-fallback',
     state: 'degraded',
     reason: 'Hover provider returned no usable documentation.',
     recommendedExtensions: ['golang.Go'],
@@ -161,6 +164,7 @@ test('formats degraded and unknown status with recovery guidance', () => {
     languageId: 'go',
     adapterDisplayName: 'Go',
     supportLevel: 'stable',
+    documentationSource: 'language-service-with-source-fallback',
     state: 'unknown',
     reason: 'Language health check timed out.',
     recommendedExtensions: ['golang.Go'],

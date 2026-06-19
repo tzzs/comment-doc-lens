@@ -53,6 +53,7 @@ test('summarizes workspace language readiness', () => {
         languageId: 'go',
         adapterDisplayName: 'Go',
         supportLevel: 'stable',
+        documentationSource: 'language-service-with-source-fallback',
         state: 'ready',
         reason: 'Language service can provide documentation context.',
         recommendedExtensions: ['golang.Go'],
@@ -70,6 +71,7 @@ test('summarizes workspace language readiness', () => {
         languageId: 'python',
         adapterDisplayName: 'Python',
         supportLevel: 'experimental',
+        documentationSource: 'language-service-with-source-fallback',
         state: 'missingDependency',
         reason: 'Missing recommended extensions: ms-python.python, ms-python.vscode-pylance.',
         recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
@@ -87,6 +89,7 @@ test('summarizes workspace language readiness', () => {
   assert.match(summary, /missingDependency: 1/);
   assert.match(summary, /order\.py/);
   assert.match(summary, /ms-python\.python/);
+  assert.match(summary, /Source: language service with source fallback/);
 });
 
 test('escapes markdown table backslashes before pipe characters', () => {
@@ -98,6 +101,7 @@ test('escapes markdown table backslashes before pipe characters', () => {
         languageId: 'go',
         adapterDisplayName: 'Go',
         supportLevel: 'stable',
+        documentationSource: 'language-service-with-source-fallback',
         state: 'degraded',
         reason: 'Path C:\\docs|generated returned no hover.',
         recommendedExtensions: ['golang.Go'],

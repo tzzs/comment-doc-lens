@@ -7,29 +7,37 @@
 | 等级 | 含义 | 进入条件 |
 | --- | --- | --- |
 | `stable` | 默认支持，并在 README 中推荐使用 | 有 fixtures、自动化测试、文档说明，并覆盖常见注释格式 |
-| `experimental` | 可用，但存在已知限制 | 基础 hover 或 fallback 行为能覆盖代表性 fixture |
-| `hover-only` | 只依赖 VS Code 语言服务 hover/definition 输出 | 可展示有用文档，但还没有自定义 source fallback |
+| `experimental` | 可用，但存在已知限制 | 基础 hover 或 fallback 行为能覆盖代表性 fixture；真实语言服务 evidence 尚未完全闭环 |
 | `planned` | 已列入路线图但尚未实现 | 有预期支持方式和验证目标 |
+
+## 文档来源能力
+
+`supportLevel` 只表示支持成熟度。adapter 还会单独声明文档来源能力，避免把“是否稳定”和“如何取文档”混在一起。
+
+| 能力 | 含义 | 用户感知 |
+| --- | --- | --- |
+| `language-service` | 只依赖 VS Code 语言服务 hover/definition 输出 | 需要对应语言服务返回有用文档；没有本地源码注释 fallback |
+| `language-service-with-source-fallback` | 优先使用 VS Code 语言服务；hover 缺失时可尝试读取定义附近源码注释 | 即使有 fallback，真实项目仍建议安装推荐扩展和工具链 |
 
 ## 当前支持
 
-| 语言 | VS Code language id | 等级 | 推荐依赖 | 注释/文档来源 | Fallback 策略 | 验证状态 |
-| --- | --- | --- | --- | --- | --- | --- |
-| Go | `go` | `stable` | 官方 Go 扩展和 gopls | hover、definition hover、`//`、`/* */` | 当 hover 只有签名或无可用文档时，读取定义附近源码注释；本地 definition provider 不可用时可扫描 Go 定义 | 单元测试覆盖 Go declaration 过滤、source fallback、timeout；integration fixture 已存在 |
-| TypeScript | `typescript` | `stable` | VS Code 内置 TypeScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 单元测试和 integration fixture 覆盖常量、变量、enum、函数、class、method、object method |
-| JavaScript | `javascript` | `stable` | VS Code 内置 TypeScript/JavaScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 单元测试和 integration fixture 覆盖 JSDoc 引用 |
-| TSX | `typescriptreact` | `stable` | VS Code 内置 TypeScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | integration fixture 覆盖 JSX tag 噪音过滤 |
-| JSX | `javascriptreact` | `stable` | VS Code 内置 JavaScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 与 TypeScript-family adapter 共用过滤规则和单元测试 |
-| Python | `python` | `stable` | Python 扩展和 Pylance | hover、definition hover、function/class docstring | 读取定义后的 `"""..."""`、`'''...'''` docstring；缺少语言服务时安静降级 | Python adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 docstring 读取；fixture 已存在 |
-| Java | `java` | `stable` | Extension Pack for Java 或等价 language server | hover、definition hover、Javadoc | 读取定义前 `/** ... */` Javadoc | Java adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 Javadoc 读取；fixture 已存在 |
-| Rust | `rust` | `stable` | rust-analyzer | hover、definition hover、`///`、`//!` 文档注释 | 读取定义前连续 `///` 或 `//!` 文档注释 | Rust adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 doc comment 读取；fixture 已存在 |
-| C# | `csharp` | `experimental` | C# Dev Kit 或 OmniSharp | hover、definition hover、XML docs | 读取定义前连续 `///` XML doc comment | C# adapter 单元测试覆盖 XML docs source fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
-| PHP | `php` | `stable` | Intelephense | hover、definition hover、PHPDoc | 读取定义前 `/** ... */` PHPDoc | PHP adapter 单元测试覆盖 class、function、method、property、const declaration 过滤、本地 definition fallback 和 PHPDoc 读取；手动 fixture 已存在 |
-| Ruby | `ruby` | `experimental` | Ruby LSP | hover、definition hover、YARD/RDoc | 读取定义前连续 `#` YARD/RDoc comment | Ruby adapter 单元测试覆盖 YARD/RDoc fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
-| Kotlin | `kotlin` | `experimental` | Kotlin | hover、definition hover、KDoc | 读取定义前 `/** ... */` KDoc | Kotlin adapter 单元测试覆盖 KDoc fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
-| Swift | `swift` | `experimental` | Swift | hover、definition hover、doc comment | 读取定义前 `///` 或 `/** ... */` doc comment | Swift adapter 单元测试覆盖 doc comment fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
-| C | `c` | `experimental` | C/C++ | hover、definition hover、Doxygen | 读取定义前 `///`、`//!` 或 `/** ... */` Doxygen comment | C/C++ adapter 单元测试覆盖 `c`/`cpp` 双 language id、推荐扩展诊断和 Doxygen fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
-| C++ | `cpp` | `experimental` | C/C++ | hover、definition hover、Doxygen | 读取定义前 `///`、`//!` 或 `/** ... */` Doxygen comment | 与 C 共用 C/C++ adapter；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
+| 语言 | VS Code language id | 等级 | 文档来源能力 | 推荐依赖 | 注释/文档来源 | Fallback 策略 | 验证状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | `go` | `stable` | `language-service-with-source-fallback` | 官方 Go 扩展和 gopls | hover、definition hover、`//`、`/* */` | 当 hover 只有签名或无可用文档时，读取定义附近源码注释；本地 definition provider 不可用时可扫描 Go 定义 | 单元测试覆盖 Go declaration 过滤、source fallback、timeout；integration fixture 已存在 |
+| TypeScript | `typescript` | `stable` | `language-service` | VS Code 内置 TypeScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 单元测试和 integration fixture 覆盖常量、变量、enum、函数、class、method、object method |
+| JavaScript | `javascript` | `stable` | `language-service` | VS Code 内置 TypeScript/JavaScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 单元测试和 integration fixture 覆盖 JSDoc 引用 |
+| TSX | `typescriptreact` | `stable` | `language-service` | VS Code 内置 TypeScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | integration fixture 覆盖 JSX tag 噪音过滤 |
+| JSX | `javascriptreact` | `stable` | `language-service` | VS Code 内置 JavaScript 服务 | hover、definition hover、JSDoc | 暂无自定义 source fallback | 与 TypeScript-family adapter 共用过滤规则和单元测试 |
+| Python | `python` | `stable` | `language-service-with-source-fallback` | Python 扩展和 Pylance | hover、definition hover、function/class docstring | 读取定义后的 `"""..."""`、`'''...'''` docstring；缺少语言服务时安静降级 | Python adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 docstring 读取；fixture 已存在 |
+| Java | `java` | `stable` | `language-service-with-source-fallback` | Extension Pack for Java 或等价 language server | hover、definition hover、Javadoc | 读取定义前 `/** ... */` Javadoc | Java adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 Javadoc 读取；fixture 已存在 |
+| Rust | `rust` | `stable` | `language-service-with-source-fallback` | rust-analyzer | hover、definition hover、`///`、`//!` 文档注释 | 读取定义前连续 `///` 或 `//!` 文档注释 | Rust adapter 单元测试覆盖 declaration 过滤、本地 definition fallback 和 doc comment 读取；fixture 已存在 |
+| C# | `csharp` | `experimental` | `language-service-with-source-fallback` | C# Dev Kit 或 OmniSharp | hover、definition hover、XML docs | 读取定义前连续 `///` XML doc comment | C# adapter 单元测试覆盖 XML docs source fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
+| PHP | `php` | `stable` | `language-service-with-source-fallback` | Intelephense | hover、definition hover、PHPDoc | 读取定义前 `/** ... */` PHPDoc | PHP adapter 单元测试覆盖 class、function、method、property、const declaration 过滤、本地 definition fallback 和 PHPDoc 读取；手动 fixture 已存在 |
+| Ruby | `ruby` | `experimental` | `language-service-with-source-fallback` | Ruby LSP | hover、definition hover、YARD/RDoc | 读取定义前连续 `#` YARD/RDoc comment | Ruby adapter 单元测试覆盖 YARD/RDoc fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
+| Kotlin | `kotlin` | `experimental` | `language-service-with-source-fallback` | Kotlin | hover、definition hover、KDoc | 读取定义前 `/** ... */` KDoc | Kotlin adapter 单元测试覆盖 KDoc fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
+| Swift | `swift` | `experimental` | `language-service-with-source-fallback` | Swift | hover、definition hover、doc comment | 读取定义前 `///` 或 `/** ... */` doc comment | Swift adapter 单元测试覆盖 doc comment fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
+| C | `c` | `experimental` | `language-service-with-source-fallback` | C/C++ | hover、definition hover、Doxygen | 读取定义前 `///`、`//!` 或 `/** ... */` Doxygen comment | C/C++ adapter 单元测试覆盖 `c`/`cpp` 双 language id、推荐扩展诊断和 Doxygen fallback；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
+| C++ | `cpp` | `experimental` | `language-service-with-source-fallback` | C/C++ | hover、definition hover、Doxygen | 读取定义前 `///`、`//!` 或 `/** ... */` Doxygen comment | 与 C 共用 C/C++ adapter；真实语言服务 fixture 已建立，capture 状态见 [language-service-evidence.md](language-service-evidence.md) |
 
 ## 语言服务健康检查
 
@@ -74,8 +82,8 @@ Comment Doc Lens 现在在 formatter、resolver 和 hint builder 三层执行文
 
 - formatter 会跳过 signature-only code block，并可按最小词数过滤低价值摘要；
 - resolver 会合并全局 `commentDocLens.minimumDocumentationWords` 与 adapter 的 `documentationQuality.minimumWords`，采用更严格的值；
-- hint builder 会在最终展示前再次过滤 resolver 返回的短摘要，避免自定义 resolver 或 hover-only 语言绕过质量预算；
-- C#、Ruby、Kotlin、Swift 和 C/C++ adapter 默认使用 `minimumWords: 2`，用于减少 bare type name、signature-like hover 等低信号提示；这些语言同时具备 source fallback，但仍保持 `experimental`，直到真实语言服务 integration 证据补齐。
+- hint builder 会在最终展示前再次过滤 resolver 返回的短摘要，避免自定义 resolver 或 language-service-only adapter 绕过质量预算；
+- C#、Ruby、Kotlin、Swift 和 C/C++ adapter 默认使用 `minimumWords: 2`，用于减少 bare type name、signature-like hover 等低信号提示；这些语言的文档来源能力是 `language-service-with-source-fallback`，但仍保持 `experimental`，直到真实语言服务 integration 证据补齐。
 
 新增语言时，如果 hover 输出常出现类型名、签名或单词摘要，应在 adapter 上声明 `documentationQuality.minimumWords`，并用单元测试覆盖该语言的噪音样例。
 
@@ -100,9 +108,9 @@ C#、Ruby、Kotlin、Swift 和 C/C++ 的真实语言服务验证入口统一在 
 
 | 语言 | 预期等级 | 初步策略 | 接入前需要确认 |
 | --- | --- | --- | --- |
-| Kotlin | `experimental` | 在 hover-only 稳定后补 KDoc source fallback | VS Code Kotlin language server 在 Gradle/Maven 项目内的输出质量 |
-| Swift | `experimental` | 在 hover-only 稳定后评估 doc comment source fallback | macOS/SourceKit-LSP 和 SwiftPM 项目环境要求 |
-| C/C++ | `experimental` | 在 hover-only 稳定后单独设计 Doxygen fallback | compile commands、include path 和多扩展 provider 差异 |
+| Kotlin | `experimental` | 已具备 KDoc source fallback，继续补真实语言服务 evidence | VS Code Kotlin language server 在 Gradle/Maven 项目内的输出质量 |
+| Swift | `experimental` | 已具备 doc comment source fallback，继续补真实语言服务 evidence | macOS/SourceKit-LSP 和 SwiftPM 项目环境要求 |
+| C/C++ | `experimental` | 已具备 Doxygen source fallback，继续补真实语言服务 evidence | compile commands、include path 和多扩展 provider 差异 |
 
 详细评估见 [第二批语言接入评估](second-batch-language-evaluation.md)。
 
@@ -110,10 +118,10 @@ C#、Ruby、Kotlin、Swift 和 C/C++ 的真实语言服务验证入口统一在 
 
 新增或升级语言时必须满足：
 
-- adapter 中声明 `languageIds`、`displayName`、`supportLevel` 和必要 fallback 能力；
+- adapter 中声明 `languageIds`、`displayName`、`supportLevel`、`documentationSource` 和必要 fallback 能力；
 - package activation/configuration 包含对应 language id；
 - 至少一个 fixture 覆盖该语言的代表性文档注释；
-- 单元测试覆盖 adapter 过滤、source fallback 或 hover-only 降级行为；
+- 单元测试覆盖 adapter 过滤、source fallback 或 language-service-only 降级行为；
 - 如可行，integration fixture 覆盖 VS Code 实际 inlay hint 输出；
 - README 或本矩阵说明依赖、限制和验证状态；
 - `npm test` 必须通过；

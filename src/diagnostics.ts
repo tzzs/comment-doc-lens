@@ -1,4 +1,7 @@
-import type { LanguageHealthStatus } from './languageHealth';
+import {
+  formatDocumentationSource,
+  type LanguageHealthStatus
+} from './languageHealth';
 
 export type DiagnosticLevel = 'info' | 'warn' | 'error';
 
@@ -90,13 +93,14 @@ export function summarizeWorkspaceDiagnosis(diagnoses: readonly WorkspaceLanguag
       diagnosis.status.recommendedExtensions.length > 0
         ? `Extensions: ${diagnosis.status.recommendedExtensions.join(', ')}`
         : 'Extensions: built-in language service';
+    const sourceText = `Source: ${formatDocumentationSource(diagnosis.status.documentationSource)}`;
     lines.push(
       [
         shortUri(diagnosis.uri),
         diagnosis.languageId,
         diagnosis.status.state,
         diagnosis.status.supportLevel,
-        `${diagnosis.status.reason} ${extensionText}`
+        `${diagnosis.status.reason} ${extensionText}. ${sourceText}`
       ].map(escapeMarkdownTableCell).join(' | ').replace(/^/, '| ').replace(/$/, ' |')
     );
   }

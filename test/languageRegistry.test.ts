@@ -43,6 +43,45 @@ test('default registry maps current language ids to stable adapters', () => {
   );
 });
 
+test('default adapters separate support maturity from documentation source capability', () => {
+  const registry = createLanguageRegistry(defaultLanguageAdapters);
+  const documentationSources = new Map(
+    registry.getAdapters().map((adapter) => [
+      adapter.displayName,
+      adapter.documentationSource
+    ])
+  );
+
+  assert.deepEqual(
+    Array.from(documentationSources.entries()),
+    [
+      ['Go', 'language-service-with-source-fallback'],
+      ['TypeScript family', 'language-service'],
+      ['Python', 'language-service-with-source-fallback'],
+      ['Java', 'language-service-with-source-fallback'],
+      ['Rust', 'language-service-with-source-fallback'],
+      ['C#', 'language-service-with-source-fallback'],
+      ['PHP', 'language-service-with-source-fallback'],
+      ['Ruby', 'language-service-with-source-fallback'],
+      ['Kotlin', 'language-service-with-source-fallback'],
+      ['Swift', 'language-service-with-source-fallback'],
+      ['C/C++', 'language-service-with-source-fallback']
+    ]
+  );
+
+  for (const adapter of registry.getAdapters()) {
+    assert.notEqual(adapter.supportLevel, 'hover-only');
+    if (adapter.supportLevel === 'experimental') {
+      assert.equal(adapter.documentationSource, 'language-service-with-source-fallback');
+      assert.ok(adapter.sourceComment, `${adapter.displayName} should keep source fallback while experimental`);
+      assert.ok(
+        (adapter.recommendedExtensions?.length ?? 0) > 0,
+        `${adapter.displayName} should name recommended language-service dependencies`
+      );
+    }
+  }
+});
+
 test('default adapters expose recommended extension metadata for health checks', () => {
   const registry = createLanguageRegistry(defaultLanguageAdapters);
 
@@ -117,7 +156,8 @@ test('registry rejects duplicate language ids across adapters', () => {
         {
           languageIds: ['go'],
           displayName: 'Duplicate Go',
-          supportLevel: 'experimental'
+          supportLevel: 'experimental',
+          documentationSource: 'language-service'
         }
       ]),
     /Duplicate language id: go/

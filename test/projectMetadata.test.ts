@@ -185,6 +185,19 @@ test('sample gallery, evidence doc, and positioning article are packaged', () =>
   assert.match(article, /does not call an LLM/i);
 });
 
+test('readmes keep user-facing language support levels concise', () => {
+  const englishReadme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
+  const chineseReadme = readFileSync(join(process.cwd(), 'README_CN.md'), 'utf8');
+  const supportMatrix = readFileSync(join(process.cwd(), 'docs/language-support.md'), 'utf8');
+
+  assert.doesNotMatch(englishReadme, /\|\s*Hover-only\s*\|\s*None currently\s*\|/);
+  assert.doesNotMatch(chineseReadme, /\|\s*Hover-only\s*\|\s*暂无\s*\|/);
+  assert.match(englishReadme, /Stable \/ Recommended/);
+  assert.match(chineseReadme, /稳定推荐/);
+  assert.match(supportMatrix, /文档来源能力/);
+  assert.match(supportMatrix, /language-service-with-source-fallback/);
+});
+
 test('maintenance docs define cadence, metrics, and release checks', () => {
   const optimizationPlan = readFileSync(join(process.cwd(), 'docs/2026-06-16-comment-lens-optimization-plan.md'), 'utf8');
   const maintenance = readFileSync(join(process.cwd(), 'docs/maintenance-metrics.md'), 'utf8');
