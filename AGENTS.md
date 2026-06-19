@@ -23,6 +23,14 @@ npm run harness:check
 
 Run `npm run test:integration` only when a GUI-capable VS Code/Electron host is available. If it aborts before any `PASS` or `FAIL` output, treat it as an extension-host environment issue until proven otherwise.
 
+## Commit and PR Title Requirements
+
+- Use Conventional Commits for every local commit and PR title because Release Please parses the final commit subject on `main`.
+- Format commit and PR titles as `type(scope): description`; use `type(scope)!: description` for breaking changes and `revert: description` for reverts.
+- Allowed types are `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`, and `revert`.
+- Keep the type and scope lowercase. Do not prefix PR titles or squash titles with `[codex]`; use labels, branch names, or the PR body for attribution.
+- Before merging, manually confirm the PR title and final squash or merge title are still Conventional Commits.
+
 ## Boundaries To Preserve
 
 - Package identity is `comment-doc-lens`; command and setting ids use `commentDocLens.*`.
