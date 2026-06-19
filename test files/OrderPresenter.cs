@@ -7,4 +7,9 @@ public class OrderPresenter
     {
         return status;
     }
+
+    public string DisplayLabel()
+    {
+        return FormatStatus("paid");
+    }
 }

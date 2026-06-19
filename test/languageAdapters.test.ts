@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
-import type { SymbolCandidate } from '../src/candidateScanner';
+import { scanCandidateSymbols, type SymbolCandidate } from '../src/candidateScanner';
+import type { LanguageAdapter } from '../src/languages/languageAdapter';
 import {
   csharpLanguageAdapter,
   cppLanguageAdapter,
@@ -114,10 +117,25 @@ test('java adapter owns declaration filtering and javadoc fallback behavior', ()
   ]);
 });
 
+test('java manual fixture includes displayable call-site references', () => {
+  assert.deepEqual(
+    displayableFixtureReferenceWords('test files/OrderPresenter.java', 'java', javaLanguageAdapter),
+    ['ORDER_LABEL', 'formatStatus'].sort()
+  );
+});
+
 test('rust adapter owns declaration filtering and doc comment fallback behavior', () => {
   assert.equal(rustLanguageAdapter.supportLevel, 'stable');
   assert.equal(rustLanguageAdapter.isDeclarationCandidate?.(candidate('format_status', 7), 'pub fn format_status(status: &str) -> String {'), true);
   assert.equal(rustLanguageAdapter.isDeclarationCandidate?.(candidate('OrderPresenter', 11), 'pub struct OrderPresenter;'), true);
+  const unitStructReferenceLine = 'let _presenter = OrderPresenter;';
+  assert.equal(
+    rustLanguageAdapter.isDeclarationCandidate?.(
+      candidate('OrderPresenter', unitStructReferenceLine.indexOf('OrderPresenter')),
+      unitStructReferenceLine
+    ),
+    false
+  );
   assert.equal(rustLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.rs', line: 0, character: 0 }), true);
   assert.equal(rustLanguageAdapter.sourceComment?.canRead({ uri: 'file:///OrderPresenter.java', line: 0, character: 0 }), false);
 
@@ -146,6 +164,13 @@ test('rust adapter owns declaration filtering and doc comment fallback behavior'
   assert.deepEqual(rustLanguageAdapter.sourceComment?.collectLeadingComments(document, 8), [
     '/// Paid order status.'
   ]);
+});
+
+test('rust manual fixture includes displayable call-site references', () => {
+  assert.deepEqual(
+    displayableFixtureReferenceWords('test files/order.rs', 'rust', rustLanguageAdapter),
+    ['OrderPresenter', 'OrderStatus', 'Paid', 'format_status'].sort()
+  );
 });
 
 test('csharp adapter owns xml doc source fallback behavior', () => {
@@ -177,6 +202,13 @@ test('csharp adapter owns xml doc source fallback behavior', () => {
     '/// Formats the order status.',
     '/// </summary>'
   ]);
+});
+
+test('csharp manual fixture includes a displayable method call reference', () => {
+  assert.deepEqual(
+    displayableFixtureReferenceWords('test files/OrderPresenter.cs', 'csharp', csharpLanguageAdapter),
+    ['FormatStatus']
+  );
 });
 
 test('php adapter owns declaration filtering and docblock fallback behavior', () => {
@@ -368,7 +400,7 @@ test('language adapters skip declaration signatures while keeping call-site refe
       adapter: javaLanguageAdapter,
       declarationLine: '  public String formatStatus(String status) {',
       declarationWords: ['String', 'formatStatus', 'status'],
-      callLine: 'return formatStatus(status);',
+      callLine: '    return formatStatus(status);',
       callWords: ['formatStatus', 'status']
     },
     {
@@ -384,7 +416,7 @@ test('language adapters skip declaration signatures while keeping call-site refe
       adapter: csharpLanguageAdapter,
       declarationLine: '    public string FormatStatus(string status)',
       declarationWords: ['FormatStatus', 'status'],
-      callLine: 'return FormatStatus(status);',
+      callLine: '        return FormatStatus(status);',
       callWords: ['FormatStatus', 'status']
     },
     {
@@ -424,7 +456,7 @@ test('language adapters skip declaration signatures while keeping call-site refe
       adapter: cppLanguageAdapter,
       declarationLine: 'std::string formatStatus(std::string status) {',
       declarationWords: ['std', 'formatStatus', 'status'],
-      callLine: 'return formatStatus(status);',
+      callLine: '  return formatStatus(status);',
       callWords: ['formatStatus', 'status']
     }
   ];
@@ -461,6 +493,44 @@ function candidateInLine(word: string, line: string, occurrence: 'first' | 'last
   const startCharacter = occurrence === 'first' ? line.indexOf(word) : line.lastIndexOf(word);
   assert.notEqual(startCharacter, -1);
   return candidate(word, startCharacter);
+}
+
+function displayableFixtureReferenceWords(
+  fixturePath: string,
+  languageId: string,
+  adapter: LanguageAdapter
+): string[] {
+  const sourceComment = adapter.sourceComment;
+  if (!sourceComment?.findDefinitionLine) {
+    return [];
+  }
+
+  const fixtureLines = readFileSync(join(process.cwd(), fixturePath), 'utf8').trimEnd().split(/\r?\n/);
+  const document = lines(fixtureLines);
+  const displayableReferences = scanCandidateSymbols(
+    fixtureLines,
+    { startLine: 0, endLineInclusive: fixtureLines.length - 1 },
+    languageId,
+    120
+  ).filter((reference) => {
+    const sourceLine = fixtureLines[reference.line] ?? '';
+    if (adapter.isDeclarationCandidate?.(reference, sourceLine, languageId)) {
+      return false;
+    }
+
+    const definitionLine = sourceComment.findDefinitionLine?.(document, reference, {
+      uri: `file:///${fixturePath}`,
+      line: reference.line,
+      character: reference.startCharacter
+    });
+    if (definitionLine === undefined) {
+      return false;
+    }
+
+    return sourceComment.collectLeadingComments(document, definitionLine).length > 0;
+  });
+
+  return Array.from(new Set(displayableReferences.map((reference) => reference.word))).sort();
 }
 
 function lines(values: readonly string[]) {

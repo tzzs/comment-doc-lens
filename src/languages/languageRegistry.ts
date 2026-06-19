@@ -460,15 +460,16 @@ function isCStyleMethodSignatureCandidate(
 }
 
 function isCStyleDeclarationPrefix(prefix: string): boolean {
-  if (prefix.length === 0 || prefix.includes('=') || prefix.includes('.')) {
+  const normalizedPrefix = prefix.trim();
+  if (normalizedPrefix.length === 0 || normalizedPrefix.includes('=') || normalizedPrefix.includes('.')) {
     return false;
   }
 
-  if (/^(?:return|throw|new|if|for|while|switch|catch|using)$/.test(prefix)) {
+  if (/^(?:return|throw|new|if|for|while|switch|catch|using)\b/.test(normalizedPrefix)) {
     return false;
   }
 
-  return /\s/.test(prefix) || !prefix.endsWith('::');
+  return /\s/.test(normalizedPrefix) || !normalizedPrefix.endsWith('::');
 }
 
 function findCStyleSignatureEnd(line: string, closeParen: number): number {
@@ -771,8 +772,7 @@ function isRustDeclarationName(candidate: { startCharacter: number; endCharacter
 
   return afterCandidate.startsWith(',')
     || isRustTupleVariantDeclaration(candidate, line)
-    || afterCandidate.startsWith('{')
-    || afterCandidate.startsWith(';');
+    || (beforeCandidate.trim().length === 0 && afterCandidate.startsWith('{'));
 }
 
 function isRustFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
