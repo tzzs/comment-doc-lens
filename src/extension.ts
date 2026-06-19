@@ -18,6 +18,7 @@ import { hoverContentsToMarkdownLines } from './hoverContent';
 import {
   formatLanguageHealthStatus,
   LanguageHealthService,
+  type LanguageHealthStatus,
   type LanguageHealthPosition,
   type LanguageHealthProbe
 } from './languageHealth';
@@ -90,6 +91,7 @@ export function activate(context: vscode.ExtensionContext): void {
       });
 
       const message = formatLanguageHealthStatus(status);
+      diagnostics.setLatestLanguageStatus(status);
       diagnostics.record('info', 'Language status evaluated.', {
         languageId: status.languageId,
         state: status.state,
@@ -106,6 +108,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('commentDocLens.diagnoseWorkspace', async () => {
       const diagnoses = await diagnoseWorkspace(languageRegistry, languageHealth, diagnostics);
       const summary = summarizeWorkspaceDiagnosis(diagnoses);
+      diagnostics.setLatestWorkspaceDiagnosis(summary);
       outputChannel.appendLine(summary);
       outputChannel.show(true);
       diagnostics.record('info', 'Workspace diagnosis completed.', {
@@ -120,9 +123,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('commentDocLens.copyDiagnosticsForIssue', async () => {
       const report = createDiagnosticsReport({
         extensionVersion: context.extension.packageJSON.version,
+        vscodeVersion: vscode.version,
         workspaceName: vscode.workspace.name,
         activeDocument: vscode.window.activeTextEditor?.document.uri.toString(),
         activeLanguageId: vscode.window.activeTextEditor?.document.languageId,
+        settings: readDiagnosticsSettingsSnapshot(),
+        latestLanguageStatus: diagnostics.getLatestLanguageStatus(),
+        latestHiddenHintExplanation: diagnostics.getLatestHiddenHintExplanation(),
+        latestWorkspaceDiagnosis: diagnostics.getLatestWorkspaceDiagnosis(),
         events: diagnostics.getEvents()
       });
       await vscode.env.clipboard.writeText(report);
@@ -157,6 +165,7 @@ export function activate(context: vscode.ExtensionContext): void {
         candidateCount,
         lineTooLong: text.length > (config.maxLineLength ?? Number.POSITIVE_INFINITY)
       });
+      diagnostics.setLatestHiddenHintExplanation(explanation);
       diagnostics.record('info', 'Explained hidden hint state.', {
         languageId: editor.document.languageId,
         candidateCount,
@@ -348,6 +357,9 @@ interface InlayHintResolveData {
 
 class CommentLensDiagnostics {
   private readonly events: DiagnosticEvent[] = [];
+  private latestLanguageStatus: LanguageHealthStatus | undefined;
+  private latestHiddenHintExplanation: string | undefined;
+  private latestWorkspaceDiagnosis: string | undefined;
 
   constructor(private readonly outputChannel: vscode.OutputChannel) {}
 
@@ -371,6 +383,30 @@ class CommentLensDiagnostics {
 
   getEvents(): readonly DiagnosticEvent[] {
     return this.events;
+  }
+
+  setLatestLanguageStatus(status: LanguageHealthStatus): void {
+    this.latestLanguageStatus = status;
+  }
+
+  getLatestLanguageStatus(): LanguageHealthStatus | undefined {
+    return this.latestLanguageStatus;
+  }
+
+  setLatestHiddenHintExplanation(explanation: string): void {
+    this.latestHiddenHintExplanation = explanation;
+  }
+
+  getLatestHiddenHintExplanation(): string | undefined {
+    return this.latestHiddenHintExplanation;
+  }
+
+  setLatestWorkspaceDiagnosis(summary: string): void {
+    this.latestWorkspaceDiagnosis = summary;
+  }
+
+  getLatestWorkspaceDiagnosis(): string | undefined {
+    return this.latestWorkspaceDiagnosis;
   }
 }
 
@@ -571,6 +607,27 @@ function readResolverOptions(): DocumentationResolverOptions {
     maxHintLength: config.get<number>('maxHintLength', 120),
     maxCacheEntries: config.get<number>('maxCacheEntries', 1000),
     minimumDocumentationWords: config.get<number>('minimumDocumentationWords', 1)
+  };
+}
+
+function readDiagnosticsSettingsSnapshot(): Readonly<Record<string, unknown>> {
+  const commentConfig = readCommentDocLensConfig();
+  const resolverOptions = readResolverOptions();
+  return {
+    enabled: commentConfig.enabled,
+    languages: commentConfig.languages,
+    languageOverrides: commentConfig.languageOverrides,
+    maxLineLength: commentConfig.maxLineLength,
+    maxHintLength: resolverOptions.maxHintLength,
+    maxHintsPerRequest: commentConfig.maxHintsPerRequest,
+    minIdentifierLength: commentConfig.minIdentifierLength,
+    minimumDocumentationWords: commentConfig.minimumDocumentationWords,
+    preferPropertyTail: commentConfig.preferPropertyTail,
+    dedupeLineHints: commentConfig.dedupeLineHints,
+    resolveTimeoutMs: commentConfig.resolveTimeoutMs,
+    maxCacheEntries: resolverOptions.maxCacheEntries,
+    hintPrefix: commentConfig.hintPrefix,
+    enableHintInteractions: commentConfig.enableHintInteractions
   };
 }
 

@@ -1,5 +1,6 @@
 import {
   formatDocumentationSource,
+  formatLanguageHealthStatus,
   type LanguageHealthStatus
 } from './languageHealth';
 
@@ -14,9 +15,14 @@ export interface DiagnosticEvent {
 
 export interface DiagnosticsReportInput {
   extensionVersion: string;
+  vscodeVersion?: string;
   workspaceName?: string;
   activeDocument?: string;
   activeLanguageId?: string;
+  settings?: Readonly<Record<string, unknown>>;
+  latestLanguageStatus?: LanguageHealthStatus;
+  latestHiddenHintExplanation?: string;
+  latestWorkspaceDiagnosis?: string;
   events: readonly DiagnosticEvent[];
 }
 
@@ -47,12 +53,35 @@ export function createDiagnosticsReport(input: DiagnosticsReportInput): string {
     '## Comment Doc Lens Diagnostics',
     '',
     `- Extension version: \`${input.extensionVersion}\``,
+    `- VS Code version: \`${input.vscodeVersion ?? 'unknown'}\``,
     `- Workspace: \`${input.workspaceName ?? 'unknown'}\``,
     `- Active document: \`${input.activeDocument ?? 'none'}\``,
     `- Active language: \`${input.activeLanguageId ?? 'none'}\``,
-    '',
-    '### Recent Events'
+    ''
   ];
+
+  if (input.settings) {
+    lines.push('### Settings Snapshot', '', '```json', JSON.stringify(input.settings, null, 2), '```', '');
+  }
+
+  if (input.latestLanguageStatus) {
+    lines.push(
+      '### Latest Language Status',
+      '',
+      formatLanguageHealthStatus(input.latestLanguageStatus),
+      ''
+    );
+  }
+
+  if (input.latestHiddenHintExplanation) {
+    lines.push('### Latest Hidden Hint Explanation', '', input.latestHiddenHintExplanation, '');
+  }
+
+  if (input.latestWorkspaceDiagnosis) {
+    lines.push('### Latest Workspace Diagnosis', '', input.latestWorkspaceDiagnosis, '');
+  }
+
+  lines.push('### Recent Events');
 
   if (input.events.length === 0) {
     lines.push('', 'No diagnostic events have been recorded yet.');

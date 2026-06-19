@@ -44,6 +44,56 @@ test('creates copyable diagnostics reports for GitHub issues', () => {
   assert.match(report, /language disabled by commentDocLens\.languages/);
 });
 
+test('creates diagnostics reports with settings and latest command context', () => {
+  const report = createDiagnosticsReport({
+    extensionVersion: '0.5.0',
+    vscodeVersion: '1.101.0',
+    workspaceName: 'comment-lens',
+    activeDocument: 'file:///workspace/order.go',
+    activeLanguageId: 'go',
+    settings: {
+      enabled: true,
+      languages: ['go', 'typescript'],
+      languageOverrides: {
+        go: { enabled: true }
+      },
+      maxLineLength: 2000,
+      maxHintLength: 120,
+      minimumDocumentationWords: 1,
+      resolveTimeoutMs: 750
+    },
+    latestLanguageStatus: {
+      languageId: 'go',
+      adapterDisplayName: 'Go',
+      supportLevel: 'stable',
+      documentationSource: 'language-service-with-source-fallback',
+      state: 'ready',
+      reason: 'Language service can provide documentation context.',
+      recommendedExtensions: ['golang.Go'],
+      checkedCapabilities: {
+        hover: true,
+        definition: true,
+        sourceFallback: true
+      }
+    },
+    latestHiddenHintExplanation: 'No symbol candidates were found on the inspected line or visible range.',
+    latestWorkspaceDiagnosis: '# Comment Doc Lens Workspace Language Diagnosis\n\nready: 1, degraded: 0, missingDependency: 0, unknown: 0',
+    events: []
+  });
+
+  assert.match(report, /VS Code version: `1\.101\.0`/);
+  assert.match(report, /### Settings Snapshot/);
+  assert.match(report, /"enabled": true/);
+  assert.match(report, /"languages": \[/);
+  assert.match(report, /### Latest Language Status/);
+  assert.match(report, /Go \(go\) is ready/);
+  assert.match(report, /sourceFallback=true/);
+  assert.match(report, /### Latest Hidden Hint Explanation/);
+  assert.match(report, /No symbol candidates were found/);
+  assert.match(report, /### Latest Workspace Diagnosis/);
+  assert.match(report, /ready: 1/);
+});
+
 test('summarizes workspace language readiness', () => {
   const summary = summarizeWorkspaceDiagnosis([
     {
