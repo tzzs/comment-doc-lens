@@ -199,6 +199,7 @@ test('readmes keep user-facing language support levels concise', () => {
 });
 
 test('maintenance docs define cadence, metrics, and release checks', () => {
+  const agents = readFileSync(join(process.cwd(), 'AGENTS.md'), 'utf8');
   const optimizationPlan = readFileSync(join(process.cwd(), 'docs/2026-06-16-comment-lens-optimization-plan.md'), 'utf8');
   const maintenance = readFileSync(join(process.cwd(), 'docs/maintenance-metrics.md'), 'utf8');
   const releaseChecklist = readFileSync(join(process.cwd(), 'docs/release-quality-checklist.md'), 'utf8');
@@ -212,6 +213,12 @@ test('maintenance docs define cadence, metrics, and release checks', () => {
   assert.match(releaseChecklist, /npm run package/);
   assert.match(releaseChecklist, /Open VSX downloads/);
   assert.match(releaseChecklist, /Marketplace Acquisition Trend/);
+  assert.match(agents, /Commit and PR Title Requirements/);
+  assert.match(agents, /Conventional Commits/);
+  assert.match(agents, /PR title/);
+  assert.match(agents, /\[codex\]/);
+  assert.match(releaseChecklist, /PR title uses Conventional Commit format/);
+  assert.match(releaseChecklist, /Conventional Commit/);
 });
 
 test('language configuration describes registered adapter semantics', () => {
