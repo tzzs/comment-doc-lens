@@ -15,6 +15,7 @@ export const goLanguageAdapter: LanguageAdapter = {
   languageIds: ['go'],
   displayName: 'Go',
   supportLevel: 'stable',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['golang.Go'],
   resolveTimeoutMs: 2500,
   isDeclarationCandidate(candidate, line) {
@@ -37,6 +38,7 @@ export const typescriptFamilyLanguageAdapter: LanguageAdapter = {
   languageIds: ['typescript', 'javascript', 'typescriptreact', 'javascriptreact'],
   displayName: 'TypeScript family',
   supportLevel: 'stable',
+  documentationSource: 'language-service',
   isDeclarationCandidate(candidate, line) {
     return isDeclarationName(candidate, line)
       || isDeclarationContext(candidate, line)
@@ -52,6 +54,7 @@ export const pythonLanguageAdapter: LanguageAdapter = {
   languageIds: ['python'],
   displayName: 'Python',
   supportLevel: 'stable',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
   isDeclarationCandidate(candidate, line) {
     return isPythonDeclarationName(candidate, line)
@@ -75,6 +78,7 @@ export const javaLanguageAdapter: LanguageAdapter = {
   languageIds: ['java'],
   displayName: 'Java',
   supportLevel: 'stable',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['vscjava.vscode-java-pack'],
   isDeclarationCandidate(candidate, line) {
     return isJavaDeclarationName(candidate, line) || isJavaMethodSignatureCandidate(candidate, line);
@@ -96,6 +100,7 @@ export const rustLanguageAdapter: LanguageAdapter = {
   languageIds: ['rust'],
   displayName: 'Rust',
   supportLevel: 'stable',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['rust-lang.rust-analyzer'],
   isDeclarationCandidate(candidate, line) {
     return isRustDeclarationName(candidate, line) || isRustFunctionSignatureCandidate(candidate, line);
@@ -117,6 +122,7 @@ export const csharpLanguageAdapter: LanguageAdapter = {
   languageIds: ['csharp'],
   displayName: 'C#',
   supportLevel: 'experimental',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['ms-dotnettools.csdevkit'],
   isDeclarationCandidate(candidate, line) {
     return isCSharpDeclarationName(candidate, line) || isCSharpMethodSignatureCandidate(candidate, line);
@@ -141,6 +147,7 @@ export const phpLanguageAdapter: LanguageAdapter = {
   languageIds: ['php'],
   displayName: 'PHP',
   supportLevel: 'stable',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['bmewburn.vscode-intelephense-client'],
   isDeclarationCandidate(candidate, line) {
     return isPhpDeclarationName(candidate, line) || isPhpFunctionSignatureCandidate(candidate, line);
@@ -162,6 +169,7 @@ export const rubyLanguageAdapter: LanguageAdapter = {
   languageIds: ['ruby'],
   displayName: 'Ruby',
   supportLevel: 'experimental',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['shopify.ruby-lsp'],
   isDeclarationCandidate(candidate, line) {
     return isRubyDeclarationName(candidate, line) || isRubyFunctionSignatureCandidate(candidate, line);
@@ -186,6 +194,7 @@ export const kotlinLanguageAdapter: LanguageAdapter = {
   languageIds: ['kotlin'],
   displayName: 'Kotlin',
   supportLevel: 'experimental',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['fwcd.kotlin'],
   isDeclarationCandidate(candidate, line) {
     return isKotlinDeclarationName(candidate, line) || isKotlinFunctionSignatureCandidate(candidate, line);
@@ -210,6 +219,7 @@ export const swiftLanguageAdapter: LanguageAdapter = {
   languageIds: ['swift'],
   displayName: 'Swift',
   supportLevel: 'experimental',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['swiftlang.swift-vscode'],
   isDeclarationCandidate(candidate, line) {
     return isSwiftDeclarationName(candidate, line) || isSwiftFunctionSignatureCandidate(candidate, line);
@@ -234,6 +244,7 @@ export const cppLanguageAdapter: LanguageAdapter = {
   languageIds: ['c', 'cpp'],
   displayName: 'C/C++',
   supportLevel: 'experimental',
+  documentationSource: 'language-service-with-source-fallback',
   recommendedExtensions: ['ms-vscode.cpptools'],
   isDeclarationCandidate(candidate, line) {
     return isCppDeclarationName(candidate, line) || isCppFunctionSignatureCandidate(candidate, line);

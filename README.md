@@ -52,15 +52,14 @@ Hints are rendered at the end of the source line so they do not split expression
 
 ## Language Support
 
-| Level | Languages | Notes |
+| Level | Languages | What to expect |
 | --- | --- | --- |
-| Stable | Go, TypeScript, JavaScript, TSX, JSX, Python, Java, Rust, PHP | Covered by adapter tests, representative fixtures, and source-comment fallback where available. |
-| Experimental | C#, Ruby, Kotlin, Swift, C, C++ | Uses language-service hover first and local source-comment fallback for common XML docs, YARD/RDoc, KDoc, Swift doc comments, and Doxygen comments. |
-| Hover-only | None currently | New languages start here only when Comment Doc Lens depends entirely on installed language-service hover/definition output. |
+| Stable / Recommended | Go, TypeScript, JavaScript, TSX, JSX, Python, Java, Rust, PHP | Recommended for everyday use. Covered by adapter tests, representative fixtures, docs, and fallback behavior where applicable. |
+| Experimental | C#, Ruby, Kotlin, Swift, C, C++ | Usable, but may depend more on installed language extensions, project indexing, and ongoing real-language-service validation. |
 
 Install the recommended language extensions for non-built-in languages. Go works best with the official Go extension and `gopls`; Python works best with Python plus Pylance; Rust works best with rust-analyzer.
 
-See the [language support matrix](docs/language-support.md) for support levels, recommended dependencies, fallback strategies, and validation status.
+See the [language support matrix](docs/language-support.md) for support levels, documentation source capabilities, recommended dependencies, fallback strategies, and validation status.
 
 ## Commands
 

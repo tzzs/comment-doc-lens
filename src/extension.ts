@@ -94,6 +94,7 @@ export function activate(context: vscode.ExtensionContext): void {
         languageId: status.languageId,
         state: status.state,
         supportLevel: status.supportLevel,
+        documentationSource: status.documentationSource,
         checkedCapabilities: status.checkedCapabilities,
         recommendedExtensions: status.recommendedExtensions
       });

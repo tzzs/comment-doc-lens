@@ -139,6 +139,7 @@ test('uses adapter documentation quality rules before accepting hover text', asy
       languageIds: ['typescript'],
       displayName: 'TypeScript',
       supportLevel: 'stable',
+      documentationSource: 'language-service',
       documentationQuality: {
         minimumWords: 2
       }

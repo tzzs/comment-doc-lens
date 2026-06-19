@@ -54,13 +54,12 @@ Comment Doc Lens 会扫描当前可见的标识符，调用 VS Code 当前语言
 
 | 等级 | 语言 | 说明 |
 | --- | --- | --- |
-| 稳定 | Go、TypeScript、JavaScript、TSX、JSX、Python、Java、Rust、PHP | 有 adapter 测试、代表性 fixture，并在可行时读取源码注释作为 fallback。 |
-| 实验 | C#、Ruby、Kotlin、Swift、C、C++ | 优先使用语言服务 hover，并为常见 XML docs、YARD/RDoc、KDoc、Swift doc comment 和 Doxygen 注释提供本地 fallback。 |
-| Hover-only | 暂无 | 新语言只有在完全依赖已安装语言服务 hover/definition 输出时才从这里开始。 |
+| 稳定推荐 | Go、TypeScript、JavaScript、TSX、JSX、Python、Java、Rust、PHP | 推荐日常使用，已有测试、fixture、文档说明，并在适用时提供 fallback。 |
+| 实验支持 | C#、Ruby、Kotlin、Swift、C、C++ | 已可使用，但更依赖推荐语言扩展、项目索引和后续真实语言服务验证。 |
 
 非内置语言建议安装对应的推荐扩展。Go 推荐官方 Go 扩展和 `gopls`；Python 推荐 Python 扩展和 Pylance；Rust 推荐 rust-analyzer。
 
-完整支持等级、推荐依赖、fallback 策略和验证状态见 [语言支持矩阵](docs/language-support.md)。
+完整支持等级、文档来源能力、推荐依赖、fallback 策略和验证状态见 [语言支持矩阵](docs/language-support.md)。
 
 ## 命令
 
