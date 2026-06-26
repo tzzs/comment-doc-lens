@@ -680,3 +680,69 @@ test('uses custom hint prefix and places hints at line end', async () => {
     }
   ]);
 });
+
+test('prioritizes method and enum candidates before applying max hint budget', async () => {
+  const resolvedWords: string[] = [];
+  const resolver: CommentHintResolver = {
+    resolve: async (candidate) => {
+      resolvedWords.push(candidate.word);
+      return {
+        summary: `doc for ${candidate.word}`,
+        fullText: `doc for ${candidate.word}`,
+        location: { uri: 'file:///order.ts', line: 1, character: 1 }
+      };
+    }
+  };
+
+  const hints = await buildCommentHints({
+    lines: ['const label = localReference + presenter.format(OrderStatus.Paid);'],
+    range: { startLine: 0, endLineInclusive: 0 },
+    languageId: 'typescript',
+    documentUri: 'file:///order.ts',
+    documentVersion: 1,
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxHintsPerRequest: 2,
+      minIdentifierLength: 2,
+      preferPropertyTail: true,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    resolver
+  });
+
+  assert.deepEqual(resolvedWords, ['format', 'Paid']);
+  assert.deepEqual(hints.map((hint) => hint.label), ['// doc for format', '// doc for Paid']);
+});
+
+test('limits crowded same-line hints without hiding method plus enum pairs', async () => {
+  const resolver: CommentHintResolver = {
+    resolve: async (candidate) => ({
+      summary: `doc for ${candidate.word}`,
+      fullText: `doc for ${candidate.word}`,
+      location: { uri: 'file:///order.ts', line: 1, character: 1 }
+    })
+  };
+
+  const hints = await buildCommentHints({
+    lines: ['const label = presenter.format(OrderStatus.Paid, customer.displayName);'],
+    range: { startLine: 0, endLineInclusive: 0 },
+    languageId: 'typescript',
+    documentUri: 'file:///order.ts',
+    documentVersion: 1,
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxHintsPerRequest: 20,
+      maxHintsPerLine: 2,
+      minIdentifierLength: 2,
+      preferPropertyTail: true,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    resolver
+  });
+
+  assert.deepEqual(hints.map((hint) => hint.label), ['// doc for format', '// doc for Paid']);
+});

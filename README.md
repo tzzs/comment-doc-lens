@@ -96,6 +96,7 @@ Before reporting a missing hint, run `Comment Doc Lens: Show Language Status`, `
 | `commentDocLens.languages` | Registered adapter languages where Comment Doc Lens runs. |
 | `commentDocLens.languageOverrides` | Enable or disable Comment Doc Lens per language. |
 | `commentDocLens.maxHintsPerRequest` | Limit hints produced for one inlay-hint request. |
+| `commentDocLens.maxHintsPerLine` | Limit same-line hints after candidate priority ranking. |
 | `commentDocLens.maxLineLength` | Skip long generated or minified lines. |
 | `commentDocLens.maxHintLength` | Limit the visible summary length. |
 | `commentDocLens.minimumDocumentationWords` | Suppress very short low-signal summaries. |
@@ -106,6 +107,8 @@ Before reporting a missing hint, run `Comment Doc Lens: Show Language Status`, `
 | `commentDocLens.maxCacheEntries` | Bound resolver cache growth. |
 | `commentDocLens.hintPrefix` | Customize the displayed prefix before summaries. |
 | `commentDocLens.enableHintInteractions` | Opt into inlay-hint tooltips and definition locations. |
+
+When several documented symbols appear on one line, Comment Doc Lens ranks call targets and business-value member references before neutral references. It still shows different summaries together until the same-line limit is reached.
 
 ## Known Limits
 

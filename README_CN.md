@@ -96,6 +96,7 @@ Comment Doc Lens 会扫描当前可见的标识符，调用 VS Code 当前语言
 | `commentDocLens.languages` | 指定 Comment Doc Lens 运行的已注册 adapter 语言。 |
 | `commentDocLens.languageOverrides` | 按语言开启或关闭 Comment Doc Lens。 |
 | `commentDocLens.maxHintsPerRequest` | 限制单次 inlay hint 请求生成的提示数量。 |
+| `commentDocLens.maxHintsPerLine` | 候选优先级排序后，限制同一行展示的提示数量。 |
 | `commentDocLens.maxLineLength` | 跳过过长的生成代码或压缩代码行。 |
 | `commentDocLens.maxHintLength` | 限制摘要展示长度。 |
 | `commentDocLens.minimumDocumentationWords` | 过滤过短、低信号的摘要。 |
@@ -106,6 +107,8 @@ Comment Doc Lens 会扫描当前可见的标识符，调用 VS Code 当前语言
 | `commentDocLens.maxCacheEntries` | 限制 resolver 缓存规模。 |
 | `commentDocLens.hintPrefix` | 自定义摘要前缀。 |
 | `commentDocLens.enableHintInteractions` | 可选开启 inlay hint tooltip 和定义位置跳转。 |
+
+当同一行出现多个有文档的符号时，Comment Doc Lens 会优先保留调用目标和业务语义更强的成员引用，再保留普通引用。不同摘要仍可同时展示，直到达到同一行数量上限。
 
 ## 已知限制
 

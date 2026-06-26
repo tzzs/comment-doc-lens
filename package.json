@@ -171,6 +171,12 @@
           "minimum": 1,
           "description": "%commentDocLens.configuration.maxHintsPerRequest.description%"
         },
+        "commentDocLens.maxHintsPerLine": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "description": "%commentDocLens.configuration.maxHintsPerLine.description%"
+        },
         "commentDocLens.minIdentifierLength": {
           "type": "number",
           "default": 2,

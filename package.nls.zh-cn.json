@@ -13,6 +13,7 @@
   "commentDocLens.configuration.maxLineLength.description": "扫描候选符号时允许的最大源码行长度。更长的行会被跳过，以避免在生成文件或压缩文件中产生昂贵查找。",
   "commentDocLens.configuration.maxHintLength.description": "行内文档摘要的最大长度。",
   "commentDocLens.configuration.maxHintsPerRequest.description": "单次 inlay hint 请求最多生成的提示数量。",
+  "commentDocLens.configuration.maxHintsPerLine.description": "候选优先级排序后，同一源码行最多展示的行内文档提示数量。",
   "commentDocLens.configuration.minIdentifierLength.description": "显示提示前所需的最短标识符长度；如果文档包含定义位置则不受此限制。",
   "commentDocLens.configuration.minimumDocumentationWords.description": "文档摘要可显示前所需的最少词数。",
   "commentDocLens.configuration.preferPropertyTail.description": "在属性链中优先使用最后一个标识符，例如 foo.bar.baz 中的 baz。",

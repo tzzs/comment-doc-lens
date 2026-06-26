@@ -13,6 +13,7 @@
   "commentDocLens.configuration.maxLineLength.description": "Maximum source line length scanned for candidate symbols. Longer lines are skipped to avoid expensive lookups in generated or minified files.",
   "commentDocLens.configuration.maxHintLength.description": "Maximum length of the inline comment summary.",
   "commentDocLens.configuration.maxHintsPerRequest.description": "Maximum number of hints produced per inlay hint request.",
+  "commentDocLens.configuration.maxHintsPerLine.description": "Maximum inline documentation hints shown on one source line after candidate priority ranking.",
   "commentDocLens.configuration.minIdentifierLength.description": "Minimum identifier length before hints are shown unless documentation includes a definition location.",
   "commentDocLens.configuration.minimumDocumentationWords.description": "Minimum number of words required in a documentation summary before it can be shown.",
   "commentDocLens.configuration.preferPropertyTail.description": "Prefer the final identifier in property chains, such as baz in foo.bar.baz.",

@@ -112,6 +112,7 @@ test('extension contributions use commentDocLens identifiers', () => {
     'commentDocLens.maxLineLength',
     'commentDocLens.maxHintLength',
     'commentDocLens.maxHintsPerRequest',
+    'commentDocLens.maxHintsPerLine',
     'commentDocLens.minIdentifierLength',
     'commentDocLens.minimumDocumentationWords',
     'commentDocLens.preferPropertyTail',
