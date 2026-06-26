@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.5.0...comment-doc-lens-v0.6.0) (2026-06-26)
+
+
+### Features
+
+* **diagnostics:** improve feedback evidence loops ([#29](https://github.com/tzzs/comment-doc-lens/issues/29)) ([e19bbcf](https://github.com/tzzs/comment-doc-lens/commit/e19bbcfcd29ed445c12f3f6c7c10d4c7ea4b4a27))
+* **hints:** prioritize candidate ranking ([cc2f4ed](https://github.com/tzzs/comment-doc-lens/commit/cc2f4ed2250c5d828ceee24143050e3b58e62d90))
+
+
+### Bug Fixes
+
+* **formatter:** filter gopls hover documentation links ([d6731d1](https://github.com/tzzs/comment-doc-lens/commit/d6731d188f51e4e7c8271727ae8dbd25b84e2f76))
+
 ## [0.5.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.4.2...comment-doc-lens-v0.5.0) (2026-06-16)
 
 
