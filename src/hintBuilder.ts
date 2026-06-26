@@ -1,4 +1,9 @@
 import { scanCandidateSymbols, type LineRange, type SymbolCandidate } from './candidateScanner';
+import {
+  prioritizeCandidates,
+  selectHintsForLineBudget,
+  type PrioritizedHint
+} from './candidatePriority';
 import { hasMinimumWordCount } from './documentationFormatter';
 import type { LocationLike, ResolvedDocumentation } from './documentationResolver';
 import type { LanguageAdapter } from './languages/languageAdapter';
@@ -10,6 +15,7 @@ export interface CommentDocLensConfig {
   languageOverrides?: Readonly<Record<string, { enabled?: boolean }>>;
   maxLineLength?: number;
   maxHintsPerRequest: number;
+  maxHintsPerLine?: number;
   minIdentifierLength: number;
   minimumDocumentationWords?: number;
   preferPropertyTail: boolean;
@@ -76,15 +82,17 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
     getCandidateScanLimit(input.config.maxHintsPerRequest),
     input.config.maxLineLength
   );
-  const candidatesToResolve = dedupeCandidates(
+  const filteredCandidates = dedupeCandidates(
     candidates.filter((candidate) => shouldResolveCandidate(candidate, input, languageAdapter))
-  ).slice(0, input.config.maxHintsPerRequest);
+  );
+  const candidatesToResolve = prioritizeCandidates(filteredCandidates, input.lines)
+    .slice(0, input.config.maxHintsPerRequest);
   const resolvedByCandidate = await mapWithConcurrency(
     candidatesToResolve,
     MAX_CONCURRENT_RESOLVES,
     async (candidate) => resolveCandidate(candidate, input, languageAdapter)
   );
-  const hints: CommentHint[] = [];
+  const hints: PrioritizedHint[] = [];
 
   for (const resolved of resolvedByCandidate) {
     if (!resolved) {
@@ -100,15 +108,13 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
       continue;
     }
 
-    const hint: CommentHint = {
+    const hint: PrioritizedHint = {
       line: candidate.line,
       character: getLineEndCharacter(input.lines, candidate.line),
       label: `${input.config.hintPrefix ?? '// '}${documentation.summary}`,
-      tooltip: documentation.fullText
+      tooltip: documentation.fullText,
+      candidate
     };
-    if (input.includeCandidateData) {
-      hint.candidate = candidate;
-    }
     if (documentation.location) {
       hint.location = documentation.location;
     }
@@ -116,7 +122,15 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
     addHint(hints, hint, input.config.dedupeLineHints);
   }
 
-  return hints;
+  const selectedHints = selectHintsForLineBudget(hints, input.lines, input.config.maxHintsPerLine);
+  return selectedHints.map((hint) => {
+    if (input.includeCandidateData) {
+      return hint;
+    }
+
+    const { candidate: _candidate, ...publicHint } = hint;
+    return publicHint;
+  });
 }
 
 function isLanguageEnabled(config: CommentDocLensConfig, languageId: string): boolean {
@@ -202,7 +216,7 @@ function shouldResolveCandidate(
   return line[candidate.endCharacter] !== '.';
 }
 
-function addHint(hints: CommentHint[], hint: CommentHint, dedupeLineHints: boolean): void {
+function addHint<T extends CommentHint>(hints: T[], hint: T, dedupeLineHints: boolean): void {
   if (!dedupeLineHints) {
     hints.push(hint);
     return;
