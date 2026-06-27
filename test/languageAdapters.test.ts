@@ -23,6 +23,10 @@ test('go adapter owns declaration filtering and source comment fallback behavior
   assert.equal(goLanguageAdapter.isDeclarationCandidate?.(candidate('FormatOrderStatus', 5), 'func FormatOrderStatus(status OrderStatus) string {'), true);
   assert.equal(goLanguageAdapter.isDeclarationCandidate?.(candidate('status', 2), '  status := OrderStatusPaid'), true);
   assert.equal(goLanguageAdapter.isDeclarationCandidate?.(candidate('OrderStatusPaid', 7), 'case OrderStatusPaid:'), false);
+  const interfaceMethodLine = 'FormatOrderStatus(status OrderStatus) string';
+  assert.equal(goLanguageAdapter.isDeclarationCandidate?.(candidateInLine('FormatOrderStatus', interfaceMethodLine), interfaceMethodLine), true);
+  assert.equal(goLanguageAdapter.isDeclarationCandidate?.(candidateInLine('status', interfaceMethodLine), interfaceMethodLine), true);
+  assert.equal(goLanguageAdapter.isDeclarationCandidate?.(candidateInLine('OrderStatus', interfaceMethodLine), interfaceMethodLine), true);
 
   assert.equal(goLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.go', line: 3, character: 0 }), true);
   assert.equal(goLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.ts', line: 3, character: 0 }), false);
@@ -41,6 +45,21 @@ test('typescript-family adapter owns declaration and jsx noise filtering behavio
   assert.equal(typescriptFamilyLanguageAdapter.isDeclarationCandidate?.(candidate('format', classMethodLine.indexOf('format')), classMethodLine), true);
   const arrowLine = 'const formatOrderStatus = (status) => status;';
   assert.equal(typescriptFamilyLanguageAdapter.isDeclarationCandidate?.(candidate('status', arrowLine.indexOf('status')), arrowLine), true);
+  const classFieldArrowLine = 'formatOrderStatus = (status) => status;';
+  assert.equal(
+    typescriptFamilyLanguageAdapter.isDeclarationCandidate?.(
+      candidate('formatOrderStatus', classFieldArrowLine.indexOf('formatOrderStatus')),
+      classFieldArrowLine
+    ),
+    true
+  );
+  assert.equal(
+    typescriptFamilyLanguageAdapter.isDeclarationCandidate?.(
+      candidate('status', classFieldArrowLine.lastIndexOf('status')),
+      classFieldArrowLine
+    ),
+    true
+  );
   const callLine = 'const label = formatOrderStatus(status);';
   assert.equal(typescriptFamilyLanguageAdapter.isDeclarationCandidate?.(candidate('formatOrderStatus', callLine.indexOf('formatOrderStatus')), callLine), false);
   assert.equal(typescriptFamilyLanguageAdapter.isDeclarationCandidate?.(candidate('status', callLine.indexOf('status')), callLine), false);
@@ -126,6 +145,7 @@ test('java manual fixture includes displayable call-site references', () => {
 
 test('rust adapter owns declaration filtering and doc comment fallback behavior', () => {
   assert.equal(rustLanguageAdapter.supportLevel, 'stable');
+  assert.equal(rustLanguageAdapter.isDeclarationCandidate?.(candidate('pub', 0), 'pub fn format_status(status: &str) -> String {'), true);
   assert.equal(rustLanguageAdapter.isDeclarationCandidate?.(candidate('format_status', 7), 'pub fn format_status(status: &str) -> String {'), true);
   assert.equal(rustLanguageAdapter.isDeclarationCandidate?.(candidate('OrderPresenter', 11), 'pub struct OrderPresenter;'), true);
   const unitStructReferenceLine = 'let _presenter = OrderPresenter;';
@@ -276,6 +296,7 @@ test('ruby adapter owns yard and rdoc source fallback behavior', () => {
   assert.equal(rubyLanguageAdapter.supportLevel, 'experimental');
   assert.deepEqual(rubyLanguageAdapter.languageIds, ['ruby']);
   assert.deepEqual(rubyLanguageAdapter.recommendedExtensions, ['shopify.ruby-lsp']);
+  assert.equal(rubyLanguageAdapter.isDeclarationCandidate?.(candidate('def', 0), 'def format_status(status)'), true);
   assert.equal(rubyLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.rb', line: 0, character: 0 }), true);
   assert.equal(rubyLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.kt', line: 0, character: 0 }), false);
 
@@ -320,6 +341,14 @@ test('planned adapters expose fallback and dependency diagnostics metadata', () 
     '/** Presents order data. */',
     'class OrderPresenter'
   ]);
+  const kotlinFunctionLine = 'fun formatStatus(status: String): String = status';
+  assert.equal(
+    kotlinLanguageAdapter.isDeclarationCandidate?.(
+      candidateInLine('status', kotlinFunctionLine, 'last'),
+      kotlinFunctionLine
+    ),
+    true
+  );
   assert.equal(kotlinLanguageAdapter.sourceComment?.findDefinitionLine?.(kotlinDocument, candidate('formatStatus', 4, 4), {
     uri: 'file:///OrderPresenter.kt',
     line: 4,

@@ -70,6 +70,7 @@ const COMMON_KEYWORDS = new Set([
 
 const IDENTIFIER_START = /[$_\p{L}]/u;
 const IDENTIFIER_PART = /[$_\p{L}\p{N}]/u;
+const HASH_LINE_COMMENT_LANGUAGES = new Set(['php', 'python', 'ruby']);
 
 export function scanCandidateSymbols(
   lines: readonly string[],
@@ -121,6 +122,10 @@ export function scanCandidateSymbols(
       }
 
       if (current === '/' && next === '/') {
+        break;
+      }
+
+      if (current === '#' && HASH_LINE_COMMENT_LANGUAGES.has(languageId)) {
         break;
       }
 

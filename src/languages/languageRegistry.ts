@@ -40,7 +40,8 @@ export const typescriptFamilyLanguageAdapter: LanguageAdapter = {
   supportLevel: 'stable',
   documentationSource: 'language-service',
   isDeclarationCandidate(candidate, line) {
-    return isDeclarationName(candidate, line)
+    return isTypeScriptFunctionLikeDeclarationLine(line)
+      || isDeclarationName(candidate, line)
       || isDeclarationContext(candidate, line)
       || isFunctionLikeDeclarationName(candidate, line)
       || isFunctionParameterName(candidate, line);
@@ -373,6 +374,31 @@ function isFunctionParameterName(candidate: { startCharacter: number; endCharact
   return looksLikeMethodDeclaration;
 }
 
+function isTypeScriptFunctionLikeDeclarationLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (/^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\b/.test(trimmed)) {
+    return true;
+  }
+
+  const methodMatch = /^(?:(?:public|private|protected|static|readonly|override|declare|abstract|async|get|set)\s+)*[$_\p{L}][$_\p{L}\p{N}]*\s*\(/u.exec(trimmed);
+  if (methodMatch && !isTypeScriptControlStatement(methodMatch[0])) {
+    const openParen = trimmed.indexOf('(', methodMatch.index);
+    const closeParen = findMatchingCloseParen(trimmed, openParen);
+    if (closeParen >= 0) {
+      const afterCloseParen = trimmed.slice(closeParen + 1).trimStart();
+      if (afterCloseParen.startsWith('{') || afterCloseParen.startsWith(':')) {
+        return true;
+      }
+    }
+  }
+
+  return /^(?:(?:public|private|protected|static|readonly|override|declare|abstract)\s+)*(?:(?:const|let|var)\s+)?[$_\p{L}][$_\p{L}\p{N}]*\s*(?:=|:)\s*(?:async\s+)?(?:function\b|\([^)]*\)\s*=>|[$_\p{L}][$_\p{L}\p{N}]*\s*=>)/u.test(trimmed);
+}
+
+function isTypeScriptControlStatement(value: string): boolean {
+  return /^(?:if|for|while|switch|catch|with)\s*\(/.test(value);
+}
+
 function findMatchingCloseParen(line: string, openParen: number): number {
   let depth = 0;
   for (let character = openParen; character < line.length; character++) {
@@ -546,6 +572,10 @@ function isGoDeclarationName(candidate: { startCharacter: number; endCharacter: 
 function isGoDeclarationContext(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
   const trimmedLine = line.trimStart();
   const leadingWhitespace = line.length - trimmedLine.length;
+  if (isGoMethodSignatureDeclarationLine(trimmedLine)) {
+    return true;
+  }
+
   if (trimmedLine.startsWith('func ')) {
     const bodyStart = line.indexOf('{');
     if (bodyStart < 0 || candidate.startCharacter < bodyStart) {
@@ -564,6 +594,38 @@ function isGoDeclarationContext(candidate: { startCharacter: number; endCharacte
   }
 
   return false;
+}
+
+function isGoMethodSignatureDeclarationLine(trimmedLine: string): boolean {
+  const signatureStart = trimmedLine.match(/^[A-Za-z_]\w*\s*\(/);
+  if (!signatureStart) {
+    return false;
+  }
+
+  const openParen = trimmedLine.indexOf('(');
+  const closeParen = findMatchingCloseParen(trimmedLine, openParen);
+  if (closeParen < 0) {
+    return false;
+  }
+
+  const afterSignature = trimmedLine.slice(closeParen + 1).trim();
+  if (afterSignature.length > 0) {
+    return isGoReturnSignature(afterSignature);
+  }
+
+  return hasGoTypedParameterList(trimmedLine.slice(openParen + 1, closeParen));
+}
+
+function isGoReturnSignature(value: string): boolean {
+  if (value.startsWith('{') || value.includes('=')) {
+    return false;
+  }
+
+  return /^(?:\*|\[\]|map\[|chan\b|<-chan\b|[A-Za-z_]\w*|\([^)]*\))/.test(value);
+}
+
+function hasGoTypedParameterList(params: string): boolean {
+  return /(?:^|,)\s*[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*\s+[*\[\]A-Za-z_]/.test(params);
 }
 
 function findGoAssignmentOperator(line: string): number {
@@ -787,7 +849,15 @@ function isRustDeclarationName(candidate: { startCharacter: number; endCharacter
 }
 
 function isRustFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  if (isRustFunctionDeclarationLine(line)) {
+    return true;
+  }
+
   return isKeywordFunctionSignatureCandidate(candidate, line, /\bfn\b/, ['{', ';']);
+}
+
+function isRustFunctionDeclarationLine(line: string): boolean {
+  return /\bfn\s+[$_\p{L}][$_\p{L}\p{N}_]*\s*\(/u.test(line);
 }
 
 function isRustTupleVariantDeclaration(candidate: { endCharacter: number }, line: string): boolean {
@@ -941,18 +1011,7 @@ function isRubyDeclarationName(candidate: { startCharacter: number; endCharacter
 
 function isRubyFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
   const definitionMatch = /^\s*def\s+/.exec(line);
-  if (!definitionMatch) {
-    return false;
-  }
-
-  const methodStart = definitionMatch[0].length;
-  const methodMatch = /(?:self\.)?[$_\p{L}][$_\p{L}\p{N}_]*[?!=]?/u.exec(line.slice(methodStart));
-  if (!methodMatch) {
-    return false;
-  }
-
-  const methodEnd = methodStart + methodMatch.index + methodMatch[0].length;
-  return candidate.startCharacter > methodEnd;
+  return definitionMatch !== null && candidate.startCharacter >= definitionMatch.index;
 }
 
 function findRubyDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
@@ -974,7 +1033,15 @@ function isKotlinDeclarationName(candidate: { startCharacter: number; endCharact
 }
 
 function isKotlinFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
+  if (isKotlinFunctionDeclarationLine(line)) {
+    return true;
+  }
+
   return isKeywordFunctionSignatureCandidate(candidate, line, /\bfun\b/, ['{', '=']);
+}
+
+function isKotlinFunctionDeclarationLine(line: string): boolean {
+  return /^\s*(?:(?:public|private|protected|internal|override|open|final|abstract|suspend|inline|operator|infix|tailrec|external)\s+)*fun\s+[$_\p{L}][$_\p{L}\p{N}_]*\s*\(/u.test(line);
 }
 
 function findKotlinDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {

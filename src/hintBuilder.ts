@@ -123,7 +123,8 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
   }
 
   const selectedHints = selectHintsForLineBudget(hints, input.lines, input.config.maxHintsPerLine);
-  return selectedHints.map((hint) => {
+  const displayHints = groupSameLineHints(selectedHints, input.config.hintPrefix ?? '// ');
+  return displayHints.map((hint) => {
     if (input.includeCandidateData) {
       return hint;
     }
@@ -246,6 +247,51 @@ function addHint<T extends CommentHint>(hints: T[], hint: T, dedupeLineHints: bo
   }
 
   hints.push(hint);
+}
+
+function groupSameLineHints(hints: readonly PrioritizedHint[], prefix: string): CommentHint[] {
+  const byLine = new Map<number, PrioritizedHint[]>();
+  for (const hint of hints) {
+    const lineHints = byLine.get(hint.line) ?? [];
+    lineHints.push(hint);
+    byLine.set(hint.line, lineHints);
+  }
+
+  const emittedLines = new Set<number>();
+  const grouped: CommentHint[] = [];
+  for (const hint of hints) {
+    const lineHints = byLine.get(hint.line) ?? [];
+    if (lineHints.length <= 1) {
+      grouped.push(hint);
+      continue;
+    }
+
+    if (emittedLines.has(hint.line)) {
+      continue;
+    }
+
+    emittedLines.add(hint.line);
+    grouped.push({
+      line: hint.line,
+      character: hint.character,
+      label: `${prefix}${lineHints.map((lineHint) => formatGroupedLabelPart(lineHint, prefix)).join(' · ')}`,
+      tooltip: lineHints.map(formatGroupedTooltipPart).join('\n\n')
+    });
+  }
+
+  return grouped;
+}
+
+function formatGroupedLabelPart(hint: PrioritizedHint, prefix: string): string {
+  return `${hint.candidate.word}: ${stripHintPrefix(hint.label, prefix)}`;
+}
+
+function formatGroupedTooltipPart(hint: PrioritizedHint): string {
+  return `${hint.candidate.word}:\n${hint.tooltip}`;
+}
+
+function stripHintPrefix(label: string, prefix: string): string {
+  return label.startsWith(prefix) ? label.slice(prefix.length) : label;
 }
 
 async function mapWithConcurrency<T, R>(
