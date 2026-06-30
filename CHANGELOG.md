@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.6.1...comment-doc-lens-v0.6.2) (2026-06-30)
+
+
+### Bug Fixes
+
+* **hints:** keep documentation hints at line ends ([84215ec](https://github.com/tzzs/comment-doc-lens/commit/84215ec8fedb57ca09cb8f72d1afda087e667821))
+
 ## [0.6.1](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.6.0...comment-doc-lens-v0.6.1) (2026-06-27)
 
 
