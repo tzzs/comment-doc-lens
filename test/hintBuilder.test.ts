@@ -513,7 +513,7 @@ test('filters short identifiers unless resolved documentation has a location', a
     resolver
   });
 
-  assert.deepEqual(hints.map((hint) => hint.label), ['// b: doc for b · total: doc for total']);
+  assert.deepEqual(hints.map((hint) => hint.label), ['// b: doc for b | total: doc for total']);
 });
 
 test('dedupes repeated line summaries and prefers a location-bearing hint', async () => {
@@ -580,7 +580,7 @@ test('keeps repeated summaries when line dedupe is disabled', async () => {
     resolver
   });
 
-  assert.deepEqual(hints.map((hint) => hint.label), ['// paid: 已支付订单 · paidAgain: 已支付订单']);
+  assert.deepEqual(hints.map((hint) => hint.label), ['// paid: 已支付订单 | paidAgain: 已支付订单']);
 });
 
 test('skips common declaration names and jsx tag names', async () => {
@@ -921,7 +921,7 @@ test('groups multiple same-line hints with candidate names', async () => {
     {
       line: 0,
       character: 46,
-      label: '// formatStatus: 格式化状态 · OrderStatusPaid: 已支付订单状态',
+      label: '// formatStatus: 格式化状态 | OrderStatusPaid: 已支付订单状态',
       tooltip: 'formatStatus:\n格式化状态\n用于订单列表展示\n\nOrderStatusPaid:\n已支付订单状态'
     }
   ]);
@@ -959,7 +959,7 @@ test('prioritizes method and enum candidates before applying max hint budget', a
   });
 
   assert.deepEqual(resolvedWords, ['format', 'Paid']);
-  assert.deepEqual(hints.map((hint) => hint.label), ['// format: doc for format · Paid: doc for Paid']);
+  assert.deepEqual(hints.map((hint) => hint.label), ['// format: doc for format | Paid: doc for Paid']);
 });
 
 test('limits crowded same-line hints without hiding method plus enum pairs', async () => {
@@ -990,5 +990,5 @@ test('limits crowded same-line hints without hiding method plus enum pairs', asy
     resolver
   });
 
-  assert.deepEqual(hints.map((hint) => hint.label), ['// format: doc for format · Paid: doc for Paid']);
+  assert.deepEqual(hints.map((hint) => hint.label), ['// format: doc for format | Paid: doc for Paid']);
 });

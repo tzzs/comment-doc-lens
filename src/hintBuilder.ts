@@ -63,6 +63,7 @@ export interface BuildCommentHintsInput {
 const MAX_CONCURRENT_RESOLVES = 4;
 const CANDIDATE_SCAN_MULTIPLIER = 3;
 const MIN_EXTRA_SCAN_CANDIDATES = 10;
+const GROUPED_HINT_SEPARATOR = ' | ';
 const DEFAULT_LANGUAGE_REGISTRY = createLanguageRegistry(defaultLanguageAdapters);
 
 export async function buildCommentHints(input: BuildCommentHintsInput): Promise<CommentHint[]> {
@@ -274,7 +275,7 @@ function groupSameLineHints(hints: readonly PrioritizedHint[], prefix: string): 
     grouped.push({
       line: hint.line,
       character: hint.character,
-      label: `${prefix}${lineHints.map((lineHint) => formatGroupedLabelPart(lineHint, prefix)).join(' · ')}`,
+      label: `${prefix}${lineHints.map((lineHint) => formatGroupedLabelPart(lineHint, prefix)).join(GROUPED_HINT_SEPARATOR)}`,
       tooltip: lineHints.map(formatGroupedTooltipPart).join('\n\n')
     });
   }
