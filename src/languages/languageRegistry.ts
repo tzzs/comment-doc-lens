@@ -10,7 +10,6 @@ import {
   findMatchingCloseParen,
   isCandidateInRange,
   isCStyleMethodSignatureCandidate,
-  isFilePathWithAnyExtension,
   isFilePathWithExtension,
   isKeywordFunctionSignatureCandidate
 } from './shared';
@@ -22,6 +21,8 @@ import { csharpLanguageAdapter } from './csharp';
 import { phpLanguageAdapter } from './php';
 import { rubyLanguageAdapter } from './ruby';
 import { kotlinLanguageAdapter } from './kotlin';
+import { swiftLanguageAdapter } from './swift';
+import { cppLanguageAdapter } from './cpp';
 
 export { goLanguageAdapter } from './go';
 export { typescriptFamilyLanguageAdapter } from './typescript';
@@ -32,6 +33,8 @@ export { csharpLanguageAdapter } from './csharp';
 export { phpLanguageAdapter } from './php';
 export { rubyLanguageAdapter } from './ruby';
 export { kotlinLanguageAdapter } from './kotlin';
+export { swiftLanguageAdapter } from './swift';
+export { cppLanguageAdapter } from './cpp';
 
 export interface LanguageRegistry {
   getAdapter(languageId: string): LanguageAdapter | undefined;
@@ -39,56 +42,6 @@ export interface LanguageRegistry {
   getLanguageIds(): string[];
   getEnabledLanguageIds(configuredLanguageIds: readonly string[]): string[];
 }
-
-export const swiftLanguageAdapter: LanguageAdapter = {
-  languageIds: ['swift'],
-  displayName: 'Swift',
-  supportLevel: 'experimental',
-  documentationSource: 'language-service-with-source-fallback',
-  recommendedExtensions: ['swiftlang.swift-vscode'],
-  isDeclarationCandidate(candidate, line) {
-    return isSwiftDeclarationName(candidate, line) || isSwiftFunctionSignatureCandidate(candidate, line);
-  },
-  sourceComment: {
-    canRead(location) {
-      return isFilePathWithExtension(location.uri, '.swift');
-    },
-    findDefinitionLine(document, candidate) {
-      return findSwiftDefinitionLine(document, candidate.word, candidate.line);
-    },
-    collectLeadingComments(document, definitionLine) {
-      return collectLeadingDocCommentLines(document, definitionLine);
-    }
-  },
-  documentationQuality: {
-    minimumWords: 2
-  }
-};
-
-export const cppLanguageAdapter: LanguageAdapter = {
-  languageIds: ['c', 'cpp'],
-  displayName: 'C/C++',
-  supportLevel: 'experimental',
-  documentationSource: 'language-service-with-source-fallback',
-  recommendedExtensions: ['ms-vscode.cpptools'],
-  isDeclarationCandidate(candidate, line) {
-    return isCppDeclarationName(candidate, line) || isCppFunctionSignatureCandidate(candidate, line);
-  },
-  sourceComment: {
-    canRead(location) {
-      return isFilePathWithAnyExtension(location.uri, ['.c', '.cc', '.cpp', '.cxx', '.h', '.hh', '.hpp', '.hxx']);
-    },
-    findDefinitionLine(document, candidate) {
-      return findCppDefinitionLine(document, candidate.word, candidate.line);
-    },
-    collectLeadingComments(document, definitionLine) {
-      return collectLeadingDocCommentLines(document, definitionLine);
-    }
-  },
-  documentationQuality: {
-    minimumWords: 2
-  }
-};
 
 export const defaultLanguageAdapters = [
   goLanguageAdapter,
@@ -135,56 +88,4 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
 
 export function getDefaultLanguageIds(): string[] {
   return createLanguageRegistry(defaultLanguageAdapters).getLanguageIds();
-}
-
-function isSwiftDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
-  if (/\b(?:actor|class|enum|func|let|protocol|struct|var|case)\s+$/.test(beforeCandidate)) {
-    return true;
-  }
-
-  return afterCandidate.startsWith(':') || afterCandidate.startsWith('=');
-}
-
-function isSwiftFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  return isKeywordFunctionSignatureCandidate(candidate, line, /\bfunc\b/, ['{']);
-}
-
-function findSwiftDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
-  const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:actor|class|enum|protocol|struct)\\s+${wordPattern}\\b`),
-    new RegExp(`\\bfunc\\s+${wordPattern}\\s*\\(`),
-    new RegExp(`\\b(?:let|var)\\s+${wordPattern}\\b`),
-    new RegExp(`\\bcase\\s+${wordPattern}\\b`)
-  ]);
-}
-
-function isCppDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
-  if (/\b(?:class|enum|struct|typedef)\s+$/.test(beforeCandidate)) {
-    return true;
-  }
-
-  return afterCandidate.startsWith(';') || afterCandidate.startsWith('=');
-}
-
-function isCppFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  return isCStyleMethodSignatureCandidate(
-    candidate,
-    line,
-    /^(?:$|[;{:]|->|\b(?:const|noexcept|override|final|requires)\b|=\s*(?:0|default|delete)\b)/
-  );
-}
-
-function findCppDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
-  const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:class|enum|struct)\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*\\(`),
-    new RegExp(`^\\s*#define\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
-  ]);
 }

@@ -69,10 +69,6 @@ export function isFilePathWithExtension(uri: string, extension: string): boolean
   }
 }
 
-export function isFilePathWithAnyExtension(uri: string, extensions: readonly string[]): boolean {
-  return extensions.some((extension) => isFilePathWithExtension(uri, extension));
-}
-
 export function collectLeadingBlockCommentLines(
   document: SourceLineReader,
   definitionLine: number,
