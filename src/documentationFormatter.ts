@@ -7,11 +7,14 @@ export interface DocumentationFormatOptions {
   minimumWords?: number;
 }
 
+const SUMMARY_SEPARATOR = ' / ';
+
 type DocumentationLineKind = 'prose' | 'tag';
 
 interface NormalizedDocumentationLine {
   text: string;
   kind: DocumentationLineKind;
+  paragraph: number;
 }
 
 export function formatDocumentation(
@@ -24,27 +27,50 @@ export function formatDocumentation(
     return undefined;
   }
 
-  const summaryIndex = normalized.findIndex((line) => line.kind === 'prose');
-  const selectedIndex = summaryIndex >= 0 ? summaryIndex : 0;
-  const selected = normalized[selectedIndex];
-
-  if (!hasMinimumWordCount(selected.text, options.minimumWords ?? 1)) {
+  const summary = selectSummary(normalized, maxHintLength);
+  if (!hasMinimumWordCount(summary, options.minimumWords ?? 1)) {
     return undefined;
   }
 
+  const summaryIndex = normalized.findIndex((line) => line.kind === 'prose');
+  const selectedIndex = summaryIndex >= 0 ? summaryIndex : 0;
+  const selected = normalized[selectedIndex];
   const displayLines = selectedIndex === 0
     ? normalized
     : [selected, ...normalized.filter((_, index) => index !== selectedIndex)];
   const fullText = displayLines.map((line) => line.text).join('\n');
-  const summary = truncate(selected.text, maxHintLength);
 
   return { summary, fullText };
+}
+
+function selectSummary(normalized: readonly NormalizedDocumentationLine[], maxHintLength: number): string {
+  const paragraphs = groupProseParagraphs(normalized);
+  if (paragraphs.length > 0) {
+    return truncate(paragraphs.join(SUMMARY_SEPARATOR), maxHintLength);
+  }
+
+  return truncate(normalized[0].text, maxHintLength);
+}
+
+function groupProseParagraphs(normalized: readonly NormalizedDocumentationLine[]): string[] {
+  const byParagraph = new Map<number, string>();
+  for (const line of normalized) {
+    if (line.kind !== 'prose') {
+      continue;
+    }
+
+    const previous = byParagraph.get(line.paragraph);
+    byParagraph.set(line.paragraph, previous === undefined ? line.text : `${previous} ${line.text}`);
+  }
+
+  return Array.from(byParagraph.values());
 }
 
 function normalizeDocumentation(markdownLines: readonly string[]): NormalizedDocumentationLine[] {
   const lines: NormalizedDocumentationLine[] = [];
   const seen = new Set<string>();
   let inCodeBlock = false;
+  let paragraph = 0;
 
   for (const rawLine of markdownLines) {
     const trimmed = rawLine.trim();
@@ -54,7 +80,12 @@ function normalizeDocumentation(markdownLines: readonly string[]): NormalizedDoc
       continue;
     }
 
-    if (inCodeBlock || trimmed.length === 0) {
+    if (inCodeBlock) {
+      continue;
+    }
+
+    if (trimmed.length === 0) {
+      paragraph++;
       continue;
     }
 
@@ -66,7 +97,7 @@ function normalizeDocumentation(markdownLines: readonly string[]): NormalizedDoc
     const normalized = normalizeDocumentationLine(cleaned);
     if (normalized && !seen.has(normalized.text)) {
       seen.add(normalized.text);
-      lines.push(normalized);
+      lines.push({ ...normalized, paragraph });
     }
   }
 
@@ -83,7 +114,7 @@ function cleanCommentMarker(line: string): string {
     .trim();
 }
 
-function normalizeDocumentationLine(line: string): NormalizedDocumentationLine | undefined {
+function normalizeDocumentationLine(line: string): Omit<NormalizedDocumentationLine, 'paragraph'> | undefined {
   if (line.length === 0) {
     return undefined;
   }
@@ -105,7 +136,7 @@ function normalizeDocumentationLine(line: string): NormalizedDocumentationLine |
   return { text: line, kind: 'prose' };
 }
 
-function normalizeXmlDocumentationLine(line: string): NormalizedDocumentationLine | undefined {
+function normalizeXmlDocumentationLine(line: string): Omit<NormalizedDocumentationLine, 'paragraph'> | undefined {
   const param = line.match(/^<param\b([^>]*)>(.*?)<\/param>$/i);
   if (param) {
     const name = param[1].match(/\bname=(?:"([^"]+)"|'([^']+)')/i);
@@ -149,7 +180,7 @@ function isXmlContainerOnly(line: string): boolean {
   return /^<\/?(summary|remarks|value|example|para)\b[^>]*>\s*$/i.test(line);
 }
 
-function normalizeDocCommandLine(line: string): NormalizedDocumentationLine | undefined {
+function normalizeDocCommandLine(line: string): Omit<NormalizedDocumentationLine, 'paragraph'> | undefined {
   const summaryCommand = line.match(/^([@\\])(?:brief|description|summary)\b[:\s-]*(.*)$/i);
   if (summaryCommand) {
     const text = summaryCommand[2].trim();

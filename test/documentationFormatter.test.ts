@@ -8,8 +8,34 @@ test('extracts the first useful markdown documentation line', () => {
     80
   );
 
-  assert.equal(result?.summary, '已支付订单。');
+  assert.equal(result?.summary, '已支付订单。 用于展示支付成功后的订单。');
   assert.equal(result?.fullText, '已支付订单。\n用于展示支付成功后的订单。');
+});
+
+test('joins prose paragraphs separated by blank lines with the summary separator', () => {
+  const result = formatDocumentation(
+    ['```ts', 'const OrderStatusPaid: OrderStatus', '```', '已支付订单。', '', '用于展示支付成功后的订单。'],
+    80
+  );
+
+  assert.equal(result?.summary, '已支付订单。 / 用于展示支付成功后的订单。');
+  assert.equal(result?.fullText, '已支付订单。\n用于展示支付成功后的订单。');
+});
+
+test('keeps a single paragraph summary unchanged when there are no blank lines', () => {
+  const result = formatDocumentation(['已支付订单。', '用于展示支付成功后的订单。'], 80);
+
+  assert.equal(result?.summary, '已支付订单。 用于展示支付成功后的订单。');
+});
+
+test('truncates the joined summary to the configured display length', () => {
+  const result = formatDocumentation(
+    ['这是一个非常非常非常长的业务状态说明。', '', '它用来解释订单在售后流程中的展示语义。'],
+    24
+  );
+
+  assert.equal(result?.summary.length, 24);
+  assert.ok(result?.summary.endsWith('...'));
 });
 
 test('strips common comment markers', () => {
@@ -153,7 +179,7 @@ test('deduplicates repeated documentation lines from multiple hover providers', 
     80
   );
 
-  assert.equal(result?.summary, 'Formats an order status.');
+  assert.equal(result?.summary, 'Formats an order status. Returns a display label.');
   assert.equal(result?.fullText, 'Formats an order status.\nReturns a display label.');
 });
 
@@ -240,7 +266,7 @@ test('strips triple-slash and bang doc comment markers', () => {
     80
   );
 
-  assert.equal(result?.summary, 'Formats an order status label.');
+  assert.equal(result?.summary, 'Formats an order status label. Used by generated status bindings.');
   assert.equal(result?.fullText, 'Formats an order status label.\nUsed by generated status bindings.');
 });
 
