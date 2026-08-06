@@ -136,6 +136,15 @@ export function collectLeadingDocCommentLines(document: SourceDocument, definiti
   return collectLeadingBlockCommentLines(document, definitionLine, '/**');
 }
 
+export function collectLeadingSlashCommentLines(document: SourceLineReader, definitionLine: number): string[] {
+  const lineComments = collectLeadingLineCommentLines(document, definitionLine, ['//']);
+  if (lineComments.length > 0) {
+    return lineComments;
+  }
+
+  return collectLeadingBlockCommentLines(document, definitionLine, '/*');
+}
+
 export function findDefinitionLine(
   document: SourceDocument,
   referenceLine: number,

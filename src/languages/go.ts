@@ -1,42 +1,11 @@
 import type { LanguageAdapter } from './languageAdapter';
 import {
-  collectLeadingBlockCommentLines,
+  collectLeadingSlashCommentLines,
   escapeRegExp,
   findMatchingCloseParen,
   isFilePathWithExtension,
-  type SourceDocument,
-  type SourceLineReader
+  type SourceDocument
 } from './shared';
-
-export function collectLeadingCommentLines(document: SourceLineReader, definitionLine: number): string[] {
-  const collected: string[] = [];
-  let line = definitionLine - 1;
-
-  while (line >= 0) {
-    const text = document.lineAt(line).text.trim();
-    if (text.length === 0) {
-      if (collected.length === 0) {
-        line--;
-        continue;
-      }
-      break;
-    }
-
-    if (text.startsWith('//')) {
-      collected.unshift(text);
-      line--;
-      continue;
-    }
-
-    break;
-  }
-
-  if (collected.length > 0) {
-    return collected;
-  }
-
-  return collectLeadingBlockCommentLines(document, definitionLine, '/*');
-}
 
 export function findGoDefinitionLine(
   document: SourceDocument,
@@ -193,7 +162,7 @@ export const goLanguageAdapter: LanguageAdapter = {
       return findGoDefinitionLine(document, candidate.word, candidate.line)?.line;
     },
     collectLeadingComments(document, definitionLine) {
-      return collectLeadingCommentLines(document, definitionLine);
+      return collectLeadingSlashCommentLines(document, definitionLine);
     }
   }
 };
