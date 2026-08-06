@@ -1,19 +1,20 @@
 import * as vscode from 'vscode';
 import { scanCandidateSymbols, type SymbolCandidate } from './candidateScanner';
 import {
+  readCommentDocLensConfig,
+  toDiagnosticsSettingsSnapshot,
+  toResolverOptions,
+  type ConfigReader
+} from './config';
+import {
   DocumentationResolver,
-  type DocumentationResolverOptions,
   type LocationLike
 } from './documentationResolver';
-import { buildCommentHints, type CommentDocLensConfig } from './hintBuilder';
+import { buildCommentHints } from './hintBuilder';
 import { formatLanguageHealthStatus, LanguageHealthService } from './languageHealth';
 import type { LanguageAdapter } from './languages/languageAdapter';
 import { resolveProbePosition } from './languages/probe';
-import {
-  createLanguageRegistry,
-  defaultLanguageAdapters,
-  getDefaultLanguageIds
-} from './languages/languageRegistry';
+import { createLanguageRegistry, defaultLanguageAdapters } from './languages/languageRegistry';
 import { VscodeDocumentationLookup } from './vscode/documentationLookup';
 import { DiagnosticsSession, type WorkspaceLanguageDiagnosis } from './vscode/diagnostics';
 import { VscodeLanguageHealthProbe } from './vscode/languageHealthProbe';
@@ -22,9 +23,18 @@ export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel('Comment Doc Lens');
   const diagnostics = new DiagnosticsSession(outputChannel);
   const lookup = new VscodeDocumentationLookup();
-  const resolver = new DocumentationResolver(lookup, readResolverOptions());
+  const configReader = createVscodeConfigReader();
+  const resolver = new DocumentationResolver(
+    lookup,
+    toResolverOptions(readCommentDocLensConfig(configReader))
+  );
   const languageRegistry = createLanguageRegistry(defaultLanguageAdapters);
-  const hintProvider = new CommentDocLensInlayHintProvider(resolver, languageRegistry, diagnostics);
+  const hintProvider = new CommentDocLensInlayHintProvider(
+    resolver,
+    languageRegistry,
+    diagnostics,
+    configReader
+  );
   const languageHealth = new LanguageHealthService(new VscodeLanguageHealthProbe());
 
   const selector = languageRegistry.getLanguageIds().map((language) => ({ language, scheme: 'file' }));
@@ -109,7 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
         workspaceName: vscode.workspace.name,
         activeDocument: vscode.window.activeTextEditor?.document.uri.toString(),
         activeLanguageId: vscode.window.activeTextEditor?.document.languageId,
-        settings: readDiagnosticsSettingsSnapshot()
+        settings: toDiagnosticsSettingsSnapshot(readCommentDocLensConfig(configReader))
       });
       await vscode.env.clipboard.writeText(report);
       diagnostics.record('info', 'Copied diagnostics report for issue.');
@@ -125,7 +135,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      const config = readCommentDocLensConfig();
+      const config = readCommentDocLensConfig(configReader);
       const line = editor.selection.active.line;
       const text = editor.document.lineAt(line).text;
       const candidateCount = scanCandidateSymbols(
@@ -161,7 +171,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('commentDocLens')) {
-        resolver.updateOptions(readResolverOptions());
+        resolver.updateOptions(toResolverOptions(readCommentDocLensConfig(configReader)));
         languageHealth.clearCache();
         hintProvider.refresh();
       }
@@ -179,7 +189,8 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   constructor(
     private readonly resolver: DocumentationResolver,
     private readonly languageRegistry: ReturnType<typeof createLanguageRegistry>,
-    private readonly diagnostics: DiagnosticsSession
+    private readonly diagnostics: DiagnosticsSession,
+    private readonly configReader: ConfigReader
   ) {}
 
   refresh(): void {
@@ -191,7 +202,7 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
     range: vscode.Range,
     token: vscode.CancellationToken
   ): Promise<vscode.InlayHint[]> {
-    const config = readCommentDocLensConfig();
+    const config = readCommentDocLensConfig(this.configReader);
     const languageAdapter = this.languageRegistry.getAdapter(document.languageId);
     if (!languageAdapter) {
       return [];
@@ -251,7 +262,7 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   }
 
   async resolveInlayHint(inlayHint: vscode.InlayHint, token: vscode.CancellationToken): Promise<vscode.InlayHint> {
-    const config = readCommentDocLensConfig();
+    const config = readCommentDocLensConfig(this.configReader);
     if (!config.enableHintInteractions || token.isCancellationRequested) {
       return inlayHint;
     }
@@ -314,7 +325,7 @@ async function diagnoseWorkspace(
   diagnostics: DiagnosticsSession
 ): Promise<WorkspaceLanguageDiagnosis[]> {
   const files = await vscode.workspace.findFiles(
-    '**/*.{go,ts,tsx,js,jsx,py,java,rs,php,cs,rb,kt,swift,c,cpp,h,hpp}',
+    languageRegistry.getSourceFileGlobs()[0],
     '**/{node_modules,.git,out}/**',
     40
   );
@@ -361,52 +372,11 @@ function getFirstLabelPart(inlayHint: vscode.InlayHint): vscode.InlayHintLabelPa
   return inlayHint.label[0] ?? new vscode.InlayHintLabelPart('');
 }
 
-function readCommentDocLensConfig(): CommentDocLensConfig {
+function createVscodeConfigReader(): ConfigReader {
   const config = vscode.workspace.getConfiguration('commentDocLens');
   return {
-    enabled: config.get<boolean>('enabled', true),
-    languages: config.get<string[]>('languages', getDefaultLanguageIds()),
-    languageOverrides: config.get<Record<string, { enabled?: boolean }>>('languageOverrides', {}),
-    maxLineLength: config.get<number>('maxLineLength', 2000),
-    maxHintsPerRequest: config.get<number>('maxHintsPerRequest', 80),
-    maxHintsPerLine: config.get<number>('maxHintsPerLine', 3),
-    minIdentifierLength: config.get<number>('minIdentifierLength', 2),
-    minimumDocumentationWords: config.get<number>('minimumDocumentationWords', 1),
-    preferPropertyTail: config.get<boolean>('preferPropertyTail', true),
-    dedupeLineHints: config.get<boolean>('dedupeLineHints', true),
-    resolveTimeoutMs: config.get<number>('resolveTimeoutMs', 750),
-    hintPrefix: config.get<string>('hintPrefix', '// '),
-    enableHintInteractions: config.get<boolean>('enableHintInteractions', false)
-  };
-}
-
-function readResolverOptions(): DocumentationResolverOptions {
-  const config = vscode.workspace.getConfiguration('commentDocLens');
-  return {
-    maxHintLength: config.get<number>('maxHintLength', 120),
-    maxCacheEntries: config.get<number>('maxCacheEntries', 1000),
-    minimumDocumentationWords: config.get<number>('minimumDocumentationWords', 1)
-  };
-}
-
-function readDiagnosticsSettingsSnapshot(): Readonly<Record<string, unknown>> {
-  const commentConfig = readCommentDocLensConfig();
-  const resolverOptions = readResolverOptions();
-  return {
-    enabled: commentConfig.enabled,
-    languages: commentConfig.languages,
-    languageOverrides: commentConfig.languageOverrides,
-    maxLineLength: commentConfig.maxLineLength,
-    maxHintLength: resolverOptions.maxHintLength,
-    maxHintsPerRequest: commentConfig.maxHintsPerRequest,
-    maxHintsPerLine: commentConfig.maxHintsPerLine,
-    minIdentifierLength: commentConfig.minIdentifierLength,
-    minimumDocumentationWords: commentConfig.minimumDocumentationWords,
-    preferPropertyTail: commentConfig.preferPropertyTail,
-    dedupeLineHints: commentConfig.dedupeLineHints,
-    resolveTimeoutMs: commentConfig.resolveTimeoutMs,
-    maxCacheEntries: resolverOptions.maxCacheEntries,
-    hintPrefix: commentConfig.hintPrefix,
-    enableHintInteractions: commentConfig.enableHintInteractions
+    get(key, defaultValue) {
+      return config.get(key, defaultValue);
+    }
   };
 }

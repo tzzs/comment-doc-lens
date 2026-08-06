@@ -50,6 +50,7 @@ function findKotlinDefinitionLine(
 
 export const kotlinLanguageAdapter: LanguageAdapter = {
   languageIds: ['kotlin'],
+  sourceFileExtensions: ['kt'],
   displayName: 'Kotlin',
   supportLevel: 'experimental',
   documentationSource: 'language-service-with-source-fallback',

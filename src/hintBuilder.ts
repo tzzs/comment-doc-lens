@@ -5,26 +5,11 @@ import {
   selectHintsForLineBudget,
   type PrioritizedHint
 } from './candidatePriority';
+import type { CommentDocLensConfig } from './config';
 import { hasMinimumWordCount } from './documentationFormatter';
 import type { LocationLike, ResolvedDocumentation } from './documentationResolver';
 import type { LanguageAdapter } from './languages/languageAdapter';
 import { createLanguageRegistry, defaultLanguageAdapters } from './languages/languageRegistry';
-
-export interface CommentDocLensConfig {
-  enabled: boolean;
-  languages: readonly string[];
-  languageOverrides?: Readonly<Record<string, { enabled?: boolean }>>;
-  maxLineLength?: number;
-  maxHintsPerRequest: number;
-  maxHintsPerLine?: number;
-  minIdentifierLength: number;
-  minimumDocumentationWords?: number;
-  preferPropertyTail: boolean;
-  dedupeLineHints: boolean;
-  resolveTimeoutMs: number;
-  hintPrefix?: string;
-  enableHintInteractions?: boolean;
-}
 
 export interface CommentHint {
   line: number;

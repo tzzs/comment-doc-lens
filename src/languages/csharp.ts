@@ -37,6 +37,7 @@ function findCSharpDefinitionLine(
 
 export const csharpLanguageAdapter: LanguageAdapter = {
   languageIds: ['csharp'],
+  sourceFileExtensions: ['cs'],
   displayName: 'C#',
   supportLevel: 'experimental',
   documentationSource: 'language-service-with-source-fallback',

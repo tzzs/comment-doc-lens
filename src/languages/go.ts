@@ -146,6 +146,7 @@ function findGoAssignmentOperator(line: string): number {
 
 export const goLanguageAdapter: LanguageAdapter = {
   languageIds: ['go'],
+  sourceFileExtensions: ['go'],
   displayName: 'Go',
   supportLevel: 'stable',
   documentationSource: 'language-service-with-source-fallback',

@@ -97,6 +97,7 @@ function findPhpDefinitionLine(
 
 export const phpLanguageAdapter: LanguageAdapter = {
   languageIds: ['php'],
+  sourceFileExtensions: ['php'],
   displayName: 'PHP',
   supportLevel: 'stable',
   documentationSource: 'language-service-with-source-fallback',

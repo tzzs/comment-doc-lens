@@ -40,4 +40,9 @@ export interface LanguageAdapter {
   findProbePosition?(document: SourceDocument): ProbePosition | undefined;
   sourceComment?: SourceCommentStrategy;
   resolveTimeoutMs?: number;
+  /**
+   * Source file extensions from which the workspace diagnosis glob is derived.
+   * When absent, the registry falls back to `languageIds`.
+   */
+  sourceFileExtensions?: readonly string[];
 }

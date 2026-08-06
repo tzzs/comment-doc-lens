@@ -41,6 +41,7 @@ export interface LanguageRegistry {
   getAdapters(): readonly LanguageAdapter[];
   getLanguageIds(): string[];
   getEnabledLanguageIds(configuredLanguageIds: readonly string[]): string[];
+  getSourceFileGlobs(): string[];
 }
 
 export const defaultLanguageAdapters = [
@@ -82,6 +83,15 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
     },
     getEnabledLanguageIds(configuredLanguageIds) {
       return configuredLanguageIds.filter((languageId) => adaptersByLanguageId.has(languageId));
+    },
+    getSourceFileGlobs() {
+      const extensions = new Set<string>();
+      for (const adapter of adapters) {
+        for (const extension of adapter.sourceFileExtensions ?? adapter.languageIds) {
+          extensions.add(extension);
+        }
+      }
+      return [`**/*.{${Array.from(extensions).join(',')}}`];
     }
   };
 }

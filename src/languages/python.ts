@@ -127,6 +127,7 @@ function readPythonTripleQuotedString(
 
 export const pythonLanguageAdapter: LanguageAdapter = {
   languageIds: ['python'],
+  sourceFileExtensions: ['py'],
   displayName: 'Python',
   supportLevel: 'stable',
   documentationSource: 'language-service-with-source-fallback',

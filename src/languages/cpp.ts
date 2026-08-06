@@ -51,6 +51,7 @@ function isFilePathWithAnyExtension(uri: string, extensions: readonly string[]):
 
 export const cppLanguageAdapter: LanguageAdapter = {
   languageIds: ['c', 'cpp'],
+  sourceFileExtensions: ['c', 'cpp', 'h', 'hpp'],
   displayName: 'C/C++',
   supportLevel: 'experimental',
   documentationSource: 'language-service-with-source-fallback',

@@ -43,6 +43,7 @@ function findSwiftDefinitionLine(
 
 export const swiftLanguageAdapter: LanguageAdapter = {
   languageIds: ['swift'],
+  sourceFileExtensions: ['swift'],
   displayName: 'Swift',
   supportLevel: 'experimental',
   documentationSource: 'language-service-with-source-fallback',

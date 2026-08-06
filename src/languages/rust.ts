@@ -92,6 +92,7 @@ function collectLeadingRustDocCommentLines(document: SourceDocument, definitionL
 
 export const rustLanguageAdapter: LanguageAdapter = {
   languageIds: ['rust'],
+  sourceFileExtensions: ['rs'],
   displayName: 'Rust',
   supportLevel: 'stable',
   documentationSource: 'language-service-with-source-fallback',

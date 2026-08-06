@@ -128,6 +128,7 @@ function isJsxLanguage(languageId: string | undefined): boolean {
 
 export const typescriptFamilyLanguageAdapter: LanguageAdapter = {
   languageIds: ['typescript', 'javascript', 'typescriptreact', 'javascriptreact'],
+  sourceFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   displayName: 'TypeScript family',
   supportLevel: 'stable',
   documentationSource: 'language-service',

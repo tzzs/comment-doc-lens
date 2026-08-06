@@ -37,6 +37,7 @@ function findRubyDefinitionLine(
 
 export const rubyLanguageAdapter: LanguageAdapter = {
   languageIds: ['ruby'],
+  sourceFileExtensions: ['rb'],
   displayName: 'Ruby',
   supportLevel: 'experimental',
   documentationSource: 'language-service-with-source-fallback',

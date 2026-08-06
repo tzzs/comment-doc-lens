@@ -49,6 +49,7 @@ function findJavaDefinitionLine(
 
 export const javaLanguageAdapter: LanguageAdapter = {
   languageIds: ['java'],
+  sourceFileExtensions: ['java'],
   displayName: 'Java',
   supportLevel: 'stable',
   documentationSource: 'language-service-with-source-fallback',
