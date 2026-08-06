@@ -22,7 +22,8 @@ import {
   type LanguageHealthPosition,
   type LanguageHealthProbe
 } from './languageHealth';
-import type { LanguageAdapter, SourceCommentStrategy } from './languages/languageAdapter';
+import type { LanguageAdapter, ProbePosition, SourceCommentStrategy } from './languages/languageAdapter';
+import { findDocumentProbePosition } from './languages/probe';
 import {
   createLanguageRegistry,
   defaultLanguageAdapters,
@@ -489,7 +490,8 @@ class VscodeDocumentationLookup implements DocumentationLookup {
     sourceComment: SourceCommentStrategy
   ): Promise<string[]> {
     const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
-    return sourceComment.collectLeadingComments(document, findNearbyDefinitionLine(document, location.line, candidate.word));
+    const definitionLine = sourceComment.findDefinitionLine?.(document, candidate, location) ?? location.line;
+    return sourceComment.collectLeadingComments(document, definitionLine);
   }
 }
 
@@ -543,7 +545,7 @@ async function diagnoseWorkspace(
       languageId: document.languageId,
       adapter,
       documentUri: document.uri.toString(),
-      position: findProbePosition(document)
+      position: resolveProbePosition(document, adapter)
     });
     diagnoses.push({
       uri: document.uri.toString(),
@@ -555,16 +557,12 @@ async function diagnoseWorkspace(
   return diagnoses;
 }
 
-function findProbePosition(document: vscode.TextDocument): LanguageHealthPosition {
-  for (let line = 0; line < document.lineCount; line++) {
-    const text = document.lineAt(line).text;
-    const firstWord = text.search(/[A-Za-z_$]/);
-    if (firstWord >= 0) {
-      return { line, character: firstWord };
-    }
-  }
-
-  return { line: 0, character: 0 };
+function resolveProbePosition(document: vscode.TextDocument, adapter: LanguageAdapter): ProbePosition {
+  return (
+    adapter.findProbePosition?.(document) ??
+    findDocumentProbePosition(document, adapter) ??
+    { line: 0, character: 0 }
+  );
 }
 
 function countDiagnosisStates(diagnoses: readonly WorkspaceLanguageDiagnosis[]): Record<string, number> {
@@ -632,26 +630,6 @@ function readDiagnosticsSettingsSnapshot(): Readonly<Record<string, unknown>> {
     hintPrefix: commentConfig.hintPrefix,
     enableHintInteractions: commentConfig.enableHintInteractions
   };
-}
-
-function findNearbyDefinitionLine(document: vscode.TextDocument, startLine: number, word: string): number {
-  const start = Math.max(0, startLine - 3);
-  const end = Math.min(document.lineCount - 1, startLine + 8);
-  const declarationPattern = new RegExp(`\\b${escapeRegExp(word)}\\b`);
-
-  for (let line = startLine; line <= end; line++) {
-    if (declarationPattern.test(document.lineAt(line).text)) {
-      return line;
-    }
-  }
-
-  for (let line = startLine - 1; line >= start; line--) {
-    if (declarationPattern.test(document.lineAt(line).text)) {
-      return line;
-    }
-  }
-
-  return startLine;
 }
 
 function escapeRegExp(value: string): string {

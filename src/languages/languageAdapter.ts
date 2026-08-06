@@ -19,6 +19,11 @@ export interface SourceCommentStrategy {
   collectLeadingComments(document: SourceDocument, definitionLine: number): string[];
 }
 
+export interface ProbePosition {
+  line: number;
+  character: number;
+}
+
 export interface DocumentationQualityRules {
   minimumWords?: number;
 }
@@ -32,6 +37,7 @@ export interface LanguageAdapter {
   documentationQuality?: DocumentationQualityRules;
   isDeclarationCandidate?(candidate: SymbolCandidate, line: string, languageId?: string): boolean;
   isNoisyCandidate?(candidate: SymbolCandidate, line: string, languageId?: string): boolean;
+  findProbePosition?(document: SourceDocument): ProbePosition | undefined;
   sourceComment?: SourceCommentStrategy;
   resolveTimeoutMs?: number;
 }
