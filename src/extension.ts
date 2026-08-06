@@ -1,13 +1,6 @@
 import * as vscode from 'vscode';
 import { scanCandidateSymbols, type SymbolCandidate } from './candidateScanner';
 import {
-  countDiagnosisStates,
-  createDiagnosticsReport,
-  createHiddenHintExplanation,
-  summarizeWorkspaceDiagnosis,
-  type WorkspaceLanguageDiagnosis
-} from './diagnostics';
-import {
   DocumentationResolver,
   type DocumentationResolverOptions,
   type LocationLike
@@ -22,12 +15,12 @@ import {
   getDefaultLanguageIds
 } from './languages/languageRegistry';
 import { VscodeDocumentationLookup } from './vscode/documentationLookup';
-import { CommentLensDiagnostics } from './vscode/diagnostics';
+import { DiagnosticsSession, type WorkspaceLanguageDiagnosis } from './vscode/diagnostics';
 import { VscodeLanguageHealthProbe } from './vscode/languageHealthProbe';
 
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel('Comment Doc Lens');
-  const diagnostics = new CommentLensDiagnostics(outputChannel);
+  const diagnostics = new DiagnosticsSession(outputChannel);
   const lookup = new VscodeDocumentationLookup();
   const resolver = new DocumentationResolver(lookup, readResolverOptions());
   const languageRegistry = createLanguageRegistry(defaultLanguageAdapters);
@@ -87,7 +80,7 @@ export function activate(context: vscode.ExtensionContext): void {
       });
 
       const message = formatLanguageHealthStatus(status);
-      diagnostics.setLatestLanguageStatus(status);
+      diagnostics.latest('languageStatus', status);
       diagnostics.record('info', 'Language status evaluated.', {
         languageId: status.languageId,
         state: status.state,
@@ -103,31 +96,20 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('commentDocLens.diagnoseWorkspace', async () => {
       const diagnoses = await diagnoseWorkspace(languageRegistry, languageHealth, diagnostics);
-      const summary = summarizeWorkspaceDiagnosis(diagnoses);
-      diagnostics.setLatestWorkspaceDiagnosis(summary);
-      outputChannel.appendLine(summary);
-      outputChannel.show(true);
-      diagnostics.record('info', 'Workspace diagnosis completed.', {
-        fileCount: diagnoses.length,
-        states: countDiagnosisStates(diagnoses)
-      });
+      diagnostics.recordWorkspaceDiagnosis(diagnoses);
       await vscode.window.showInformationMessage(`Comment Doc Lens: diagnosed ${diagnoses.length} workspace files.`);
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('commentDocLens.copyDiagnosticsForIssue', async () => {
-      const report = createDiagnosticsReport({
+      const report = diagnostics.renderIssueReport({
         extensionVersion: context.extension.packageJSON.version,
         vscodeVersion: vscode.version,
         workspaceName: vscode.workspace.name,
         activeDocument: vscode.window.activeTextEditor?.document.uri.toString(),
         activeLanguageId: vscode.window.activeTextEditor?.document.languageId,
-        settings: readDiagnosticsSettingsSnapshot(),
-        latestLanguageStatus: diagnostics.getLatestLanguageStatus(),
-        latestHiddenHintExplanation: diagnostics.getLatestHiddenHintExplanation(),
-        latestWorkspaceDiagnosis: diagnostics.getLatestWorkspaceDiagnosis(),
-        events: diagnostics.getEvents()
+        settings: readDiagnosticsSettingsSnapshot()
       });
       await vscode.env.clipboard.writeText(report);
       diagnostics.record('info', 'Copied diagnostics report for issue.');
@@ -153,7 +135,7 @@ export function activate(context: vscode.ExtensionContext): void {
         config.maxHintsPerRequest,
         config.maxLineLength
       ).length;
-      const explanation = createHiddenHintExplanation({
+      const explanation = diagnostics.explainHiddenHint({
         enabled: config.enabled,
         languageId: editor.document.languageId,
         configuredLanguages: config.languages,
@@ -161,14 +143,6 @@ export function activate(context: vscode.ExtensionContext): void {
         candidateCount,
         lineTooLong: text.length > (config.maxLineLength ?? Number.POSITIVE_INFINITY)
       });
-      diagnostics.setLatestHiddenHintExplanation(explanation);
-      diagnostics.record('info', 'Explained hidden hint state.', {
-        languageId: editor.document.languageId,
-        candidateCount,
-        explanation
-      });
-      outputChannel.appendLine(explanation);
-      outputChannel.show(true);
       await vscode.window.showInformationMessage(`Comment Doc Lens: ${explanation}`);
     })
   );
@@ -205,7 +179,7 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   constructor(
     private readonly resolver: DocumentationResolver,
     private readonly languageRegistry: ReturnType<typeof createLanguageRegistry>,
-    private readonly diagnostics: CommentLensDiagnostics
+    private readonly diagnostics: DiagnosticsSession
   ) {}
 
   refresh(): void {
@@ -337,7 +311,7 @@ function collectLines(document: vscode.TextDocument, range: vscode.Range): strin
 async function diagnoseWorkspace(
   languageRegistry: ReturnType<typeof createLanguageRegistry>,
   languageHealth: LanguageHealthService,
-  diagnostics: CommentLensDiagnostics
+  diagnostics: DiagnosticsSession
 ): Promise<WorkspaceLanguageDiagnosis[]> {
   const files = await vscode.workspace.findFiles(
     '**/*.{go,ts,tsx,js,jsx,py,java,rs,php,cs,rb,kt,swift,c,cpp,h,hpp}',
