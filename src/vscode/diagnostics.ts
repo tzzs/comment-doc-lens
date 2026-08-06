@@ -42,7 +42,11 @@ export interface IssueReportContext {
   settings?: Readonly<Record<string, unknown>>;
 }
 
-export type LatestDiagnosticsKind = 'languageStatus' | 'hiddenHintExplanation' | 'workspaceDiagnosis';
+interface LatestValueMap {
+  languageStatus: LanguageHealthStatus;
+  hiddenHintExplanation: string;
+  workspaceDiagnosis: string;
+}
 
 const MAX_EVENTS = 100;
 const STATE_ORDER: Array<LanguageHealthStatus['state']> = [
@@ -60,7 +64,7 @@ const STATE_ORDER: Array<LanguageHealthStatus['state']> = [
  */
 export class DiagnosticsSession {
   private readonly events: DiagnosticEvent[] = [];
-  private readonly latestValues: Partial<Record<LatestDiagnosticsKind, LanguageHealthStatus | string>> = {};
+  private readonly latestValues: Partial<LatestValueMap> = {};
 
   constructor(private readonly outputChannel: DiagnosticsOutput) {}
 
@@ -82,16 +86,12 @@ export class DiagnosticsSession {
     }
   }
 
-  latest(kind: 'languageStatus', value: LanguageHealthStatus | undefined): void;
-  latest(kind: 'hiddenHintExplanation' | 'workspaceDiagnosis', value: string | undefined): void;
-  latest(kind: LatestDiagnosticsKind, value: LanguageHealthStatus | string | undefined): void {
-    this.latestValues[kind] = value as LanguageHealthStatus | string | undefined;
+  latest<K extends keyof LatestValueMap>(kind: K, value: LatestValueMap[K] | undefined): void {
+    this.latestValues[kind] = value;
   }
 
-  getLatest(kind: 'languageStatus'): LanguageHealthStatus | undefined;
-  getLatest(kind: 'hiddenHintExplanation' | 'workspaceDiagnosis'): string | undefined;
-  getLatest(kind: LatestDiagnosticsKind): LanguageHealthStatus | string | undefined {
-    return this.latestValues[kind] as LanguageHealthStatus | string | undefined;
+  getLatest<K extends keyof LatestValueMap>(kind: K): LatestValueMap[K] | undefined {
+    return this.latestValues[kind];
   }
 
   getEvents(): readonly DiagnosticEvent[] {
