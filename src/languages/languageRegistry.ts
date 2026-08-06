@@ -18,12 +18,14 @@ import { typescriptFamilyLanguageAdapter } from './typescript';
 import { pythonLanguageAdapter } from './python';
 import { javaLanguageAdapter } from './java';
 import { rustLanguageAdapter } from './rust';
+import { csharpLanguageAdapter } from './csharp';
 
 export { goLanguageAdapter } from './go';
 export { typescriptFamilyLanguageAdapter } from './typescript';
 export { pythonLanguageAdapter } from './python';
 export { javaLanguageAdapter } from './java';
 export { rustLanguageAdapter } from './rust';
+export { csharpLanguageAdapter } from './csharp';
 
 export interface LanguageRegistry {
   getAdapter(languageId: string): LanguageAdapter | undefined;
@@ -31,31 +33,6 @@ export interface LanguageRegistry {
   getLanguageIds(): string[];
   getEnabledLanguageIds(configuredLanguageIds: readonly string[]): string[];
 }
-
-export const csharpLanguageAdapter: LanguageAdapter = {
-  languageIds: ['csharp'],
-  displayName: 'C#',
-  supportLevel: 'experimental',
-  documentationSource: 'language-service-with-source-fallback',
-  recommendedExtensions: ['ms-dotnettools.csdevkit'],
-  isDeclarationCandidate(candidate, line) {
-    return isCSharpDeclarationName(candidate, line) || isCSharpMethodSignatureCandidate(candidate, line);
-  },
-  sourceComment: {
-    canRead(location) {
-      return isFilePathWithExtension(location.uri, '.cs');
-    },
-    findDefinitionLine(document, candidate) {
-      return findCSharpDefinitionLine(document, candidate.word, candidate.line);
-    },
-    collectLeadingComments(document, definitionLine) {
-      return collectLeadingLineCommentLines(document, definitionLine, ['///']);
-    }
-  },
-  documentationQuality: {
-    minimumWords: 2
-  }
-};
 
 export const phpLanguageAdapter: LanguageAdapter = {
   languageIds: ['php'],
@@ -299,24 +276,6 @@ function findPhpDefinitionLine(document: { lineAt(line: number): { text: string 
   }
 
   return undefined;
-}
-
-function isCSharpDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  return /\b(?:class|enum|interface|record|struct)\s+$/.test(beforeCandidate);
-}
-
-function isCSharpMethodSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  return isCStyleMethodSignatureCandidate(candidate, line, /^(?:$|[;{]|=>|\bwhere\b)/);
-}
-
-function findCSharpDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
-  const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:class|enum|interface|record|struct)\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*\\(`),
-    new RegExp(`\\b${wordPattern}\\s*(?:=>|\\{|;)`)
-  ]);
 }
 
 function isRubyDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
