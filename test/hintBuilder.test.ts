@@ -414,6 +414,41 @@ test('prefers the tail of property chains when configured', async () => {
   assert.deepEqual(hints.map((hint) => hint.label), ['// doc for displayName']);
 });
 
+test('drops optional-chaining and namespace receivers under the unified role classifier', async () => {
+  const resolvedWords: string[] = [];
+  const resolver: CommentHintResolver = {
+    resolve: async (candidate) => {
+      resolvedWords.push(candidate.word);
+      return {
+        summary: `doc for ${candidate.word}`,
+        fullText: `doc for ${candidate.word}`,
+        location: { uri: 'file:///order.ts', line: 1, character: 1 }
+      };
+    }
+  };
+
+  const hints = await buildCommentHints({
+    lines: ['const label = profile?.name + Engine::notify();'],
+    range: { startLine: 0, endLineInclusive: 0 },
+    languageId: 'typescript',
+    documentUri: 'file:///order.ts',
+    documentVersion: 1,
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxHintsPerRequest: 20,
+      minIdentifierLength: 2,
+      preferPropertyTail: true,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    resolver
+  });
+
+  assert.deepEqual(resolvedWords, ['notify', 'name']);
+  assert.deepEqual(hints.map((hint) => hint.label), ['// notify: doc for notify | name: doc for name']);
+});
+
 test('applies max hint budget after filtering noisy candidates', async () => {
   const resolvedWords: string[] = [];
   const resolver: CommentHintResolver = {

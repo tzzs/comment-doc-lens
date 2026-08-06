@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { SymbolCandidate } from '../src/candidateScanner';
 import {
+  classifyCandidate,
   getCandidatePriorityScore,
   prioritizeCandidates,
   selectHintsForLineBudget,
@@ -39,6 +40,14 @@ test('keeps stable scan order when candidate scores tie', () => {
   const prioritized = prioritizeCandidates([alpha, beta], [line]);
 
   assert.deepEqual(prioritized.map((item) => item.word), ['alpha', 'beta']);
+});
+
+test('classifies candidate roles through a single entry point', () => {
+  assert.equal(classifyCandidate(candidate('format', 'presenter.format(x);'), 'presenter.format(x);'), 'callTarget');
+  assert.equal(classifyCandidate(candidate('Paid', 'OrderStatus.Paid'), 'OrderStatus.Paid'), 'enumOrConstantMember');
+  assert.equal(classifyCandidate(candidate('name', 'profile.name'), 'profile.name'), 'propertyTail');
+  assert.equal(classifyCandidate(candidate('OrderStatus', 'OrderStatus.Paid'), 'OrderStatus.Paid'), 'receiverOrNamespace');
+  assert.equal(classifyCandidate(candidate('fallback', 'const f = fallback;'), 'const f = fallback;'), 'neutralReference');
 });
 
 test('prioritizes member tail over receiver or namespace context', () => {

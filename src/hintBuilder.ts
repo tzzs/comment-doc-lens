@@ -1,5 +1,6 @@
 import { getLineText, scanCandidateSymbols, type LineRange, type SymbolCandidate } from './candidateScanner';
 import {
+  classifyCandidate,
   prioritizeCandidates,
   selectHintsForLineBudget,
   type PrioritizedHint
@@ -215,7 +216,7 @@ function shouldResolveCandidate(
     return true;
   }
 
-  return line[candidate.endCharacter] !== '.';
+  return classifyCandidate(candidate, line) !== 'receiverOrNamespace';
 }
 
 function addHint<T extends CommentHint>(hints: T[], hint: T, dedupeLineHints: boolean): void {
