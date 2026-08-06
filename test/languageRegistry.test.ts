@@ -161,18 +161,21 @@ test('registry derives workspace diagnosis globs from adapter source file extens
   );
 });
 
-test('registry falls back to language ids when an adapter declares no source extensions', () => {
-  const registry = createLanguageRegistry([
-    ...defaultLanguageAdapters,
-    {
-      languageIds: ['nim'],
-      displayName: 'Nim',
-      supportLevel: 'experimental',
-      documentationSource: 'language-service'
-    }
-  ]);
-
-  assert.ok(registry.getSourceFileGlobs()[0].includes('nim'));
+test('registry rejects adapters that declare no source extensions', () => {
+  assert.throws(
+    () =>
+      createLanguageRegistry([
+        ...defaultLanguageAdapters,
+        {
+          languageIds: ['nim'],
+          sourceFileExtensions: [],
+          displayName: 'Nim',
+          supportLevel: 'experimental',
+          documentationSource: 'language-service'
+        }
+      ]),
+    /must declare sourceFileExtensions/
+  );
 });
 
 test('registry rejects duplicate language ids across adapters', () => {
@@ -182,6 +185,7 @@ test('registry rejects duplicate language ids across adapters', () => {
         ...defaultLanguageAdapters,
         {
           languageIds: ['go'],
+          sourceFileExtensions: ['go'],
           displayName: 'Duplicate Go',
           supportLevel: 'experimental',
           documentationSource: 'language-service'

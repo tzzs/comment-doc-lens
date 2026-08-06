@@ -62,6 +62,10 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
   const adaptersByLanguageId = new Map<string, LanguageAdapter>();
 
   for (const adapter of adapters) {
+    if (adapter.sourceFileExtensions.length === 0) {
+      throw new Error(`${adapter.displayName} must declare sourceFileExtensions for the diagnosis glob`);
+    }
+
     for (const languageId of adapter.languageIds) {
       if (adaptersByLanguageId.has(languageId)) {
         throw new Error(`Duplicate language id: ${languageId}`);
@@ -87,7 +91,7 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
     getSourceFileGlobs() {
       const extensions = new Set<string>();
       for (const adapter of adapters) {
-        for (const extension of adapter.sourceFileExtensions ?? adapter.languageIds) {
+        for (const extension of adapter.sourceFileExtensions) {
           extensions.add(extension);
         }
       }

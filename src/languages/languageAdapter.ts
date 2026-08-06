@@ -42,7 +42,9 @@ export interface LanguageAdapter {
   resolveTimeoutMs?: number;
   /**
    * Source file extensions from which the workspace diagnosis glob is derived.
-   * When absent, the registry falls back to `languageIds`.
+   * Required: `languageIds` are VS Code language ids (e.g. `typescript`), not
+   * file extensions (e.g. `ts`), so a fallback to `languageIds` would silently
+   * produce a wrong glob for multi-extension languages. Never leave this empty.
    */
-  sourceFileExtensions?: readonly string[];
+  sourceFileExtensions: readonly string[];
 }
