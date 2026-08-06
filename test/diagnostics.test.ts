@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  countDiagnosisStates,
   createDiagnosticsReport,
   createHiddenHintExplanation,
   summarizeWorkspaceDiagnosis,
-  type DiagnosticEvent
+  type DiagnosticEvent,
+  type WorkspaceLanguageDiagnosis
 } from '../src/diagnostics';
 
 test('creates copyable diagnostics reports for GitHub issues', () => {
@@ -140,6 +142,37 @@ test('summarizes workspace language readiness', () => {
   assert.match(summary, /order\.py/);
   assert.match(summary, /ms-python\.python/);
   assert.match(summary, /Source: language service with source fallback/);
+});
+
+test('counts diagnosis states across a workspace batch', () => {
+  const diagnoses: WorkspaceLanguageDiagnosis[] = [
+    {
+      uri: 'file:///a.go',
+      languageId: 'go',
+      status: {
+        languageId: 'go',
+        adapterDisplayName: 'Go',
+        supportLevel: 'stable',
+        documentationSource: 'language-service-with-source-fallback',
+        state: 'ready',
+        reason: 'Language service can provide documentation context.',
+        recommendedExtensions: ['golang.Go'],
+        checkedCapabilities: { hover: true, definition: true, sourceFallback: true }
+      }
+    },
+    {
+      uri: 'file:///b.go',
+      languageId: 'go',
+      status: { languageId: 'go', adapterDisplayName: 'Go', supportLevel: 'stable', documentationSource: 'language-service-with-source-fallback', state: 'ready', reason: 'x', recommendedExtensions: [], checkedCapabilities: { hover: true, definition: true, sourceFallback: true } }
+    },
+    {
+      uri: 'file:///c.py',
+      languageId: 'python',
+      status: { languageId: 'python', adapterDisplayName: 'Python', supportLevel: 'experimental', documentationSource: 'language-service-with-source-fallback', state: 'missingDependency', reason: 'y', recommendedExtensions: [], checkedCapabilities: { hover: false, definition: false, sourceFallback: true } }
+    }
+  ];
+
+  assert.deepEqual(countDiagnosisStates(diagnoses), { ready: 2, missingDependency: 1 });
 });
 
 test('escapes markdown table backslashes before pipe characters', () => {

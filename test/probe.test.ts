@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { SymbolCandidate } from '../src/candidateScanner';
 import { typescriptFamilyLanguageAdapter } from '../src/languages/typescript';
 import { goLanguageAdapter } from '../src/languages/go';
-import { findDocumentProbePosition } from '../src/languages/probe';
+import { findDocumentProbePosition, resolveProbePosition } from '../src/languages/probe';
 import type { SourceDocument } from '../src/languages/shared';
 
 function makeDocument(lines: readonly string[]): SourceDocument {
@@ -31,6 +31,12 @@ test('probe position falls back to the first candidate when every line is skippe
   );
 
   assert.notEqual(position, undefined);
+});
+
+test('resolveProbePosition falls back to the origin line', () => {
+  const position = resolveProbePosition(makeDocument(['var unused;']), typescriptFamilyLanguageAdapter);
+
+  assert.deepEqual(position, { line: 0, character: 0 });
 });
 
 test('source comment collects doc comment above the definition anchor', () => {

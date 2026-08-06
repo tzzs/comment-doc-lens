@@ -1,34 +1,29 @@
 import * as vscode from 'vscode';
 import { scanCandidateSymbols, type SymbolCandidate } from './candidateScanner';
 import {
+  countDiagnosisStates,
   createDiagnosticsReport,
   createHiddenHintExplanation,
   summarizeWorkspaceDiagnosis,
-  type DiagnosticEvent,
   type WorkspaceLanguageDiagnosis
 } from './diagnostics';
 import {
   DocumentationResolver,
-  type DocumentationLookup,
   type DocumentationResolverOptions,
   type LocationLike
 } from './documentationResolver';
 import { buildCommentHints, type CommentDocLensConfig } from './hintBuilder';
-import { hoverContentsToMarkdownLines } from './hoverContent';
-import {
-  formatLanguageHealthStatus,
-  LanguageHealthService,
-  type LanguageHealthStatus,
-  type LanguageHealthPosition,
-  type LanguageHealthProbe
-} from './languageHealth';
-import type { LanguageAdapter, ProbePosition, SourceCommentStrategy } from './languages/languageAdapter';
-import { findDocumentProbePosition } from './languages/probe';
+import { formatLanguageHealthStatus, LanguageHealthService } from './languageHealth';
+import type { LanguageAdapter, SourceCommentStrategy } from './languages/languageAdapter';
+import { resolveProbePosition } from './languages/probe';
 import {
   createLanguageRegistry,
   defaultLanguageAdapters,
   getDefaultLanguageIds
 } from './languages/languageRegistry';
+import { VscodeDocumentationLookup } from './vscode/documentationLookup';
+import { CommentLensDiagnostics } from './vscode/diagnostics';
+import { VscodeLanguageHealthProbe } from './vscode/languageHealthProbe';
 
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel('Comment Doc Lens');
@@ -202,32 +197,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {}
 
-class VscodeLanguageHealthProbe implements LanguageHealthProbe {
-  async isExtensionInstalled(extensionId: string): Promise<boolean> {
-    return vscode.extensions.getExtension(extensionId) !== undefined;
-  }
-
-  async hasHover(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
-    const lines = await getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(position.line, position.character));
-    return lines.some((line) => line.trim().length > 0);
-  }
-
-  async hasDefinition(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
-    let definitions: Array<vscode.Location | vscode.LocationLink> | undefined;
-    try {
-      definitions = await vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(
-        'vscode.executeDefinitionProvider',
-        vscode.Uri.parse(documentUri),
-        new vscode.Position(position.line, position.character)
-      );
-    } catch {
-      definitions = undefined;
-    }
-
-    return (definitions ?? []).length > 0;
-  }
-}
-
 class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   private readonly emitter = new vscode.EventEmitter<void>();
   private readonly resolveData = new WeakMap<vscode.InlayHint, InlayHintResolveData>();
@@ -357,153 +326,6 @@ interface InlayHintResolveData {
   languageId: string;
 }
 
-class CommentLensDiagnostics {
-  private readonly events: DiagnosticEvent[] = [];
-  private latestLanguageStatus: LanguageHealthStatus | undefined;
-  private latestHiddenHintExplanation: string | undefined;
-  private latestWorkspaceDiagnosis: string | undefined;
-
-  constructor(private readonly outputChannel: vscode.OutputChannel) {}
-
-  record(level: DiagnosticEvent['level'], message: string, details?: Readonly<Record<string, unknown>>): void {
-    const event: DiagnosticEvent = {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      details
-    };
-    this.events.push(event);
-    if (this.events.length > 100) {
-      this.events.shift();
-    }
-
-    this.outputChannel.appendLine(`[${event.timestamp}] ${level.toUpperCase()} ${message}`);
-    if (details) {
-      this.outputChannel.appendLine(JSON.stringify(details, null, 2));
-    }
-  }
-
-  getEvents(): readonly DiagnosticEvent[] {
-    return this.events;
-  }
-
-  setLatestLanguageStatus(status: LanguageHealthStatus): void {
-    this.latestLanguageStatus = status;
-  }
-
-  getLatestLanguageStatus(): LanguageHealthStatus | undefined {
-    return this.latestLanguageStatus;
-  }
-
-  setLatestHiddenHintExplanation(explanation: string): void {
-    this.latestHiddenHintExplanation = explanation;
-  }
-
-  getLatestHiddenHintExplanation(): string | undefined {
-    return this.latestHiddenHintExplanation;
-  }
-
-  setLatestWorkspaceDiagnosis(summary: string): void {
-    this.latestWorkspaceDiagnosis = summary;
-  }
-
-  getLatestWorkspaceDiagnosis(): string | undefined {
-    return this.latestWorkspaceDiagnosis;
-  }
-}
-
-class VscodeDocumentationLookup implements DocumentationLookup {
-  async getHoverMarkdownLines(candidate: SymbolCandidate, documentUri: string): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(candidate.line, candidate.startCharacter));
-  }
-
-  async getDefinitionLocation(
-    candidate: SymbolCandidate,
-    documentUri: string,
-    languageAdapter?: LanguageAdapter
-  ): Promise<LocationLike | undefined> {
-    const uri = vscode.Uri.parse(documentUri);
-    let definitions: Array<vscode.Location | vscode.LocationLink> | undefined;
-    try {
-      definitions = await vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(
-        'vscode.executeDefinitionProvider',
-        uri,
-        new vscode.Position(candidate.line, candidate.startCharacter)
-      );
-    } catch {
-      definitions = undefined;
-    }
-    const firstDefinition = definitions?.[0];
-    if (!firstDefinition) {
-      return this.getLocalDefinitionLocation(candidate, uri, languageAdapter);
-    }
-
-    if ('targetUri' in firstDefinition) {
-      return {
-        uri: firstDefinition.targetUri.toString(),
-        line: firstDefinition.targetRange.start.line,
-        character: firstDefinition.targetRange.start.character
-      };
-    }
-
-    return {
-      uri: firstDefinition.uri.toString(),
-      line: firstDefinition.range.start.line,
-      character: firstDefinition.range.start.character
-    };
-  }
-
-  private async getLocalDefinitionLocation(
-    candidate: SymbolCandidate,
-    uri: vscode.Uri,
-    languageAdapter?: LanguageAdapter
-  ): Promise<LocationLike | undefined> {
-    const sourceComment = languageAdapter?.sourceComment;
-    if (!sourceComment?.canRead({ uri: uri.toString(), line: candidate.line, character: candidate.startCharacter })) {
-      return undefined;
-    }
-
-    const document = await vscode.workspace.openTextDocument(uri);
-    const definitionLine = sourceComment.findDefinitionLine?.(document, candidate, {
-      uri: uri.toString(),
-      line: candidate.line,
-      character: candidate.startCharacter
-    });
-    if (definitionLine === undefined) {
-      return undefined;
-    }
-
-    return {
-      uri: uri.toString(),
-      line: definitionLine,
-      character: document.lineAt(definitionLine).text.indexOf(candidate.word)
-    };
-  }
-
-  async getHoverMarkdownLinesAtLocation(location: LocationLike): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character));
-  }
-
-  async getDefinitionSourceLines(
-    location: LocationLike,
-    candidate: SymbolCandidate,
-    sourceComment: SourceCommentStrategy
-  ): Promise<string[]> {
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
-    const definitionLine = sourceComment.findDefinitionLine?.(document, candidate, location) ?? location.line;
-    return sourceComment.collectLeadingComments(document, definitionLine);
-  }
-}
-
-async function getHoverLines(uri: vscode.Uri, position: vscode.Position): Promise<string[]> {
-  const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
-    'vscode.executeHoverProvider',
-    uri,
-    position
-  );
-  return (hovers ?? []).flatMap((hover) => hoverContentsToMarkdownLines(hover.contents));
-}
-
 function collectLines(document: vscode.TextDocument, range: vscode.Range): string[] {
   const lines: string[] = [];
   for (let line = range.start.line; line <= range.end.line; line++) {
@@ -555,23 +377,6 @@ async function diagnoseWorkspace(
   }
 
   return diagnoses;
-}
-
-function resolveProbePosition(document: vscode.TextDocument, adapter: LanguageAdapter): ProbePosition {
-  return (
-    adapter.findProbePosition?.(document) ??
-    findDocumentProbePosition(document, adapter) ??
-    { line: 0, character: 0 }
-  );
-}
-
-function countDiagnosisStates(diagnoses: readonly WorkspaceLanguageDiagnosis[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const diagnosis of diagnoses) {
-    counts[diagnosis.status.state] = (counts[diagnosis.status.state] ?? 0) + 1;
-  }
-
-  return counts;
 }
 
 function getFirstLabelPart(inlayHint: vscode.InlayHint): vscode.InlayHintLabelPart {
@@ -630,8 +435,4 @@ function readDiagnosticsSettingsSnapshot(): Readonly<Record<string, unknown>> {
     hintPrefix: commentConfig.hintPrefix,
     enableHintInteractions: commentConfig.enableHintInteractions
   };
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

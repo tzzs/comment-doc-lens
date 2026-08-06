@@ -1,6 +1,17 @@
 import { scanCandidateSymbols, type SymbolCandidate } from '../candidateScanner';
 import type { LanguageAdapter, ProbePosition, SourceDocument } from './languageAdapter';
 
+export function resolveProbePosition(
+  document: SourceDocument,
+  adapter: LanguageAdapter
+): ProbePosition {
+  return (
+    adapter.findProbePosition?.(document) ??
+    findDocumentProbePosition(document, adapter) ??
+    { line: 0, character: 0 }
+  );
+}
+
 export function findDocumentProbePosition(
   document: SourceDocument,
   adapter: LanguageAdapter

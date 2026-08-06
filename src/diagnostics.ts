@@ -137,6 +137,15 @@ export function summarizeWorkspaceDiagnosis(diagnoses: readonly WorkspaceLanguag
   return lines.join('\n');
 }
 
+export function countDiagnosisStates(diagnoses: readonly WorkspaceLanguageDiagnosis[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const diagnosis of diagnoses) {
+    counts[diagnosis.status.state] = (counts[diagnosis.status.state] ?? 0) + 1;
+  }
+
+  return counts;
+}
+
 export function createHiddenHintExplanation(input: HiddenHintExplanationInput): string {
   if (!input.enabled) {
     return 'Comment Doc Lens is disabled globally. Enable `commentDocLens.enabled` to show inline documentation hints.';
