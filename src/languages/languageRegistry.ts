@@ -17,11 +17,13 @@ import {
 import { typescriptFamilyLanguageAdapter } from './typescript';
 import { pythonLanguageAdapter } from './python';
 import { javaLanguageAdapter } from './java';
+import { rustLanguageAdapter } from './rust';
 
 export { goLanguageAdapter } from './go';
 export { typescriptFamilyLanguageAdapter } from './typescript';
 export { pythonLanguageAdapter } from './python';
 export { javaLanguageAdapter } from './java';
+export { rustLanguageAdapter } from './rust';
 
 export interface LanguageRegistry {
   getAdapter(languageId: string): LanguageAdapter | undefined;
@@ -29,28 +31,6 @@ export interface LanguageRegistry {
   getLanguageIds(): string[];
   getEnabledLanguageIds(configuredLanguageIds: readonly string[]): string[];
 }
-
-export const rustLanguageAdapter: LanguageAdapter = {
-  languageIds: ['rust'],
-  displayName: 'Rust',
-  supportLevel: 'stable',
-  documentationSource: 'language-service-with-source-fallback',
-  recommendedExtensions: ['rust-lang.rust-analyzer'],
-  isDeclarationCandidate(candidate, line) {
-    return isRustDeclarationName(candidate, line) || isRustFunctionSignatureCandidate(candidate, line);
-  },
-  sourceComment: {
-    canRead(location) {
-      return isFilePathWithExtension(location.uri, '.rs');
-    },
-    findDefinitionLine(document, candidate) {
-      return findRustDefinitionLine(document, candidate.word, candidate.line);
-    },
-    collectLeadingComments(document, definitionLine) {
-      return collectLeadingRustDocCommentLines(document, definitionLine);
-    }
-  }
-};
 
 export const csharpLanguageAdapter: LanguageAdapter = {
   languageIds: ['csharp'],
@@ -244,80 +224,6 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
 
 export function getDefaultLanguageIds(): string[] {
   return createLanguageRegistry(defaultLanguageAdapters).getLanguageIds();
-}
-
-function isRustDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
-  if (/\b(?:const|enum|fn|struct|trait|type)\s+$/.test(beforeCandidate)) {
-    return true;
-  }
-
-  return afterCandidate.startsWith(',')
-    || isRustTupleVariantDeclaration(candidate, line)
-    || (beforeCandidate.trim().length === 0 && afterCandidate.startsWith('{'));
-}
-
-function isRustFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  if (isRustFunctionDeclarationLine(line)) {
-    return true;
-  }
-
-  return isKeywordFunctionSignatureCandidate(candidate, line, /\bfn\b/, ['{', ';']);
-}
-
-function isRustFunctionDeclarationLine(line: string): boolean {
-  return /\bfn\s+[$_\p{L}][$_\p{L}\p{N}_]*\s*\(/u.test(line);
-}
-
-function isRustTupleVariantDeclaration(candidate: { endCharacter: number }, line: string): boolean {
-  const openParen = line.indexOf('(', candidate.endCharacter);
-  if (openParen < 0) {
-    return false;
-  }
-
-  const closeParen = findMatchingCloseParen(line, openParen);
-  return closeParen > openParen && line.slice(closeParen + 1).trimStart().startsWith(',');
-}
-
-function findRustDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
-  const wordPattern = escapeRegExp(word);
-  const definitionPatterns = [
-    new RegExp(`\\b(?:const|enum|fn|struct|trait|type)\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*${wordPattern}\\s*(?:,|\\(|\\{|;)`)
-  ];
-
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
-}
-
-function collectLeadingRustDocCommentLines(document: { lineAt(line: number): { text: string }; lineCount: number }, definitionLine: number): string[] {
-  const collected: string[] = [];
-  for (let line = definitionLine - 1; line >= 0; line--) {
-    const text = document.lineAt(line).text.trim();
-    if (text.startsWith('///') || text.startsWith('//!')) {
-      collected.unshift(text);
-      continue;
-    }
-
-    if (text.length === 0 && collected.length === 0) {
-      continue;
-    }
-
-    break;
-  }
-
-  return collected;
 }
 
 function isPhpDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
