@@ -14,7 +14,7 @@ import {
 } from './documentationResolver';
 import { buildCommentHints, type CommentDocLensConfig } from './hintBuilder';
 import { formatLanguageHealthStatus, LanguageHealthService } from './languageHealth';
-import type { LanguageAdapter, SourceCommentStrategy } from './languages/languageAdapter';
+import type { LanguageAdapter } from './languages/languageAdapter';
 import { resolveProbePosition } from './languages/probe';
 import {
   createLanguageRegistry,

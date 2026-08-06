@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { SymbolCandidate } from '../candidateScanner';
 import type { DocumentationLookup, LocationLike } from '../documentationResolver';
-import type { LanguageAdapter, SourceCommentStrategy } from '../languages/languageAdapter';
+import type { LanguageAdapter } from '../languages/languageAdapter';
 import { getHoverLines } from './hover';
 
 export class VscodeDocumentationLookup implements DocumentationLookup {
@@ -76,11 +76,16 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
     return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character));
   }
 
-  async getDefinitionSourceLines(
+  async getDefinitionSourceComments(
     location: LocationLike,
     candidate: SymbolCandidate,
-    sourceComment: SourceCommentStrategy
+    languageAdapter?: LanguageAdapter
   ): Promise<string[]> {
+    const sourceComment = languageAdapter?.sourceComment;
+    if (!sourceComment?.canRead(location)) {
+      return [];
+    }
+
     const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
     const definitionLine = sourceComment.findDefinitionLine?.(document, candidate, location) ?? location.line;
     return sourceComment.collectLeadingComments(document, definitionLine);

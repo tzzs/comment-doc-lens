@@ -7,7 +7,8 @@ test('uses documentation from hover at the reference position', async () => {
   const lookup: DocumentationLookup = {
     getHoverMarkdownLines: async () => ['```ts', 'const value: OrderStatus', '```', '已支付订单'],
     getDefinitionLocation: async () => undefined,
-    getHoverMarkdownLinesAtLocation: async () => []
+    getHoverMarkdownLinesAtLocation: async () => [],
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -28,7 +29,8 @@ test('adds definition location even when reference hover has documentation', asy
     getDefinitionLocation: async () => ({ uri: 'file:///status.ts', line: 8, character: 13 }),
     getHoverMarkdownLinesAtLocation: async () => {
       throw new Error('definition hover should not be needed when reference hover has documentation');
-    }
+    },
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -53,7 +55,8 @@ test('resolves lightweight summaries without definition lookup when reference ho
     },
     getHoverMarkdownLinesAtLocation: async () => {
       throw new Error('definition hover should not be needed for summary-only lookup');
-    }
+    },
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -78,7 +81,7 @@ test('falls back to full resolution when lightweight summaries have no usable re
       return { uri: 'file:///status.go', line: 3, character: 6 };
     },
     getHoverMarkdownLinesAtLocation: async () => ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'],
-    getDefinitionSourceLines: async () => ['// Paid status from source comment.']
+    getDefinitionSourceComments: async () => ['// Paid status from source comment.']
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -103,7 +106,8 @@ test('falls back to definition hover when reference hover has no documentation',
   const lookup: DocumentationLookup = {
     getHoverMarkdownLines: async () => ['```go', 'const OrderStatusPaid OrderStatus = 1', '```'],
     getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 8, character: 6 }),
-    getHoverMarkdownLinesAtLocation: async () => ['// 已支付订单']
+    getHoverMarkdownLinesAtLocation: async () => ['// 已支付订单'],
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -122,7 +126,8 @@ test('uses adapter documentation quality rules before accepting hover text', asy
   const lookup: DocumentationLookup = {
     getHoverMarkdownLines: async () => ['Status'],
     getDefinitionLocation: async () => undefined,
-    getHoverMarkdownLinesAtLocation: async () => []
+    getHoverMarkdownLinesAtLocation: async () => [],
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -154,7 +159,7 @@ test('falls back to source comments near the definition when hover has no docume
     getHoverMarkdownLines: async () => ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'],
     getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 3, character: 6 }),
     getHoverMarkdownLinesAtLocation: async () => ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'],
-    getDefinitionSourceLines: async () => ['// Paid status from source comment.']
+    getDefinitionSourceComments: async () => ['// Paid status from source comment.']
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -179,7 +184,7 @@ test('prefers go source comments over non-comment reference hover text', async (
     getHoverMarkdownLines: async () => ['OrderStatusPaid is declared in package status.'],
     getDefinitionLocation: async () => ({ uri: 'file:///status.go?version=1#L3', line: 3, character: 6 }),
     getHoverMarkdownLinesAtLocation: async () => ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'],
-    getDefinitionSourceLines: async () => ['// Paid status from source comment.']
+    getDefinitionSourceComments: async () => ['// Paid status from source comment.']
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -199,6 +204,30 @@ test('prefers go source comments over non-comment reference hover text', async (
   assert.deepEqual(result?.location, { uri: 'file:///status.go?version=1#L3', line: 3, character: 6 });
 });
 
+test('produces no hint when source comments cannot be read', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'],
+    getDefinitionLocation: async () => ({ uri: 'file:///status.ts', line: 3, character: 6 }),
+    getHoverMarkdownLinesAtLocation: async () => ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'],
+    getDefinitionSourceComments: async () => []
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    {
+      word: 'OrderStatusPaid',
+      line: 8,
+      startCharacter: 12,
+      endCharacter: 27
+    },
+    '',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result, undefined);
+});
+
 test('caches repeated lookups by document version and candidate position', async () => {
   let hoverCalls = 0;
   const lookup: DocumentationLookup = {
@@ -207,7 +236,8 @@ test('caches repeated lookups by document version and candidate position', async
       return ['业务状态'];
     },
     getDefinitionLocation: async () => undefined,
-    getHoverMarkdownLinesAtLocation: async () => []
+    getHoverMarkdownLinesAtLocation: async () => [],
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
   const candidate = {
@@ -234,7 +264,8 @@ test('passes document uri to lookup methods', async () => {
       seenUris.push(documentUri);
       return { uri: 'file:///status.ts', line: 1, character: 1 };
     },
-    getHoverMarkdownLinesAtLocation: async () => ['状态说明']
+    getHoverMarkdownLinesAtLocation: async () => ['状态说明'],
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
 
@@ -256,7 +287,8 @@ test('updates max hint length after configuration changes', async () => {
   const lookup: DocumentationLookup = {
     getHoverMarkdownLines: async () => ['这是一个非常非常非常长的业务状态说明'],
     getDefinitionLocation: async () => undefined,
-    getHoverMarkdownLinesAtLocation: async () => []
+    getHoverMarkdownLinesAtLocation: async () => [],
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
   const candidate = {
@@ -280,7 +312,8 @@ test('bounds cache size and evicts the oldest lookup', async () => {
       return ['业务状态'];
     },
     getDefinitionLocation: async () => undefined,
-    getHoverMarkdownLinesAtLocation: async () => []
+    getHoverMarkdownLinesAtLocation: async () => [],
+    getDefinitionSourceComments: async () => []
   };
   const resolver = new DocumentationResolver(lookup, { maxHintLength: 80, maxCacheEntries: 2 });
 
