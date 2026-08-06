@@ -16,10 +16,12 @@ import {
 } from './shared';
 import { typescriptFamilyLanguageAdapter } from './typescript';
 import { pythonLanguageAdapter } from './python';
+import { javaLanguageAdapter } from './java';
 
 export { goLanguageAdapter } from './go';
 export { typescriptFamilyLanguageAdapter } from './typescript';
 export { pythonLanguageAdapter } from './python';
+export { javaLanguageAdapter } from './java';
 
 export interface LanguageRegistry {
   getAdapter(languageId: string): LanguageAdapter | undefined;
@@ -27,28 +29,6 @@ export interface LanguageRegistry {
   getLanguageIds(): string[];
   getEnabledLanguageIds(configuredLanguageIds: readonly string[]): string[];
 }
-
-export const javaLanguageAdapter: LanguageAdapter = {
-  languageIds: ['java'],
-  displayName: 'Java',
-  supportLevel: 'stable',
-  documentationSource: 'language-service-with-source-fallback',
-  recommendedExtensions: ['vscjava.vscode-java-pack'],
-  isDeclarationCandidate(candidate, line) {
-    return isJavaDeclarationName(candidate, line) || isJavaMethodSignatureCandidate(candidate, line);
-  },
-  sourceComment: {
-    canRead(location) {
-      return isFilePathWithExtension(location.uri, '.java');
-    },
-    findDefinitionLine(document, candidate) {
-      return findJavaDefinitionLine(document, candidate.word, candidate.line);
-    },
-    collectLeadingComments(document, definitionLine) {
-      return collectLeadingBlockCommentLines(document, definitionLine, '/**');
-    }
-  }
-};
 
 export const rustLanguageAdapter: LanguageAdapter = {
   languageIds: ['rust'],
@@ -264,37 +244,6 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
 
 export function getDefaultLanguageIds(): string[] {
   return createLanguageRegistry(defaultLanguageAdapters).getLanguageIds();
-}
-
-function isJavaDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  return /\b(?:class|enum|interface|record)\s+$/.test(beforeCandidate);
-}
-
-function isJavaMethodSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  return isCStyleMethodSignatureCandidate(candidate, line, /^(?:$|[;{]|\bthrows\b)/);
-}
-
-function findJavaDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
-  const wordPattern = escapeRegExp(word);
-  const definitionPatterns = [
-    new RegExp(`\\b(?:class|enum|interface|record)\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*\\(`),
-    new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
-  ];
-
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
 }
 
 function isRustDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
