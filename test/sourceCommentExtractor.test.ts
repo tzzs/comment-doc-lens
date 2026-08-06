@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { collectLeadingCommentLines, findGoDefinitionLine } from '../src/sourceCommentExtractor';
+import { collectLeadingCommentLines, findGoDefinitionLine } from '../src/languages/go';
 
 function createDocument(lines: readonly string[]) {
   return {

@@ -1,8 +1,23 @@
 import type { LanguageAdapter } from './languageAdapter';
+import { goLanguageAdapter } from './go';
 import {
-  collectLeadingCommentLines,
-  findGoDefinitionLine
-} from '../sourceCommentExtractor';
+  collectLeadingBlockCommentLines,
+  collectLeadingDocCommentLines,
+  collectLeadingLineCommentLines,
+  escapeRegExp,
+  findDefinitionLine,
+  findFirstTokenIndex,
+  findMatchingCloseParen,
+  isCandidateInRange,
+  isCStyleMethodSignatureCandidate,
+  isFilePathWithAnyExtension,
+  isFilePathWithExtension,
+  isKeywordFunctionSignatureCandidate
+} from './shared';
+import { typescriptFamilyLanguageAdapter } from './typescript';
+
+export { goLanguageAdapter } from './go';
+export { typescriptFamilyLanguageAdapter } from './typescript';
 
 export interface LanguageRegistry {
   getAdapter(languageId: string): LanguageAdapter | undefined;
@@ -10,46 +25,6 @@ export interface LanguageRegistry {
   getLanguageIds(): string[];
   getEnabledLanguageIds(configuredLanguageIds: readonly string[]): string[];
 }
-
-export const goLanguageAdapter: LanguageAdapter = {
-  languageIds: ['go'],
-  displayName: 'Go',
-  supportLevel: 'stable',
-  documentationSource: 'language-service-with-source-fallback',
-  recommendedExtensions: ['golang.Go'],
-  resolveTimeoutMs: 2500,
-  isDeclarationCandidate(candidate, line) {
-    return isGoDeclarationName(candidate, line) || isGoDeclarationContext(candidate, line);
-  },
-  sourceComment: {
-    canRead(location) {
-      return isFilePathWithExtension(location.uri, '.go');
-    },
-    findDefinitionLine(document, candidate) {
-      return findGoDefinitionLine(document, candidate.word, candidate.line)?.line;
-    },
-    collectLeadingComments(document, definitionLine) {
-      return collectLeadingCommentLines(document, definitionLine);
-    }
-  }
-};
-
-export const typescriptFamilyLanguageAdapter: LanguageAdapter = {
-  languageIds: ['typescript', 'javascript', 'typescriptreact', 'javascriptreact'],
-  displayName: 'TypeScript family',
-  supportLevel: 'stable',
-  documentationSource: 'language-service',
-  isDeclarationCandidate(candidate, line) {
-    return isTypeScriptFunctionLikeDeclarationLine(line)
-      || isDeclarationName(candidate, line)
-      || isDeclarationContext(candidate, line)
-      || isFunctionLikeDeclarationName(candidate, line)
-      || isFunctionParameterName(candidate, line);
-  },
-  isNoisyCandidate(candidate, line, languageId) {
-    return isJsxTagName(candidate, line, languageId) || isJsxAttributeName(candidate, line, languageId);
-  }
-};
 
 export const pythonLanguageAdapter: LanguageAdapter = {
   languageIds: ['python'],
@@ -92,7 +67,7 @@ export const javaLanguageAdapter: LanguageAdapter = {
       return findJavaDefinitionLine(document, candidate.word, candidate.line);
     },
     collectLeadingComments(document, definitionLine) {
-      return collectLeadingBlockCommentLines(document, definitionLine);
+      return collectLeadingBlockCommentLines(document, definitionLine, '/**');
     }
   }
 };
@@ -161,7 +136,7 @@ export const phpLanguageAdapter: LanguageAdapter = {
       return findPhpDefinitionLine(document, candidate.word, candidate.line);
     },
     collectLeadingComments(document, definitionLine) {
-      return collectLeadingBlockCommentLines(document, definitionLine);
+      return collectLeadingBlockCommentLines(document, definitionLine, '/**');
     }
   }
 };
@@ -208,7 +183,7 @@ export const kotlinLanguageAdapter: LanguageAdapter = {
       return findKotlinDefinitionLine(document, candidate.word, candidate.line);
     },
     collectLeadingComments(document, definitionLine) {
-      return collectLeadingBlockCommentLines(document, definitionLine);
+      return collectLeadingBlockCommentLines(document, definitionLine, '/**');
     }
   },
   documentationQuality: {
@@ -311,351 +286,6 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
 
 export function getDefaultLanguageIds(): string[] {
   return createLanguageRegistry(defaultLanguageAdapters).getLanguageIds();
-}
-
-function isDeclarationName(candidate: { startCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  return /\b(?:class|const|enum|function|interface|let|type|var)\s+$/.test(beforeCandidate);
-}
-
-function isDeclarationContext(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const next = nextNonWhitespaceCharacter(line, candidate.endCharacter);
-  if (next !== ':') {
-    return false;
-  }
-
-  return !/\bcase\s+$/.test(line.slice(0, candidate.startCharacter));
-}
-
-function isFunctionLikeDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const next = nextNonWhitespaceCharacter(line, candidate.endCharacter);
-  if (next !== '(') {
-    return false;
-  }
-
-  const openParen = line.indexOf('(', candidate.endCharacter);
-  if (openParen < 0) {
-    return false;
-  }
-
-  const closeParen = findMatchingCloseParen(line, openParen);
-  if (closeParen < 0) {
-    return false;
-  }
-
-  const afterCloseParen = line.slice(closeParen + 1).trimStart();
-  return afterCloseParen.startsWith('{') || afterCloseParen.startsWith(':');
-}
-
-function isFunctionParameterName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const openParen = line.lastIndexOf('(', candidate.startCharacter);
-  if (openParen < 0 || candidate.endCharacter <= openParen) {
-    return false;
-  }
-
-  const closeParen = findMatchingCloseParen(line, openParen);
-  if (closeParen < candidate.endCharacter) {
-    return false;
-  }
-
-  const beforeOpenParen = line.slice(0, openParen).trimEnd();
-  const afterCloseParen = line.slice(closeParen + 1).trimStart();
-  if (afterCloseParen.startsWith('=>')) {
-    return true;
-  }
-
-  const looksLikeFunctionDeclaration = /\bfunction(?:\s+[$_\p{L}][$_\p{L}\p{N}]*)?$/u.test(beforeOpenParen);
-  if (looksLikeFunctionDeclaration) {
-    return true;
-  }
-
-  const looksLikeMethodDeclaration = /[$_\p{L}][$_\p{L}\p{N}]*$/u.test(beforeOpenParen)
-    && (afterCloseParen.startsWith('{') || afterCloseParen.startsWith(':'));
-  return looksLikeMethodDeclaration;
-}
-
-function isTypeScriptFunctionLikeDeclarationLine(line: string): boolean {
-  const trimmed = line.trim();
-  if (/^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\b/.test(trimmed)) {
-    return true;
-  }
-
-  const methodMatch = /^(?:(?:public|private|protected|static|readonly|override|declare|abstract|async|get|set)\s+)*[$_\p{L}][$_\p{L}\p{N}]*\s*\(/u.exec(trimmed);
-  if (methodMatch && !isTypeScriptControlStatement(methodMatch[0])) {
-    const openParen = trimmed.indexOf('(', methodMatch.index);
-    const closeParen = findMatchingCloseParen(trimmed, openParen);
-    if (closeParen >= 0) {
-      const afterCloseParen = trimmed.slice(closeParen + 1).trimStart();
-      if (afterCloseParen.startsWith('{') || afterCloseParen.startsWith(':')) {
-        return true;
-      }
-    }
-  }
-
-  return /^(?:(?:public|private|protected|static|readonly|override|declare|abstract)\s+)*(?:(?:const|let|var)\s+)?[$_\p{L}][$_\p{L}\p{N}]*\s*(?:=|:)\s*(?:async\s+)?(?:function\b|\([^)]*\)\s*=>|[$_\p{L}][$_\p{L}\p{N}]*\s*=>)/u.test(trimmed);
-}
-
-function isTypeScriptControlStatement(value: string): boolean {
-  return /^(?:if|for|while|switch|catch|with)\s*\(/.test(value);
-}
-
-function findMatchingCloseParen(line: string, openParen: number): number {
-  let depth = 0;
-  for (let character = openParen; character < line.length; character++) {
-    if (line[character] === '(') {
-      depth++;
-      continue;
-    }
-
-    if (line[character] !== ')') {
-      continue;
-    }
-
-    depth--;
-    if (depth === 0) {
-      return character;
-    }
-  }
-
-  return -1;
-}
-
-function isCandidateInRange(
-  candidate: { startCharacter: number; endCharacter: number },
-  startCharacter: number,
-  endCharacter: number
-): boolean {
-  return candidate.startCharacter >= startCharacter && candidate.endCharacter <= endCharacter;
-}
-
-function firstNonWhitespaceIndex(line: string): number {
-  const index = line.search(/\S/);
-  return index >= 0 ? index : line.length;
-}
-
-function findFirstTokenIndex(line: string, tokens: readonly string[], startCharacter: number): number {
-  let firstIndex = -1;
-  for (const token of tokens) {
-    const index = line.indexOf(token, startCharacter);
-    if (index >= 0 && (firstIndex < 0 || index < firstIndex)) {
-      firstIndex = index;
-    }
-  }
-
-  return firstIndex;
-}
-
-function isKeywordFunctionSignatureCandidate(
-  candidate: { startCharacter: number; endCharacter: number },
-  line: string,
-  keywordPattern: RegExp,
-  bodyMarkers: readonly string[]
-): boolean {
-  const keywordMatch = keywordPattern.exec(line);
-  if (!keywordMatch) {
-    return false;
-  }
-
-  const bodyStart = findFirstTokenIndex(line, bodyMarkers, keywordMatch.index + keywordMatch[0].length);
-  const signatureEnd = bodyStart >= 0 ? bodyStart : line.length;
-  return isCandidateInRange(candidate, keywordMatch.index, signatureEnd);
-}
-
-function isCStyleMethodSignatureCandidate(
-  candidate: { startCharacter: number; endCharacter: number },
-  line: string,
-  tailPattern: RegExp
-): boolean {
-  const openParen = line.indexOf('(');
-  if (openParen < 0) {
-    return false;
-  }
-
-  const closeParen = findMatchingCloseParen(line, openParen);
-  if (closeParen < 0) {
-    return false;
-  }
-
-  const afterCloseParen = line.slice(closeParen + 1).trimStart();
-  if (!tailPattern.test(afterCloseParen)) {
-    return false;
-  }
-
-  const beforeOpenParen = line.slice(0, openParen).trimEnd();
-  const nameMatch = /[$_\p{L}][$_\p{L}\p{N}]*$/u.exec(beforeOpenParen);
-  if (!nameMatch) {
-    return false;
-  }
-
-  const prefix = beforeOpenParen.slice(0, nameMatch.index).trimEnd();
-  if (!isCStyleDeclarationPrefix(prefix)) {
-    return false;
-  }
-
-  const signatureEnd = findCStyleSignatureEnd(line, closeParen);
-  return isCandidateInRange(candidate, firstNonWhitespaceIndex(line), signatureEnd);
-}
-
-function isCStyleDeclarationPrefix(prefix: string): boolean {
-  const normalizedPrefix = prefix.trim();
-  if (normalizedPrefix.length === 0 || normalizedPrefix.includes('=') || normalizedPrefix.includes('.')) {
-    return false;
-  }
-
-  if (/^(?:return|throw|new|if|for|while|switch|catch|using)\b/.test(normalizedPrefix)) {
-    return false;
-  }
-
-  return /\s/.test(normalizedPrefix) || !normalizedPrefix.endsWith('::');
-}
-
-function findCStyleSignatureEnd(line: string, closeParen: number): number {
-  const bodyStart = findFirstTokenIndex(line, ['{', ';', '=>'], closeParen + 1);
-  return bodyStart >= 0 ? bodyStart : line.length;
-}
-
-function nextNonWhitespaceCharacter(line: string, startCharacter: number): string | undefined {
-  for (let character = startCharacter; character < line.length; character++) {
-    if (!/\s/.test(line[character])) {
-      return line[character];
-    }
-  }
-
-  return undefined;
-}
-
-function isJsxTagName(candidate: { startCharacter: number }, line: string, languageId?: string): boolean {
-  if (!isJsxLanguage(languageId) && languageId !== undefined) {
-    return false;
-  }
-
-  const beforeCandidate = line.slice(0, candidate.startCharacter).trimEnd();
-  return beforeCandidate.endsWith('<') || beforeCandidate.endsWith('</');
-}
-
-function isJsxAttributeName(
-  candidate: { startCharacter: number; endCharacter: number },
-  line: string,
-  languageId?: string
-): boolean {
-  if (!isJsxLanguage(languageId) && languageId !== undefined) {
-    return false;
-  }
-
-  if (line[candidate.endCharacter] !== '=') {
-    return false;
-  }
-
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  return beforeCandidate.lastIndexOf('<') > beforeCandidate.lastIndexOf('>');
-}
-
-function isJsxLanguage(languageId: string | undefined): boolean {
-  return languageId === 'typescriptreact' || languageId === 'javascriptreact';
-}
-
-function isGoDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  if (/\bfunc(?:\s*\([^)]*\))?\s+$/.test(beforeCandidate)) {
-    return true;
-  }
-
-  const trimmedStart = line.search(/\S/);
-  if (trimmedStart !== candidate.startCharacter) {
-    return false;
-  }
-
-  const afterCandidate = line.slice(candidate.endCharacter);
-  return afterCandidate.includes('=') && !afterCandidate.trimStart().startsWith(':=');
-}
-
-function isGoDeclarationContext(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const trimmedLine = line.trimStart();
-  const leadingWhitespace = line.length - trimmedLine.length;
-  if (isGoMethodSignatureDeclarationLine(trimmedLine)) {
-    return true;
-  }
-
-  if (trimmedLine.startsWith('func ')) {
-    const bodyStart = line.indexOf('{');
-    if (bodyStart < 0 || candidate.startCharacter < bodyStart) {
-      return true;
-    }
-  }
-
-  const shortDeclaration = line.indexOf(':=');
-  if (shortDeclaration >= 0 && candidate.startCharacter >= leadingWhitespace && candidate.endCharacter <= shortDeclaration) {
-    return true;
-  }
-
-  const assignment = findGoAssignmentOperator(line);
-  if (assignment >= 0 && candidate.startCharacter >= leadingWhitespace && candidate.endCharacter <= assignment) {
-    return true;
-  }
-
-  return false;
-}
-
-function isGoMethodSignatureDeclarationLine(trimmedLine: string): boolean {
-  const signatureStart = trimmedLine.match(/^[A-Za-z_]\w*\s*\(/);
-  if (!signatureStart) {
-    return false;
-  }
-
-  const openParen = trimmedLine.indexOf('(');
-  const closeParen = findMatchingCloseParen(trimmedLine, openParen);
-  if (closeParen < 0) {
-    return false;
-  }
-
-  const afterSignature = trimmedLine.slice(closeParen + 1).trim();
-  if (afterSignature.length > 0) {
-    return isGoReturnSignature(afterSignature);
-  }
-
-  return hasGoTypedParameterList(trimmedLine.slice(openParen + 1, closeParen));
-}
-
-function isGoReturnSignature(value: string): boolean {
-  if (value.startsWith('{') || value.includes('=')) {
-    return false;
-  }
-
-  return /^(?:\*|\[\]|map\[|chan\b|<-chan\b|[A-Za-z_]\w*|\([^)]*\))/.test(value);
-}
-
-function hasGoTypedParameterList(params: string): boolean {
-  return /(?:^|,)\s*[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*\s+[*\[\]A-Za-z_]/.test(params);
-}
-
-function findGoAssignmentOperator(line: string): number {
-  for (let index = 0; index < line.length; index++) {
-    if (line[index] !== '=') {
-      continue;
-    }
-
-    const previous = line[index - 1];
-    const next = line[index + 1];
-    if (previous === ':' || previous === '=' || previous === '!' || previous === '<' || previous === '>' || next === '=') {
-      continue;
-    }
-
-    return index;
-  }
-
-  return -1;
-}
-
-function isFilePathWithExtension(uri: string, extension: string): boolean {
-  try {
-    return decodeURIComponent(new URL(uri).pathname).endsWith(extension);
-  } catch {
-    return uri.split(/[?#]/, 1)[0].endsWith(extension);
-  }
-}
-
-function isFilePathWithAnyExtension(uri: string, extensions: readonly string[]): boolean {
-  return extensions.some((extension) => isFilePathWithExtension(uri, extension));
 }
 
 function isPythonDeclarationName(candidate: { startCharacter: number }, line: string): boolean {
@@ -770,10 +400,6 @@ function readPythonTripleQuotedString(
   return [];
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function isJavaDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
   const beforeCandidate = line.slice(0, candidate.startCharacter);
   return /\b(?:class|enum|interface|record)\s+$/.test(beforeCandidate);
@@ -803,37 +429,6 @@ function findJavaDefinitionLine(document: { lineAt(line: number): { text: string
   }
 
   return undefined;
-}
-
-function collectLeadingBlockCommentLines(document: { lineAt(line: number): { text: string }; lineCount: number }, definitionLine: number): string[] {
-  const collected: string[] = [];
-  let line = definitionLine - 1;
-  let foundEnd = false;
-
-  while (line >= 0) {
-    const text = document.lineAt(line).text.trim();
-    if (text.length === 0 && !foundEnd) {
-      line--;
-      continue;
-    }
-
-    if (!foundEnd && text.endsWith('*/')) {
-      foundEnd = true;
-    }
-
-    if (!foundEnd) {
-      break;
-    }
-
-    collected.unshift(text);
-    if (text.startsWith('/**')) {
-      return collected;
-    }
-
-    line--;
-  }
-
-  return [];
 }
 
 function isRustDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
@@ -1103,58 +698,4 @@ function findCppDefinitionLine(document: { lineAt(line: number): { text: string 
     new RegExp(`^\\s*#define\\s+${wordPattern}\\b`),
     new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
   ]);
-}
-
-function findDefinitionLine(
-  document: { lineAt(line: number): { text: string }; lineCount: number },
-  referenceLine: number,
-  definitionPatterns: readonly RegExp[]
-): number | undefined {
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
-}
-
-function collectLeadingDocCommentLines(
-  document: { lineAt(line: number): { text: string }; lineCount: number },
-  definitionLine: number
-): string[] {
-  const lineComments = collectLeadingLineCommentLines(document, definitionLine, ['///', '//!']);
-  if (lineComments.length > 0) {
-    return lineComments;
-  }
-
-  return collectLeadingBlockCommentLines(document, definitionLine);
-}
-
-function collectLeadingLineCommentLines(
-  document: { lineAt(line: number): { text: string }; lineCount: number },
-  definitionLine: number,
-  prefixes: readonly string[]
-): string[] {
-  const collected: string[] = [];
-  for (let line = definitionLine - 1; line >= 0; line--) {
-    const text = document.lineAt(line).text.trim();
-    if (prefixes.some((prefix) => text.startsWith(prefix))) {
-      collected.unshift(text);
-      continue;
-    }
-
-    if (text.length === 0 && collected.length === 0) {
-      continue;
-    }
-
-    break;
-  }
-
-  return collected;
 }
