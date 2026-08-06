@@ -15,9 +15,11 @@ import {
   isKeywordFunctionSignatureCandidate
 } from './shared';
 import { typescriptFamilyLanguageAdapter } from './typescript';
+import { pythonLanguageAdapter } from './python';
 
 export { goLanguageAdapter } from './go';
 export { typescriptFamilyLanguageAdapter } from './typescript';
+export { pythonLanguageAdapter } from './python';
 
 export interface LanguageRegistry {
   getAdapter(languageId: string): LanguageAdapter | undefined;
@@ -25,30 +27,6 @@ export interface LanguageRegistry {
   getLanguageIds(): string[];
   getEnabledLanguageIds(configuredLanguageIds: readonly string[]): string[];
 }
-
-export const pythonLanguageAdapter: LanguageAdapter = {
-  languageIds: ['python'],
-  displayName: 'Python',
-  supportLevel: 'stable',
-  documentationSource: 'language-service-with-source-fallback',
-  recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
-  isDeclarationCandidate(candidate, line) {
-    return isPythonDeclarationName(candidate, line)
-      || isPythonFunctionSignatureCandidate(candidate, line)
-      || isPythonAssignmentName(candidate, line);
-  },
-  sourceComment: {
-    canRead(location) {
-      return isFilePathWithExtension(location.uri, '.py');
-    },
-    findDefinitionLine(document, candidate) {
-      return findPythonDefinitionLine(document, candidate.word, candidate.line);
-    },
-    collectLeadingComments(document, definitionLine) {
-      return collectPythonDocstringLines(document, definitionLine);
-    }
-  }
-};
 
 export const javaLanguageAdapter: LanguageAdapter = {
   languageIds: ['java'],
@@ -286,118 +264,6 @@ export function createLanguageRegistry(adapters: readonly LanguageAdapter[]): La
 
 export function getDefaultLanguageIds(): string[] {
   return createLanguageRegistry(defaultLanguageAdapters).getLanguageIds();
-}
-
-function isPythonDeclarationName(candidate: { startCharacter: number }, line: string): boolean {
-  const beforeCandidate = line.slice(0, candidate.startCharacter);
-  return /^\s*(?:def|class)\s+$/.test(beforeCandidate);
-}
-
-function isPythonFunctionSignatureCandidate(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const definitionMatch = /^\s*def\s+/.exec(line);
-  if (!definitionMatch) {
-    return false;
-  }
-
-  const openParen = line.indexOf('(', definitionMatch[0].length);
-  if (openParen < 0) {
-    return false;
-  }
-
-  const closeParen = findMatchingCloseParen(line, openParen);
-  const colon = closeParen >= 0 ? line.indexOf(':', closeParen + 1) : -1;
-  const signatureEnd = colon >= 0 ? colon : line.length;
-  return isCandidateInRange(candidate, definitionMatch.index, signatureEnd);
-}
-
-function isPythonAssignmentName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
-  const trimmedStart = line.search(/\S/);
-  if (trimmedStart !== candidate.startCharacter) {
-    return false;
-  }
-
-  const afterCandidate = line.slice(candidate.endCharacter).trimStart();
-  return afterCandidate.startsWith('=') && !afterCandidate.startsWith('==');
-}
-
-function findPythonDefinitionLine(document: { lineAt(line: number): { text: string }; lineCount: number }, word: string, referenceLine: number): number | undefined {
-  const wordPattern = escapeRegExp(word);
-  const definitionPatterns = [
-    new RegExp(`^\\s*(?:def|class)\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*${wordPattern}\\s*=`)
-  ];
-
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
-}
-
-function collectPythonDocstringLines(document: { lineAt(line: number): { text: string }; lineCount: number }, definitionLine: number): string[] {
-  for (let line = definitionLine + 1; line < document.lineCount; line++) {
-    const text = document.lineAt(line).text;
-    const trimmed = text.trim();
-    if (trimmed.length === 0) {
-      continue;
-    }
-
-    return readPythonTripleQuotedString(document, line, trimmed);
-  }
-
-  return [];
-}
-
-function readPythonTripleQuotedString(
-  document: { lineAt(line: number): { text: string }; lineCount: number },
-  startLine: number,
-  firstTrimmedLine: string
-): string[] {
-  const quote = firstTrimmedLine.startsWith('"""')
-    ? '"""'
-    : firstTrimmedLine.startsWith("'''")
-      ? "'''"
-      : undefined;
-  if (!quote) {
-    return [];
-  }
-
-  const firstContent = firstTrimmedLine.slice(quote.length);
-  const closingOnFirstLine = firstContent.indexOf(quote);
-  if (closingOnFirstLine >= 0) {
-    const singleLine = firstContent.slice(0, closingOnFirstLine).trim();
-    return singleLine ? [singleLine] : [];
-  }
-
-  const lines: string[] = [];
-  if (firstContent.trim().length > 0) {
-    lines.push(firstContent.trim());
-  }
-
-  for (let line = startLine + 1; line < document.lineCount; line++) {
-    const trimmed = document.lineAt(line).text.trim();
-    const closingIndex = trimmed.indexOf(quote);
-    if (closingIndex >= 0) {
-      const beforeClosing = trimmed.slice(0, closingIndex).trim();
-      if (beforeClosing.length > 0) {
-        lines.push(beforeClosing);
-      }
-      return lines;
-    }
-
-    if (trimmed.length > 0) {
-      lines.push(trimmed);
-    }
-  }
-
-  return [];
 }
 
 function isJavaDeclarationName(candidate: { word: string; startCharacter: number; endCharacter: number }, line: string): boolean {
