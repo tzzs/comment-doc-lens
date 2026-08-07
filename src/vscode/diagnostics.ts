@@ -69,6 +69,16 @@ export class DiagnosticsSession {
   constructor(private readonly outputChannel: DiagnosticsOutput) {}
 
   record(level: DiagnosticLevel, message: string, details?: Readonly<Record<string, unknown>>): void {
+    // A persistently failing language service can otherwise flood the event
+    // queue with one identical warn/error per candidate, crowding out other
+    // signals in the copy-for-issue report. Keep only the first occurrence of a
+    // repeated failure.
+    if (level === 'warn' || level === 'error') {
+      if (this.events.some((event) => event.level === level && event.message === message && sameDetails(event.details, details))) {
+        return;
+      }
+    }
+
     const event: DiagnosticEvent = {
       timestamp: new Date().toISOString(),
       level,
@@ -266,4 +276,11 @@ function shortUri(uri: string): string {
 
 function escapeMarkdownTableCell(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+}
+
+function sameDetails(
+  left: Readonly<Record<string, unknown>> | undefined,
+  right: Readonly<Record<string, unknown>> | undefined
+): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
