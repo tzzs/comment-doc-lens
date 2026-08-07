@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.6.2...comment-doc-lens-v0.6.3) (2026-08-07)
+
+
+### Bug Fixes
+
+* **hints:** join prose paragraphs into inlay summaries ([d9d3b11](https://github.com/tzzs/comment-doc-lens/commit/d9d3b11021591f4178f4eaf38c35a6ee12dc0ea2))
+
 ## [0.6.2](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.6.1...comment-doc-lens-v0.6.2) (2026-06-30)
 
 
