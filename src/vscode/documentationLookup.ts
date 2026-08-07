@@ -76,7 +76,7 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
     return {
       uri: uri.toString(),
       line: definitionLine,
-      character: document.lineAt(definitionLine).text.indexOf(candidate.word)
+      character: Math.max(0, document.lineAt(definitionLine).text.indexOf(candidate.word))
     };
   }
 
@@ -99,6 +99,10 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
       document,
       location.line,
       (line) => sourceComment.collectLeadingComments(document, line),
+      // Hot path: the anchor is already the language-service definition line, so
+      // the narrow DEFINITION_SEARCH_WINDOW fallback (default) is intentional —
+      // versus LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups
+      // away from a known definition.
       (anchorLine) => sourceComment.findDefinitionLine?.(document, candidate, { ...location, line: anchorLine })
     );
   }

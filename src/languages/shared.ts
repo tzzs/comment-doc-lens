@@ -145,7 +145,21 @@ export function collectLeadingSlashCommentLines(document: SourceLineReader, defi
   return collectLeadingBlockCommentLines(document, definitionLine, '/*');
 }
 
+/**
+ * Window above an already-known definition to relocate the comment-bearing
+ * declaration line. Kept narrow because the anchor is the definition, so the
+ * doc comment sits directly above it; a wide lookback here risks grabbing an
+ * unrelated declaration's comment and scanning long stretches of the hot path.
+ */
 export const DEFINITION_SEARCH_WINDOW = 20;
+
+/**
+ * Lookback used when scanning for a *local* definition from a reference site.
+ * Unlike DEFINITION_SEARCH_WINDOW (anchored at a known definition), there is no
+ * nearby anchor, so the definition can legitimately sit far above the reference
+ * (e.g. a const block near the top of a long file). This runs only on the cold
+ * definition-lookup path, not per resolved candidate.
+ */
 export const LOCAL_DEFINITION_LOOKBACK = 500;
 
 export function findDefinitionLine(
