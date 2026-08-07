@@ -14,6 +14,8 @@ export const CANDIDATE_PRIORITY = {
   receiverOrNamespace: 0
 } as const;
 
+export type CandidateRole = keyof typeof CANDIDATE_PRIORITY;
+
 export function prioritizeCandidates(
   candidates: readonly SymbolCandidate[],
   lines: readonly string[],
@@ -92,26 +94,30 @@ function getCandidateLine(lines: readonly string[], lineNumber: number, range?: 
   return lines[lineNumber] ?? '';
 }
 
-export function getCandidatePriorityScore(candidate: SymbolCandidate, line: string): number {
+export function classifyCandidate(candidate: SymbolCandidate, line: string): CandidateRole {
   if (isReceiverOrNamespace(candidate, line)) {
-    return CANDIDATE_PRIORITY.receiverOrNamespace;
+    return 'receiverOrNamespace';
   }
 
   if (isCallTarget(candidate, line)) {
-    return CANDIDATE_PRIORITY.callTarget;
+    return 'callTarget';
   }
 
   if (isMemberTail(candidate, line)) {
     return looksEnumOrConstantLike(candidate.word)
-      ? CANDIDATE_PRIORITY.enumOrConstantMember
-      : CANDIDATE_PRIORITY.propertyTail;
+      ? 'enumOrConstantMember'
+      : 'propertyTail';
   }
 
   if (isTypeReference(candidate, line)) {
-    return CANDIDATE_PRIORITY.typeReference;
+    return 'typeReference';
   }
 
-  return CANDIDATE_PRIORITY.neutralReference;
+  return 'neutralReference';
+}
+
+export function getCandidatePriorityScore(candidate: SymbolCandidate, line: string): number {
+  return CANDIDATE_PRIORITY[classifyCandidate(candidate, line)];
 }
 
 function isCallTarget(candidate: SymbolCandidate, line: string): boolean {

@@ -148,6 +148,36 @@ test('registry filters enabled language ids through existing configuration seman
   assert.deepEqual(registry.getEnabledLanguageIds([]), []);
 });
 
+test('registry derives workspace diagnosis globs from adapter source file extensions', () => {
+  const registry = createLanguageRegistry(defaultLanguageAdapters);
+  const globs = registry.getSourceFileGlobs();
+
+  assert.equal(globs.length, 1);
+  assert.match(globs[0], /^\*\*\/\*\.\{[a-z,]+}$/);
+  const extensions = globs[0].slice(globs[0].indexOf('{') + 1, globs[0].lastIndexOf('}')).split(',');
+  assert.deepEqual(
+    [...extensions].sort(),
+    ['go', 'ts', 'tsx', 'js', 'jsx', 'py', 'java', 'rs', 'php', 'cs', 'rb', 'kt', 'swift', 'c', 'cpp', 'h', 'hpp'].sort()
+  );
+});
+
+test('registry rejects adapters that declare no source extensions', () => {
+  assert.throws(
+    () =>
+      createLanguageRegistry([
+        ...defaultLanguageAdapters,
+        {
+          languageIds: ['nim'],
+          sourceFileExtensions: [],
+          displayName: 'Nim',
+          supportLevel: 'experimental',
+          documentationSource: 'language-service'
+        }
+      ]),
+    /must declare sourceFileExtensions/
+  );
+});
+
 test('registry rejects duplicate language ids across adapters', () => {
   assert.throws(
     () =>
@@ -155,6 +185,7 @@ test('registry rejects duplicate language ids across adapters', () => {
         ...defaultLanguageAdapters,
         {
           languageIds: ['go'],
+          sourceFileExtensions: ['go'],
           displayName: 'Duplicate Go',
           supportLevel: 'experimental',
           documentationSource: 'language-service'

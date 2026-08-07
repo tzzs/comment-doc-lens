@@ -26,6 +26,7 @@ test('builds inlay hints from resolved candidate documentation', async () => {
         maxHintsPerRequest: 20,
         minIdentifierLength: 2,
         preferPropertyTail: true,
+        maxHintLength: 120,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -67,6 +68,7 @@ test('places hints at absolute line ends for dense visible-range lines', async (
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -104,6 +106,7 @@ test('filters resolved documentation below the configured word budget', async ()
       minIdentifierLength: 2,
       minimumDocumentationWords: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -133,6 +136,7 @@ test('returns no hints when disabled or language is not enabled', async () => {
         maxHintsPerRequest: 20,
         minIdentifierLength: 2,
         preferPropertyTail: true,
+        maxHintLength: 120,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -154,6 +158,7 @@ test('returns no hints when disabled or language is not enabled', async () => {
         maxHintsPerRequest: 20,
         minIdentifierLength: 2,
         preferPropertyTail: true,
+        maxHintLength: 120,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -186,6 +191,7 @@ test('returns no hints when a per-language override disables the language', asyn
         maxHintsPerRequest: 20,
         minIdentifierLength: 2,
         preferPropertyTail: true,
+        maxHintLength: 120,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -215,6 +221,7 @@ test('does not resolve candidates on lines beyond the configured length budget',
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -251,6 +258,7 @@ test('does not show a symbol own documentation on its definition line', async ()
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -361,6 +369,7 @@ test('does not show own documentation on supported language definition lines', a
         maxHintsPerRequest: 20,
         minIdentifierLength: 2,
         preferPropertyTail: true,
+        maxHintLength: 120,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -404,6 +413,7 @@ test('prefers the tail of property chains when configured', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -412,6 +422,42 @@ test('prefers the tail of property chains when configured', async () => {
 
   assert.deepEqual(resolvedWords, ['displayName']);
   assert.deepEqual(hints.map((hint) => hint.label), ['// doc for displayName']);
+});
+
+test('drops optional-chaining and namespace receivers under the unified role classifier', async () => {
+  const resolvedWords: string[] = [];
+  const resolver: CommentHintResolver = {
+    resolve: async (candidate) => {
+      resolvedWords.push(candidate.word);
+      return {
+        summary: `doc for ${candidate.word}`,
+        fullText: `doc for ${candidate.word}`,
+        location: { uri: 'file:///order.ts', line: 1, character: 1 }
+      };
+    }
+  };
+
+  const hints = await buildCommentHints({
+    lines: ['const label = profile?.name + Engine::notify();'],
+    range: { startLine: 0, endLineInclusive: 0 },
+    languageId: 'typescript',
+    documentUri: 'file:///order.ts',
+    documentVersion: 1,
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxHintsPerRequest: 20,
+      minIdentifierLength: 2,
+      preferPropertyTail: true,
+      maxHintLength: 120,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    resolver
+  });
+
+  assert.deepEqual(resolvedWords, ['notify', 'name']);
+  assert.deepEqual(hints.map((hint) => hint.label), ['// notify: doc for notify | name: doc for name']);
 });
 
 test('applies max hint budget after filtering noisy candidates', async () => {
@@ -442,6 +488,7 @@ test('applies max hint budget after filtering noisy candidates', async () => {
       maxHintsPerRequest: 2,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -476,6 +523,7 @@ test('deduplicates repeated candidate positions within a request', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -507,6 +555,7 @@ test('filters short identifiers unless resolved documentation has a location', a
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -537,6 +586,7 @@ test('dedupes repeated line summaries and prefers a location-bearing hint', asyn
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -574,6 +624,7 @@ test('keeps repeated summaries when line dedupe is disabled', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: false,
       resolveTimeoutMs: 750
     },
@@ -611,6 +662,7 @@ test('skips common declaration names and jsx tag names', async () => {
       maxHintsPerRequest: 30,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -649,6 +701,7 @@ test('skips jsx attribute names', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -688,6 +741,7 @@ test('skips go declaration names', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -725,6 +779,7 @@ test('keeps go case label references', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -758,6 +813,7 @@ test('allows slower go resolver responses than the configured base timeout', asy
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 1
     },
@@ -795,6 +851,7 @@ test('limits concurrent resolver calls', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: false,
       resolveTimeoutMs: 750
     },
@@ -827,6 +884,7 @@ test('drops resolver results that exceed the configured timeout', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 1
     },
@@ -859,6 +917,7 @@ test('uses custom hint prefix and places hints at line end', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750,
       hintPrefix: ' // doc: '
@@ -911,6 +970,7 @@ test('groups multiple same-line hints with candidate names', async () => {
       maxHintsPerRequest: 20,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -952,6 +1012,7 @@ test('prioritizes method and enum candidates before applying max hint budget', a
       maxHintsPerRequest: 2,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -984,6 +1045,7 @@ test('limits crowded same-line hints without hiding method plus enum pairs', asy
       maxHintsPerLine: 2,
       minIdentifierLength: 2,
       preferPropertyTail: true,
+      maxHintLength: 120,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
