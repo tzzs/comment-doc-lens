@@ -114,6 +114,7 @@ export class DocumentationResolver {
     );
     if (fromReference) {
       this.setCache(cacheKey, fromReference);
+      this.setCache(this.getCacheKey('full', candidate, documentUri, documentVersion), fromReference);
       return fromReference;
     }
 
