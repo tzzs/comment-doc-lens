@@ -50,13 +50,19 @@ function isRustTupleVariantDeclaration(candidate: { endCharacter: number }, line
 function findRustDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:const|enum|fn|struct|trait|type)\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*${wordPattern}\\s*(?:,|\\(|\\{|;)`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:const|enum|fn|struct|trait|type)\\s+${wordPattern}\\b`),
+      new RegExp(`^\\s*${wordPattern}\\s*(?:,|\\(|\\{|;)`)
+    ],
+    lookback
+  );
 }
 
 function collectLeadingRustDocCommentLines(document: SourceDocument, definitionLine: number): string[] {
@@ -92,8 +98,8 @@ export const rustLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.rs');
     },
-    findDefinitionLine(document, candidate, location) {
-      return findRustDefinitionLine(document, candidate.word, location.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findRustDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingRustDocCommentLines(document, definitionLine);

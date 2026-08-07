@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { SymbolCandidate } from '../candidateScanner';
 import type { DocumentationLookup, LocationLike } from '../documentationResolver';
 import type { LanguageAdapter } from '../languages/languageAdapter';
-import { collectCommentsAtAnchor } from '../languages/shared';
+import { collectCommentsAtAnchor, LOCAL_DEFINITION_LOOKBACK } from '../languages/shared';
 import { getHoverLines } from './hover';
 import type { DiagnosticsSession } from './diagnostics';
 
@@ -68,7 +68,7 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
       uri: uri.toString(),
       line: candidate.line,
       character: candidate.startCharacter
-    });
+    }, LOCAL_DEFINITION_LOOKBACK);
     if (definitionLine === undefined) {
       return undefined;
     }

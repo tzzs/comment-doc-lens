@@ -45,13 +45,19 @@ function isPythonAssignmentName(candidate: { startCharacter: number; endCharacte
 function findPythonDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`^\\s*(?:def|class)\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*${wordPattern}\\s*=`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`^\\s*(?:def|class)\\s+${wordPattern}\\b`),
+      new RegExp(`^\\s*${wordPattern}\\s*=`)
+    ],
+    lookback
+  );
 }
 
 function collectPythonDocstringLines(document: SourceDocument, definitionLine: number): string[] {
@@ -129,8 +135,8 @@ export const pythonLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.py');
     },
-    findDefinitionLine(document, candidate, location) {
-      return findPythonDefinitionLine(document, candidate.word, location.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findPythonDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectPythonDocstringLines(document, definitionLine);

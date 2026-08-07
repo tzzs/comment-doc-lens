@@ -25,14 +25,20 @@ function isJavaMethodSignatureCandidate(
 function findJavaDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:class|enum|interface|record)\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*\\(`),
-    new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:class|enum|interface|record)\\s+${wordPattern}\\b`),
+      new RegExp(`\\b${wordPattern}\\s*\\(`),
+      new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
+    ],
+    lookback
+  );
 }
 
 export const javaLanguageAdapter: LanguageAdapter = {
@@ -49,8 +55,8 @@ export const javaLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.java');
     },
-    findDefinitionLine(document, candidate, location) {
-      return findJavaDefinitionLine(document, candidate.word, location.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findJavaDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

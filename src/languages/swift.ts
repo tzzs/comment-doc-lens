@@ -30,15 +30,21 @@ function isSwiftFunctionSignatureCandidate(
 function findSwiftDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:actor|class|enum|protocol|struct)\\s+${wordPattern}\\b`),
-    new RegExp(`\\bfunc\\s+${wordPattern}\\s*\\(`),
-    new RegExp(`\\b(?:let|var)\\s+${wordPattern}\\b`),
-    new RegExp(`\\bcase\\s+${wordPattern}\\b`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:actor|class|enum|protocol|struct)\\s+${wordPattern}\\b`),
+      new RegExp(`\\bfunc\\s+${wordPattern}\\s*\\(`),
+      new RegExp(`\\b(?:let|var)\\s+${wordPattern}\\b`),
+      new RegExp(`\\bcase\\s+${wordPattern}\\b`)
+    ],
+    lookback
+  );
 }
 
 export const swiftLanguageAdapter: LanguageAdapter = {
@@ -55,8 +61,8 @@ export const swiftLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.swift');
     },
-    findDefinitionLine(document, candidate, location) {
-      return findSwiftDefinitionLine(document, candidate.word, location.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findSwiftDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingDocCommentLines(document, definitionLine);

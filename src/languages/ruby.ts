@@ -26,13 +26,19 @@ function isRubyFunctionSignatureCandidate(
 function findRubyDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`^\\s*(?:def|class|module)\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*${wordPattern}\\s*=`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`^\\s*(?:def|class|module)\\s+${wordPattern}\\b`),
+      new RegExp(`^\\s*${wordPattern}\\s*=`)
+    ],
+    lookback
+  );
 }
 
 export const rubyLanguageAdapter: LanguageAdapter = {
@@ -49,8 +55,8 @@ export const rubyLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.rb');
     },
-    findDefinitionLine(document, candidate, location) {
-      return findRubyDefinitionLine(document, candidate.word, location.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findRubyDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingLineCommentLines(document, definitionLine, ['#']);

@@ -71,16 +71,22 @@ function isPhpVariableAssignmentName(
 function findPhpDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:class|enum|interface|trait)\\s+${wordPattern}\\b`),
-    new RegExp(`\\bfunction\\s+${wordPattern}\\s*\\(`),
-    new RegExp(`^\\s*(?:(?:public|protected|private)\\s+)?const\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*(?:public|protected|private)\\s+(?:(?:static|readonly)\\s+)*(?:\\??[\\w\\\\]+(?:\\[\\])?\\s+)?\\$${wordPattern}\\b`),
-    new RegExp(`\\$${wordPattern}\\s*=`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:class|enum|interface|trait)\\s+${wordPattern}\\b`),
+      new RegExp(`\\bfunction\\s+${wordPattern}\\s*\\(`),
+      new RegExp(`^\\s*(?:(?:public|protected|private)\\s+)?const\\s+${wordPattern}\\b`),
+      new RegExp(`^\\s*(?:public|protected|private)\\s+(?:(?:static|readonly)\\s+)*(?:\\??[\\w\\\\]+(?:\\[\\])?\\s+)?\\$${wordPattern}\\b`),
+      new RegExp(`\\$${wordPattern}\\s*=`)
+    ],
+    lookback
+  );
 }
 
 export const phpLanguageAdapter: LanguageAdapter = {
@@ -97,8 +103,8 @@ export const phpLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.php');
     },
-    findDefinitionLine(document, candidate, location) {
-      return findPhpDefinitionLine(document, candidate.word, location.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findPhpDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

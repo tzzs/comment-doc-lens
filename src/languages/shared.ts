@@ -146,13 +146,15 @@ export function collectLeadingSlashCommentLines(document: SourceLineReader, defi
 }
 
 export const DEFINITION_SEARCH_WINDOW = 20;
+export const LOCAL_DEFINITION_LOOKBACK = 500;
 
 export function findDefinitionLine(
   document: SourceDocument,
   referenceLine: number,
-  definitionPatterns: readonly RegExp[]
+  definitionPatterns: readonly RegExp[],
+  lookback = DEFINITION_SEARCH_WINDOW
 ): number | undefined {
-  const from = Math.max(0, referenceLine - DEFINITION_SEARCH_WINDOW);
+  const from = Math.max(0, referenceLine - lookback);
   for (let line = from; line <= referenceLine; line++) {
     if (line === referenceLine) {
       continue;
