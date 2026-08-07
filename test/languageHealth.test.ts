@@ -193,6 +193,64 @@ test('evicts the oldest entry when the cache exceeds its bound', async () => {
   assert.equal(hoverProbeCount, 5);
 });
 
+test('does not cache degraded results so a later evaluation gets a fresh status', async () => {
+  let hoverProbeCount = 0;
+  const service = new LanguageHealthService({
+    isExtensionInstalled: async () => true,
+    hasHover: async () => {
+      hoverProbeCount += 1;
+      return hoverProbeCount > 1;
+    },
+    hasDefinition: async () => true
+  });
+
+  const input = {
+    languageId: 'go',
+    adapter: goLanguageAdapter,
+    documentUri: 'file:///order.go',
+    position: { line: 1, character: 4 }
+  };
+
+  const degraded = await service.evaluate(input);
+  assert.equal(degraded.state, 'degraded');
+  assert.equal(hoverProbeCount, 1);
+
+  const ready = await service.evaluate(input);
+  assert.equal(ready.state, 'ready');
+  assert.equal(hoverProbeCount, 2);
+});
+
+test('does not cache timed-out results so a later evaluation gets a fresh status', async () => {
+  let probeCalls = 0;
+  const timeline = new LanguageHealthService(
+    {
+      isExtensionInstalled: async () => true,
+      hasHover: async () => {
+        probeCalls += 1;
+        return new Promise((resolve) => setTimeout(() => resolve(true), 20));
+      },
+      hasDefinition: async () => true
+    },
+    1
+  );
+
+  const input = {
+    languageId: 'go',
+    adapter: goLanguageAdapter,
+    documentUri: 'file:///order.go',
+    position: { line: 1, character: 4 }
+  };
+
+  const first = await timeline.evaluate(input);
+  assert.equal(first.state, 'unknown');
+
+  // A cached 'unknown' would return the original promise without re-probing;
+  // our fix drops failed results, so a second evaluation reaches the probe again.
+  const second = await timeline.evaluate(input);
+  assert.equal(second.state, 'unknown');
+  assert.equal(probeCalls, 2);
+});
+
 test('clearCache invalidates previously cached health checks', async () => {
   let hoverProbeCount = 0;
   const service = new LanguageHealthService({
