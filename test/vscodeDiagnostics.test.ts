@@ -41,18 +41,15 @@ test('keeps at most the last hundred events', () => {
   assert.equal(store.getEvents()[0].message, 'event 20');
 });
 
-test('records a repeated warn or error only once', () => {
+test('records a repeated warn or error message only once', () => {
   const lines: string[] = [];
   const store = new DiagnosticsSession(output(lines));
 
   store.record('warn', 'Hover provider failed; skipping hint for this candidate.', { uri: 'file:///a.ts', line: 3 });
-  store.record('warn', 'Hover provider failed; skipping hint for this candidate.', { uri: 'file:///a.ts', line: 3 });
   store.record('warn', 'Hover provider failed; skipping hint for this candidate.', { uri: 'file:///a.ts', line: 4 });
 
-  assert.deepEqual(
-    store.getEvents().map((event) => event.details),
-    [{ uri: 'file:///a.ts', line: 3 }, { uri: 'file:///a.ts', line: 4 }]
-  );
+  assert.equal(store.getEvents().length, 1);
+  assert.deepEqual(store.getEvents()[0].details, { uri: 'file:///a.ts', line: 3 });
 });
 
 test('stores and returns the latest diagnostic snapshots', () => {

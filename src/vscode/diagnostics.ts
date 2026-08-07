@@ -71,10 +71,11 @@ export class DiagnosticsSession {
   record(level: DiagnosticLevel, message: string, details?: Readonly<Record<string, unknown>>): void {
     // A persistently failing language service can otherwise flood the event
     // queue with one identical warn/error per candidate, crowding out other
-    // signals in the copy-for-issue report. Keep only the first occurrence of a
-    // repeated failure.
+    // signals in the copy-for-issue report. Failure details vary per candidate
+    // (line/character), so dedup on the message alone: keep only the first
+    // occurrence of each repeated failure while retaining its position.
     if (level === 'warn' || level === 'error') {
-      if (this.events.some((event) => event.level === level && event.message === message && sameDetails(event.details, details))) {
+      if (this.events.some((event) => event.level === level && event.message === message)) {
         return;
       }
     }
@@ -276,11 +277,4 @@ function shortUri(uri: string): string {
 
 function escapeMarkdownTableCell(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
-}
-
-function sameDetails(
-  left: Readonly<Record<string, unknown>> | undefined,
-  right: Readonly<Record<string, unknown>> | undefined
-): boolean {
-  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
