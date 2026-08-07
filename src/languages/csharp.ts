@@ -49,8 +49,8 @@ export const csharpLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.cs');
     },
-    findDefinitionLine(document, candidate) {
-      return findCSharpDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location) {
+      return findCSharpDefinitionLine(document, candidate.word, location.line);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingLineCommentLines(document, definitionLine, ['///']);

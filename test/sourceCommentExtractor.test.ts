@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { findGoDefinitionLine } from '../src/languages/go';
 import {
+  collectCommentsAtAnchor,
   collectLeadingBlockCommentLines,
   collectLeadingDocCommentLines,
   collectLeadingLineCommentLines,
-  collectLeadingSlashCommentLines
+  collectLeadingSlashCommentLines,
+  findDefinitionLine
 } from '../src/languages/shared';
 
 function createDocument(lines: readonly string[]) {
@@ -134,6 +136,60 @@ test('collectLeadingSlashCommentLines ignores non-adjacent comments', () => {
   ]);
 
   assert.deepEqual(collectLeadingSlashCommentLines(document, 2), []);
+});
+
+test('collectCommentsAtAnchor collects comments directly at the definition anchor', () => {
+  const document = createDocument([
+    '// Status reports the current status.',
+    'func Status() string { return "ok" }'
+  ]);
+  let findCalls = 0;
+
+  const collected = collectCommentsAtAnchor(
+    document,
+    1,
+    (line) => collectLeadingSlashCommentLines(document, line),
+    (anchorLine) => {
+      findCalls++;
+      return findGoDefinitionLine(document, 'Status', anchorLine)?.line;
+    }
+  );
+
+  assert.deepEqual(collected, ['// Status reports the current status.']);
+  assert.equal(findCalls, 0);
+});
+
+test('collectCommentsAtAnchor falls back to a windowed search above the anchor', () => {
+  const document = createDocument([
+    '/// Formats the order status.',
+    'pub fn format_status(status: &str) -> String {',
+    '    status.to_string()',
+    '}',
+    '',
+    'pub fn format_status(status: &str) -> String {',
+    '    status.to_string()',
+    '}'
+  ]);
+
+  const collected = collectCommentsAtAnchor(
+    document,
+    5,
+    (line) => collectLeadingDocCommentLines(document, line),
+    (anchorLine) => findDefinitionLine(document, anchorLine, [/\bfn\s+format_status\s*\(/])
+  );
+
+  assert.deepEqual(collected, ['/// Formats the order status.']);
+});
+
+test('findDefinitionLine only searches a window above the anchor', () => {
+  const document = createDocument([
+    '// Detached documentation.',
+    'const status = 1;',
+    ...Array.from({ length: 25 }, () => ''),
+    'const other = 2;'
+  ]);
+
+  assert.equal(findDefinitionLine(document, 26, [/^const\s+status\b/]), undefined);
 });
 
 test('finds go const block definitions for local source fallback', () => {

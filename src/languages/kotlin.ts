@@ -62,8 +62,8 @@ export const kotlinLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.kt');
     },
-    findDefinitionLine(document, candidate) {
-      return findKotlinDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location) {
+      return findKotlinDefinitionLine(document, candidate.word, location.line);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

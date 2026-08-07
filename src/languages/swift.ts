@@ -55,8 +55,8 @@ export const swiftLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.swift');
     },
-    findDefinitionLine(document, candidate) {
-      return findSwiftDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location) {
+      return findSwiftDefinitionLine(document, candidate.word, location.line);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingDocCommentLines(document, definitionLine);

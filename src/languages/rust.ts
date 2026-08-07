@@ -1,6 +1,7 @@
 import type { LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   escapeRegExp,
+  findDefinitionLine,
   findMatchingCloseParen,
   isFilePathWithExtension,
   isKeywordFunctionSignatureCandidate
@@ -52,23 +53,10 @@ function findRustDefinitionLine(
   referenceLine: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  const definitionPatterns = [
+  return findDefinitionLine(document, referenceLine, [
     new RegExp(`\\b(?:const|enum|fn|struct|trait|type)\\s+${wordPattern}\\b`),
     new RegExp(`^\\s*${wordPattern}\\s*(?:,|\\(|\\{|;)`)
-  ];
-
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
+  ]);
 }
 
 function collectLeadingRustDocCommentLines(document: SourceDocument, definitionLine: number): string[] {
@@ -104,8 +92,8 @@ export const rustLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.rs');
     },
-    findDefinitionLine(document, candidate) {
-      return findRustDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location) {
+      return findRustDefinitionLine(document, candidate.word, location.line);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingRustDocCommentLines(document, definitionLine);

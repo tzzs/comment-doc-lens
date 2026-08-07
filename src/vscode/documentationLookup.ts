@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { SymbolCandidate } from '../candidateScanner';
 import type { DocumentationLookup, LocationLike } from '../documentationResolver';
 import type { LanguageAdapter } from '../languages/languageAdapter';
+import { collectCommentsAtAnchor } from '../languages/shared';
 import { getHoverLines } from './hover';
 import type { DiagnosticsSession } from './diagnostics';
 
@@ -94,7 +95,11 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
     }
 
     const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
-    const definitionLine = sourceComment.findDefinitionLine?.(document, candidate, location) ?? location.line;
-    return sourceComment.collectLeadingComments(document, definitionLine);
+    return collectCommentsAtAnchor(
+      document,
+      location.line,
+      (line) => sourceComment.collectLeadingComments(document, line),
+      (anchorLine) => sourceComment.findDefinitionLine?.(document, candidate, { ...location, line: anchorLine })
+    );
   }
 }

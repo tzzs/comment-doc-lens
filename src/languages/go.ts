@@ -1,6 +1,7 @@
 import type { LanguageAdapter } from './languageAdapter';
 import {
   collectLeadingSlashCommentLines,
+  DEFINITION_SEARCH_WINDOW,
   escapeRegExp,
   findMatchingCloseParen,
   isFilePathWithExtension,
@@ -19,7 +20,8 @@ export function findGoDefinitionLine(
   ];
   let blockDeclaration: 'const' | 'var' | 'type' | undefined;
 
-  for (let line = 0; line < document.lineCount; line++) {
+  const from = Math.max(0, referenceLine - DEFINITION_SEARCH_WINDOW);
+  for (let line = from; line <= referenceLine; line++) {
     const text = document.lineAt(line).text;
     const trimmed = text.trim();
 
@@ -159,8 +161,8 @@ export const goLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.go');
     },
-    findDefinitionLine(document, candidate) {
-      return findGoDefinitionLine(document, candidate.word, candidate.line)?.line;
+    findDefinitionLine(document, candidate, location) {
+      return findGoDefinitionLine(document, candidate.word, location.line)?.line;
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingSlashCommentLines(document, definitionLine);

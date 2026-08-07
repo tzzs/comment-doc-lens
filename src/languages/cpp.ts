@@ -63,8 +63,8 @@ export const cppLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithAnyExtension(location.uri, ['.c', '.cc', '.cpp', '.cxx', '.h', '.hh', '.hpp', '.hxx']);
     },
-    findDefinitionLine(document, candidate) {
-      return findCppDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location) {
+      return findCppDefinitionLine(document, candidate.word, location.line);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingDocCommentLines(document, definitionLine);

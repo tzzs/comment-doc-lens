@@ -2,6 +2,7 @@ import type { LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   collectLeadingBlockCommentLines,
   escapeRegExp,
+  findDefinitionLine,
   isCStyleMethodSignatureCandidate,
   isFilePathWithExtension
 } from './shared';
@@ -27,24 +28,11 @@ function findJavaDefinitionLine(
   referenceLine: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  const definitionPatterns = [
+  return findDefinitionLine(document, referenceLine, [
     new RegExp(`\\b(?:class|enum|interface|record)\\s+${wordPattern}\\b`),
     new RegExp(`\\b${wordPattern}\\s*\\(`),
     new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
-  ];
-
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
+  ]);
 }
 
 export const javaLanguageAdapter: LanguageAdapter = {
@@ -61,8 +49,8 @@ export const javaLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.java');
     },
-    findDefinitionLine(document, candidate) {
-      return findJavaDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location) {
+      return findJavaDefinitionLine(document, candidate.word, location.line);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

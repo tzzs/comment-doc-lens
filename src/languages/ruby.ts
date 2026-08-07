@@ -49,8 +49,8 @@ export const rubyLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.rb');
     },
-    findDefinitionLine(document, candidate) {
-      return findRubyDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location) {
+      return findRubyDefinitionLine(document, candidate.word, location.line);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingLineCommentLines(document, definitionLine, ['#']);

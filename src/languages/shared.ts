@@ -145,12 +145,15 @@ export function collectLeadingSlashCommentLines(document: SourceLineReader, defi
   return collectLeadingBlockCommentLines(document, definitionLine, '/*');
 }
 
+export const DEFINITION_SEARCH_WINDOW = 20;
+
 export function findDefinitionLine(
   document: SourceDocument,
   referenceLine: number,
   definitionPatterns: readonly RegExp[]
 ): number | undefined {
-  for (let line = 0; line < document.lineCount; line++) {
+  const from = Math.max(0, referenceLine - DEFINITION_SEARCH_WINDOW);
+  for (let line = from; line <= referenceLine; line++) {
     if (line === referenceLine) {
       continue;
     }
@@ -162,6 +165,28 @@ export function findDefinitionLine(
   }
 
   return undefined;
+}
+
+/**
+ * Collects the doc comment for an anchor line (the language-service definition
+ * location). Collectors already walk upward from the definition line, so the
+ * anchor is tried first and avoids a document scan in the common case. When the
+ * anchor carries no adjacent comment, a windowed definition lookup falls back to
+ * searching the lines just above the anchor instead of the whole document.
+ */
+export function collectCommentsAtAnchor(
+  document: SourceLineReader,
+  anchorLine: number,
+  collect: (line: number) => string[],
+  find?: (anchorLine: number) => number | undefined
+): string[] {
+  const anchored = collect(anchorLine);
+  if (anchored.length > 0) {
+    return anchored;
+  }
+
+  const definitionLine = find?.(anchorLine) ?? anchorLine;
+  return collect(definitionLine);
 }
 
 export function isCStyleMethodSignatureCandidate(
