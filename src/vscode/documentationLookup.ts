@@ -3,10 +3,17 @@ import type { SymbolCandidate } from '../candidateScanner';
 import type { DocumentationLookup, LocationLike } from '../documentationResolver';
 import type { LanguageAdapter } from '../languages/languageAdapter';
 import { getHoverLines } from './hover';
+import type { DiagnosticsSession } from './diagnostics';
 
 export class VscodeDocumentationLookup implements DocumentationLookup {
+  constructor(private readonly diagnostics?: DiagnosticsSession) {}
+
   async getHoverMarkdownLines(candidate: SymbolCandidate, documentUri: string): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(candidate.line, candidate.startCharacter));
+    return getHoverLines(
+      vscode.Uri.parse(documentUri),
+      new vscode.Position(candidate.line, candidate.startCharacter),
+      this.diagnostics
+    );
   }
 
   async getDefinitionLocation(
@@ -73,7 +80,7 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
   }
 
   async getHoverMarkdownLinesAtLocation(location: LocationLike): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character));
+    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character), this.diagnostics);
   }
 
   async getDefinitionSourceComments(

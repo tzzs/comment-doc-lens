@@ -1,14 +1,21 @@
 import * as vscode from 'vscode';
 import type { LanguageHealthPosition, LanguageHealthProbe } from '../languageHealth';
 import { getHoverLines } from './hover';
+import type { DiagnosticsSession } from './diagnostics';
 
 export class VscodeLanguageHealthProbe implements LanguageHealthProbe {
+  constructor(private readonly diagnostics?: DiagnosticsSession) {}
+
   async isExtensionInstalled(extensionId: string): Promise<boolean> {
     return vscode.extensions.getExtension(extensionId) !== undefined;
   }
 
   async hasHover(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
-    const lines = await getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(position.line, position.character));
+    const lines = await getHoverLines(
+      vscode.Uri.parse(documentUri),
+      new vscode.Position(position.line, position.character),
+      this.diagnostics
+    );
     return lines.some((line) => line.trim().length > 0);
   }
 
