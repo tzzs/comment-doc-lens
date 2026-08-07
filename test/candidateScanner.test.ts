@@ -141,6 +141,19 @@ test('skips language-specific keywords without producing candidates', () => {
   );
 });
 
+test('keeps default language behavior when no language-specific keyword list applies', () => {
+  const candidates = scanCandidateSymbols(
+    ['fn never mixed fn mixed fn'],
+    { startLine: 0, endLineInclusive: 0 },
+    'typescript',
+    20
+  );
+  assert.deepEqual(
+    candidates.map((candidate) => candidate.word),
+    ['fn', 'never', 'mixed', 'fn', 'mixed', 'fn']
+  );
+});
+
 test('scans property chains and jsx identifiers without treating tags as comments or strings', () => {
   const candidates = scanCandidateSymbols(
     [
