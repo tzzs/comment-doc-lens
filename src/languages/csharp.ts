@@ -25,14 +25,20 @@ function isCSharpMethodSignatureCandidate(
 function findCSharpDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:class|enum|interface|record|struct)\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*\\(`),
-    new RegExp(`\\b${wordPattern}\\s*(?:=>|\\{|;)`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:class|enum|interface|record|struct)\\s+${wordPattern}\\b`),
+      new RegExp(`\\b${wordPattern}\\s*\\(`),
+      new RegExp(`\\b${wordPattern}\\s*(?:=>|\\{|;)`)
+    ],
+    lookback
+  );
 }
 
 export const csharpLanguageAdapter: LanguageAdapter = {
@@ -49,8 +55,8 @@ export const csharpLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.cs');
     },
-    findDefinitionLine(document, candidate) {
-      return findCSharpDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findCSharpDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingLineCommentLines(document, definitionLine, ['///']);

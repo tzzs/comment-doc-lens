@@ -34,15 +34,21 @@ function isCppFunctionSignatureCandidate(
 function findCppDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:class|enum|struct)\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*\\(`),
-    new RegExp(`^\\s*#define\\s+${wordPattern}\\b`),
-    new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:class|enum|struct)\\s+${wordPattern}\\b`),
+      new RegExp(`\\b${wordPattern}\\s*\\(`),
+      new RegExp(`^\\s*#define\\s+${wordPattern}\\b`),
+      new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
+    ],
+    lookback
+  );
 }
 
 function isFilePathWithAnyExtension(uri: string, extensions: readonly string[]): boolean {
@@ -63,8 +69,8 @@ export const cppLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithAnyExtension(location.uri, ['.c', '.cc', '.cpp', '.cxx', '.h', '.hh', '.hpp', '.hxx']);
     },
-    findDefinitionLine(document, candidate) {
-      return findCppDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findCppDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingDocCommentLines(document, definitionLine);

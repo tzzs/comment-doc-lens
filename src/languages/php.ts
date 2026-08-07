@@ -2,6 +2,7 @@ import type { LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   collectLeadingBlockCommentLines,
   escapeRegExp,
+  findDefinitionLine,
   findFirstTokenIndex,
   isCandidateInRange,
   isFilePathWithExtension
@@ -70,29 +71,22 @@ function isPhpVariableAssignmentName(
 function findPhpDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  const definitionPatterns = [
-    new RegExp(`\\b(?:class|enum|interface|trait)\\s+${wordPattern}\\b`),
-    new RegExp(`\\bfunction\\s+${wordPattern}\\s*\\(`),
-    new RegExp(`^\\s*(?:(?:public|protected|private)\\s+)?const\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*(?:public|protected|private)\\s+(?:(?:static|readonly)\\s+)*(?:\\??[\\w\\\\]+(?:\\[\\])?\\s+)?\\$${wordPattern}\\b`),
-    new RegExp(`\\$${wordPattern}\\s*=`)
-  ];
-
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:class|enum|interface|trait)\\s+${wordPattern}\\b`),
+      new RegExp(`\\bfunction\\s+${wordPattern}\\s*\\(`),
+      new RegExp(`^\\s*(?:(?:public|protected|private)\\s+)?const\\s+${wordPattern}\\b`),
+      new RegExp(`^\\s*(?:public|protected|private)\\s+(?:(?:static|readonly)\\s+)*(?:\\??[\\w\\\\]+(?:\\[\\])?\\s+)?\\$${wordPattern}\\b`),
+      new RegExp(`\\$${wordPattern}\\s*=`)
+    ],
+    lookback
+  );
 }
 
 export const phpLanguageAdapter: LanguageAdapter = {
@@ -109,8 +103,8 @@ export const phpLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.php');
     },
-    findDefinitionLine(document, candidate) {
-      return findPhpDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findPhpDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

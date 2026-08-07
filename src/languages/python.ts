@@ -1,6 +1,7 @@
 import type { LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   escapeRegExp,
+  findDefinitionLine,
   findMatchingCloseParen,
   isCandidateInRange,
   isFilePathWithExtension
@@ -44,26 +45,19 @@ function isPythonAssignmentName(candidate: { startCharacter: number; endCharacte
 function findPythonDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  const definitionPatterns = [
-    new RegExp(`^\\s*(?:def|class)\\s+${wordPattern}\\b`),
-    new RegExp(`^\\s*${wordPattern}\\s*=`)
-  ];
-
-  for (let line = 0; line < document.lineCount; line++) {
-    if (line === referenceLine) {
-      continue;
-    }
-
-    const text = document.lineAt(line).text;
-    if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
-    }
-  }
-
-  return undefined;
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`^\\s*(?:def|class)\\s+${wordPattern}\\b`),
+      new RegExp(`^\\s*${wordPattern}\\s*=`)
+    ],
+    lookback
+  );
 }
 
 function collectPythonDocstringLines(document: SourceDocument, definitionLine: number): string[] {
@@ -141,8 +135,8 @@ export const pythonLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.py');
     },
-    findDefinitionLine(document, candidate) {
-      return findPythonDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findPythonDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectPythonDocstringLines(document, definitionLine);

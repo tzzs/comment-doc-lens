@@ -69,6 +69,17 @@ export class DiagnosticsSession {
   constructor(private readonly outputChannel: DiagnosticsOutput) {}
 
   record(level: DiagnosticLevel, message: string, details?: Readonly<Record<string, unknown>>): void {
+    // A persistently failing language service can otherwise flood the event
+    // queue with one identical warn/error per candidate, crowding out other
+    // signals in the copy-for-issue report. Failure details vary per candidate
+    // (line/character), so dedup on the message alone: keep only the first
+    // occurrence of each repeated failure while retaining its position.
+    if (level === 'warn' || level === 'error') {
+      if (this.events.some((event) => event.level === level && event.message === message)) {
+        return;
+      }
+    }
+
     const event: DiagnosticEvent = {
       timestamp: new Date().toISOString(),
       level,

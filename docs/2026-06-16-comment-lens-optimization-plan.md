@@ -77,6 +77,7 @@ Comment Doc Lens 的定位是：
 - 新增 `AGENTS.md`，记录 agent 接手项目时的工作流、验证命令和当前 source of truth。
 - 新增 `docs/README.md`，作为 docs 入口索引，区分当前文档、历史设计和状态记录。
 - 新增 `npm run harness:check`，校验关键交接文档与 npm scripts 是否存在。
+- 已上线 issue templates：`bug-report`、`missing-hint`、`language-support`、`performance-timeout`（`.github/ISSUE_TEMPLATE/`），missing-hint 模板引导用户经 `Copy Diagnostics for Issue` 提交报告。
 
 ## 未完成
 
@@ -84,7 +85,6 @@ Comment Doc Lens 的定位是：
 
 - 发布前重新核对 Marketplace、Open VSX、GitHub release、release tag、README 链接和仓库 URL 是否都指向同一个 `comment-doc-lens` 入口。
 - 补 GitHub topics，覆盖 `vscode-extension`、`documentation`、`inlay-hints`、`doc-comments`、`docstring`、`code-reading` 等检索词。
-- 补 issue templates：bug report、missing hint diagnostics、language support request。
 - 可选补 10 秒以内 GIF，并同步 README、Marketplace、Open VSX 和 release notes。
 
 ### 语言质量证据

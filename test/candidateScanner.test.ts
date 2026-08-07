@@ -117,6 +117,43 @@ test('skips lines longer than the configured line length budget', () => {
   );
 });
 
+test('skips language-specific keywords without producing candidates', () => {
+  const php = scanCandidateSymbols(
+    ['namespace App; use Order\\Item; foreach ($items as $item) { echo Item::paid(); }'],
+    { startLine: 0, endLineInclusive: 0 },
+    'php',
+    20
+  );
+  assert.deepEqual(
+    php.map((candidate) => candidate.word),
+    ['App', 'Order', 'Item', '$items', '$item', 'Item', 'paid']
+  );
+
+  const rust = scanCandidateSymbols(
+    ['fn main() { impl Order { } trait View { } mod ui; }'],
+    { startLine: 0, endLineInclusive: 0 },
+    'rust',
+    20
+  );
+  assert.deepEqual(
+    rust.map((candidate) => candidate.word),
+    ['main', 'Order', 'View', 'ui']
+  );
+});
+
+test('keeps default language behavior when no language-specific keyword list applies', () => {
+  const candidates = scanCandidateSymbols(
+    ['fn never mixed fn mixed fn'],
+    { startLine: 0, endLineInclusive: 0 },
+    'typescript',
+    20
+  );
+  assert.deepEqual(
+    candidates.map((candidate) => candidate.word),
+    ['fn', 'never', 'mixed', 'fn', 'mixed', 'fn']
+  );
+});
+
 test('scans property chains and jsx identifiers without treating tags as comments or strings', () => {
   const candidates = scanCandidateSymbols(
     [

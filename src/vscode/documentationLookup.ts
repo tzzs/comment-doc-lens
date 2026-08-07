@@ -2,11 +2,19 @@ import * as vscode from 'vscode';
 import type { SymbolCandidate } from '../candidateScanner';
 import type { DocumentationLookup, LocationLike } from '../documentationResolver';
 import type { LanguageAdapter } from '../languages/languageAdapter';
+import { collectCommentsAtAnchor, LOCAL_DEFINITION_LOOKBACK } from '../languages/shared';
 import { getHoverLines } from './hover';
+import type { DiagnosticsSession } from './diagnostics';
 
 export class VscodeDocumentationLookup implements DocumentationLookup {
+  constructor(private readonly diagnostics?: DiagnosticsSession) {}
+
   async getHoverMarkdownLines(candidate: SymbolCandidate, documentUri: string): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(candidate.line, candidate.startCharacter));
+    return getHoverLines(
+      vscode.Uri.parse(documentUri),
+      new vscode.Position(candidate.line, candidate.startCharacter),
+      this.diagnostics
+    );
   }
 
   async getDefinitionLocation(
@@ -60,7 +68,7 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
       uri: uri.toString(),
       line: candidate.line,
       character: candidate.startCharacter
-    });
+    }, LOCAL_DEFINITION_LOOKBACK);
     if (definitionLine === undefined) {
       return undefined;
     }
@@ -68,12 +76,12 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
     return {
       uri: uri.toString(),
       line: definitionLine,
-      character: document.lineAt(definitionLine).text.indexOf(candidate.word)
+      character: Math.max(0, document.lineAt(definitionLine).text.indexOf(candidate.word))
     };
   }
 
   async getHoverMarkdownLinesAtLocation(location: LocationLike): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character));
+    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character), this.diagnostics);
   }
 
   async getDefinitionSourceComments(
@@ -87,7 +95,15 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
     }
 
     const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
-    const definitionLine = sourceComment.findDefinitionLine?.(document, candidate, location) ?? location.line;
-    return sourceComment.collectLeadingComments(document, definitionLine);
+    return collectCommentsAtAnchor(
+      document,
+      location.line,
+      (line) => sourceComment.collectLeadingComments(document, line),
+      // Hot path: the anchor is already the language-service definition line, so
+      // the narrow DEFINITION_SEARCH_WINDOW fallback (default) is intentional —
+      // versus LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups
+      // away from a known definition.
+      (anchorLine) => sourceComment.findDefinitionLine?.(document, candidate, { ...location, line: anchorLine })
+    );
   }
 }

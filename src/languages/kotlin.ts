@@ -38,14 +38,20 @@ function isKotlinFunctionDeclarationLine(line: string): boolean {
 function findKotlinDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback?: number
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
-  return findDefinitionLine(document, referenceLine, [
-    new RegExp(`\\b(?:class|interface|object)\\s+${wordPattern}\\b`),
-    new RegExp(`\\bfun\\s+${wordPattern}\\s*\\(`),
-    new RegExp(`\\b(?:val|var)\\s+${wordPattern}\\b`)
-  ]);
+  return findDefinitionLine(
+    document,
+    referenceLine,
+    [
+      new RegExp(`\\b(?:class|interface|object)\\s+${wordPattern}\\b`),
+      new RegExp(`\\bfun\\s+${wordPattern}\\s*\\(`),
+      new RegExp(`\\b(?:val|var)\\s+${wordPattern}\\b`)
+    ],
+    lookback
+  );
 }
 
 export const kotlinLanguageAdapter: LanguageAdapter = {
@@ -62,8 +68,8 @@ export const kotlinLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.kt');
     },
-    findDefinitionLine(document, candidate) {
-      return findKotlinDefinitionLine(document, candidate.word, candidate.line);
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findKotlinDefinitionLine(document, candidate.word, location.line, maxLookback);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

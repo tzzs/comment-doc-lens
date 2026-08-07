@@ -22,7 +22,7 @@ import { VscodeLanguageHealthProbe } from './vscode/languageHealthProbe';
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel('Comment Doc Lens');
   const diagnostics = new DiagnosticsSession(outputChannel);
-  const lookup = new VscodeDocumentationLookup();
+  const lookup = new VscodeDocumentationLookup(diagnostics);
   const configReader = createVscodeConfigReader();
   const resolver = new DocumentationResolver(
     lookup,
@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext): void {
     diagnostics,
     configReader
   );
-  const languageHealth = new LanguageHealthService(new VscodeLanguageHealthProbe());
+  const languageHealth = new LanguageHealthService(new VscodeLanguageHealthProbe(diagnostics));
 
   const selector = languageRegistry.getLanguageIds().map((language) => ({ language, scheme: 'file' }));
   context.subscriptions.push(vscode.languages.registerInlayHintsProvider(selector, hintProvider));

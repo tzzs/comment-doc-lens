@@ -14,7 +14,8 @@ export interface SourceCommentStrategy {
   findDefinitionLine?(
     document: SourceDocument,
     candidate: SymbolCandidate,
-    location: LocationLike
+    location: LocationLike,
+    maxLookback?: number
   ): number | undefined;
   collectLeadingComments(document: SourceDocument, definitionLine: number): string[];
 }

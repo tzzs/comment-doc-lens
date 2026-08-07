@@ -77,7 +77,34 @@ export class LanguageHealthService {
       probe: this.probe,
       timeoutMs: this.timeoutMs
     });
+    this.setCache(cacheKey, health);
+    return health;
+  }
+
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  private setCache(cacheKey: string, health: Promise<LanguageHealthStatus>): void {
     this.cache.set(cacheKey, health);
+    // Transient probing failures - a timeout ('unknown') or an unindexed
+    // language ('degraded') - are not cached, so a later evaluation
+    // (after the extension is installed or indexing finishes) returns a fresh
+    // result instead of the stale failure. Deterministic states ('ready',
+    // 'missingDependency') stay cached as before.
+    const cached = this.cache.get(cacheKey);
+    void cached?.then(
+      (result) => {
+        if (result.state === 'unknown' || result.state === 'degraded') {
+          if (this.cache.get(cacheKey) === health) {
+            this.cache.delete(cacheKey);
+          }
+        }
+      },
+      // A rejected health promise must not surface as an unhandled rejection;
+      // failures are simply not cached, so a later evaluation retries cleanly.
+      () => {}
+    );
     // Bound the cache: Map iteration order is insertion order, so the first
     // key is the oldest entry. Evicting oldest-first keeps repeated workspace
     // diagnoses (up to 40 positions per batch) from unbounded growth while
@@ -89,11 +116,6 @@ export class LanguageHealthService {
       }
       this.cache.delete(oldest);
     }
-    return health;
-  }
-
-  clearCache(): void {
-    this.cache.clear();
   }
 }
 

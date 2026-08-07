@@ -1,6 +1,7 @@
 import type { LanguageAdapter } from './languageAdapter';
 import {
   collectLeadingSlashCommentLines,
+  DEFINITION_SEARCH_WINDOW,
   escapeRegExp,
   findMatchingCloseParen,
   isFilePathWithExtension,
@@ -10,7 +11,8 @@ import {
 export function findGoDefinitionLine(
   document: SourceDocument,
   word: string,
-  referenceLine: number
+  referenceLine: number,
+  lookback = DEFINITION_SEARCH_WINDOW
 ): { line: number; character: number } | undefined {
   const wordPattern = escapeRegExp(word);
   const declarationPatterns = [
@@ -18,8 +20,10 @@ export function findGoDefinitionLine(
     new RegExp(`^\\s*func\\s+(?:\\([^)]*\\)\\s*)?${wordPattern}\\s*\\(`)
   ];
   let blockDeclaration: 'const' | 'var' | 'type' | undefined;
+  let blockStartLine = -1;
 
-  for (let line = 0; line < document.lineCount; line++) {
+  const from = Math.max(0, referenceLine - lookback);
+  for (let line = from; line <= referenceLine; line++) {
     const text = document.lineAt(line).text;
     const trimmed = text.trim();
 
@@ -31,25 +35,36 @@ export function findGoDefinitionLine(
       const blockStart = trimmed.match(/^(const|var|type)\s*\($/);
       if (blockStart) {
         blockDeclaration = blockStart[1] as 'const' | 'var' | 'type';
+        blockStartLine = line;
         continue;
       }
     } else if (trimmed === ')') {
       blockDeclaration = undefined;
+      blockStartLine = -1;
       continue;
     }
 
-    if (
-      declarationPatterns.some((pattern) => pattern.test(text)) ||
-      (blockDeclaration && new RegExp(`^\\s*${wordPattern}\\b`).test(text))
-    ) {
-      return {
-        line,
-        character: text.indexOf(word)
-      };
+    const isDeclaration = declarationPatterns.some((pattern) => pattern.test(text));
+    const isBlockMember = blockDeclaration !== undefined && new RegExp(`^\\s*${wordPattern}\\b`).test(text);
+    if (isDeclaration || isBlockMember) {
+      // A group member without its own adjacent comment inherits the block-level
+      // comment above the const/var/type block opener.
+      if (blockStartLine >= 0 && !isGoAdjacentComment(document, line)) {
+        return { line: blockStartLine, character: 0 };
+      }
+      return { line, character: text.indexOf(word) };
     }
   }
 
   return undefined;
+}
+
+function isGoAdjacentComment(document: SourceDocument, line: number): boolean {
+  if (line <= 0) {
+    return false;
+  }
+  const previous = document.lineAt(line - 1).text.trim();
+  return previous.startsWith('//') || previous.startsWith('/*');
 }
 
 function isGoDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
@@ -159,8 +174,8 @@ export const goLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.go');
     },
-    findDefinitionLine(document, candidate) {
-      return findGoDefinitionLine(document, candidate.word, candidate.line)?.line;
+    findDefinitionLine(document, candidate, location, maxLookback) {
+      return findGoDefinitionLine(document, candidate.word, location.line, maxLookback)?.line;
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingSlashCommentLines(document, definitionLine);

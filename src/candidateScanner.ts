@@ -72,6 +72,120 @@ const IDENTIFIER_START = /[$_\p{L}]/u;
 const IDENTIFIER_PART = /[$_\p{L}\p{N}]/u;
 const HASH_LINE_COMMENT_LANGUAGES = new Set(['php', 'python', 'ruby']);
 
+const LANGUAGE_KEYWORDS: Readonly<Record<string, ReadonlySet<string>>> = {
+  php: new Set([
+    'abstract',
+    'and',
+    'array',
+    'as',
+    'break',
+    'case',
+    'catch',
+    'class',
+    'clone',
+    'const',
+    'continue',
+    'declare',
+    'default',
+    'die',
+    'do',
+    'echo',
+    'else',
+    'elseif',
+    'empty',
+    'enddeclare',
+    'endfor',
+    'endforeach',
+    'endif',
+    'endswitch',
+    'endwhile',
+    'exit',
+    'extends',
+    'final',
+    'finally',
+    'fn',
+    'for',
+    'foreach',
+    'function',
+    'global',
+    'goto',
+    'if',
+    'implements',
+    'include',
+    'include_once',
+    'instanceof',
+    'insteadof',
+    'interface',
+    'isset',
+    'list',
+    'match',
+    'mixed',
+    'namespace',
+    'never',
+    'parent',
+    'print',
+    'private',
+    'protected',
+    'public',
+    'readonly',
+    'require',
+    'require_once',
+    'return',
+    'self',
+    'static',
+    'switch',
+    'throw',
+    'trait',
+    'try',
+    'unset',
+    'use',
+    'var',
+    'while',
+    'yield'
+  ]),
+  rust: new Set([
+    'as',
+    'async',
+    'await',
+    'box',
+    'break',
+    'const',
+    'continue',
+    'crate',
+    'dyn',
+    'else',
+    'enum',
+    'extern',
+    'false',
+    'fn',
+    'for',
+    'if',
+    'impl',
+    'in',
+    'let',
+    'loop',
+    'match',
+    'mod',
+    'move',
+    'mut',
+    'pub',
+    'ref',
+    'return',
+    'self',
+    'static',
+    'struct',
+    'super',
+    'trait',
+    'true',
+    'type',
+    'unsafe',
+    'use',
+    'where',
+    'while',
+    'yield'
+  ])
+};
+
 export function getLineText(lines: readonly string[], range: LineRange, lineNumber: number): string {
   const absoluteLine = lines[lineNumber];
   if (absoluteLine !== undefined) {
@@ -181,6 +295,9 @@ export function scanCandidateSymbols(
   return candidates;
 }
 
-function isKeyword(word: string, _languageId: string): boolean {
-  return COMMON_KEYWORDS.has(word);
+function isKeyword(word: string, languageId: string): boolean {
+  if (COMMON_KEYWORDS.has(word)) {
+    return true;
+  }
+  return LANGUAGE_KEYWORDS[languageId]?.has(word) ?? false;
 }

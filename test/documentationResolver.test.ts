@@ -229,6 +229,40 @@ test('produces no hint when source comments cannot be read', async () => {
   assert.equal(result, undefined);
 });
 
+test('resolveSummary populates the full cache entry for later resolve reuse', async () => {
+  let hoverCalls = 0;
+  let definitionCalls = 0;
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => {
+      hoverCalls++;
+      return ['```ts', 'const OrderStatusPaid = 1', '```', 'Paid order status.'];
+    },
+    getDefinitionLocation: async () => {
+      definitionCalls++;
+      return { uri: 'file:///status.ts', line: 8, character: 13 };
+    },
+    getHoverMarkdownLinesAtLocation: async () => {
+      throw new Error('definition hover should not be needed once the full cache entry is populated');
+    },
+    getDefinitionSourceComments: async () => []
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+  const candidate = {
+    word: 'OrderStatusPaid',
+    line: 4,
+    startCharacter: 11,
+    endCharacter: 26
+  };
+
+  const summary = await resolver.resolveSummary(candidate, 'file:///order.ts', 3);
+  assert.equal(summary?.summary, 'Paid order status.');
+
+  const resolved = await resolver.resolve(candidate, 'file:///order.ts', 3);
+  assert.equal(resolved?.fullText, 'Paid order status.');
+  assert.equal(hoverCalls, 1);
+  assert.equal(definitionCalls, 0);
+});
+
 test('caches repeated lookups by document version and candidate position', async () => {
   let hoverCalls = 0;
   const lookup: DocumentationLookup = {
