@@ -210,6 +210,31 @@ test('finds go const block definitions for local source fallback', () => {
   });
 });
 
+test('go block member without adjacent comment resolves to block-level comment', () => {
+  const document = createDocument([
+    '// Currency rates are shared for the billing cycle.',
+    'const (',
+    '\tCurrencyUsd Currency = "USD"',
+    ')',
+    '',
+    'const (',
+    '\t// RoundedPrice keeps two significant digits.',
+    '\tRoundedPrice = "1.50"',
+    '\tCurrencyEur Currency = "EUR"',
+    ')',
+    '',
+    'func sample() {',
+    '\t_ = CurrencyUsd',
+    '\t_ = CurrencyEur',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'CurrencyEur', 13), {
+    line: 5,
+    character: 0
+  });
+});
+
 test('finds go type, function, and method definitions for local source fallback', () => {
   const document = createDocument([
     'type OrderPresenter struct{}',
