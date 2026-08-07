@@ -1,6 +1,6 @@
 import type { SymbolCandidate } from './candidateScanner';
 import { formatDocumentation, type DocumentationFormatOptions, type FormattedDocumentation } from './documentationFormatter';
-import type { LanguageAdapter, SourceCommentStrategy } from './languages/languageAdapter';
+import type { LanguageAdapter } from './languages/languageAdapter';
 
 export interface LocationLike {
   uri: string;
@@ -20,10 +20,10 @@ export interface DocumentationLookup {
     languageAdapter?: LanguageAdapter
   ): Promise<LocationLike | undefined>;
   getHoverMarkdownLinesAtLocation(location: LocationLike): Promise<string[]>;
-  getDefinitionSourceLines?(
+  getDefinitionSourceComments(
     location: LocationLike,
     candidate: SymbolCandidate,
-    sourceComment: SourceCommentStrategy
+    languageAdapter?: LanguageAdapter
   ): Promise<string[]>;
 }
 
@@ -127,13 +127,8 @@ export class DocumentationResolver {
     candidate: SymbolCandidate,
     languageAdapter?: LanguageAdapter
   ): Promise<FormattedDocumentation | undefined> {
-    const sourceComment = languageAdapter?.sourceComment;
-    if (!sourceComment?.canRead(location)) {
-      return undefined;
-    }
-
     return formatDocumentation(
-      await this.lookup.getDefinitionSourceLines?.(location, candidate, sourceComment) ?? [],
+      await this.lookup.getDefinitionSourceComments(location, candidate, languageAdapter),
       this.options.maxHintLength,
       this.getFormatOptions(languageAdapter)
     );

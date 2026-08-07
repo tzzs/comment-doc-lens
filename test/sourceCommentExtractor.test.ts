@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { collectLeadingCommentLines, findGoDefinitionLine } from '../src/sourceCommentExtractor';
+import { findGoDefinitionLine } from '../src/languages/go';
+import {
+  collectLeadingBlockCommentLines,
+  collectLeadingDocCommentLines,
+  collectLeadingLineCommentLines,
+  collectLeadingSlashCommentLines
+} from '../src/languages/shared';
 
 function createDocument(lines: readonly string[]) {
   return {
@@ -9,17 +15,31 @@ function createDocument(lines: readonly string[]) {
   };
 }
 
-test('collects contiguous leading line comments', () => {
+test('collectLeadingLineCommentLines gathers contiguous prefix lines and stops at code', () => {
   const document = createDocument([
-    '// First line.',
-    '// Second line.',
+    '# First line.',
+    '# Second line.',
     'const value = 1;'
   ]);
 
-  assert.deepEqual(collectLeadingCommentLines(document, 2), ['// First line.', '// Second line.']);
+  assert.deepEqual(collectLeadingLineCommentLines(document, 2, ['#']), [
+    '# First line.',
+    '# Second line.'
+  ]);
 });
 
-test('collects leading block comments', () => {
+test('collectLeadingLineCommentLines skips leading blank lines but stops after collected comments', () => {
+  const document = createDocument([
+    '',
+    '// Adjacent comment.',
+    '',
+    'const value = 1;'
+  ]);
+
+  assert.deepEqual(collectLeadingLineCommentLines(document, 3, ['//']), ['// Adjacent comment.']);
+});
+
+test('collectLeadingBlockCommentLines gathers a trailing block comment', () => {
   const document = createDocument([
     '/**',
     ' * Formats an order status.',
@@ -27,21 +47,93 @@ test('collects leading block comments', () => {
     'function formatOrderStatus() {}'
   ]);
 
-  assert.deepEqual(collectLeadingCommentLines(document, 3), [
+  assert.deepEqual(collectLeadingBlockCommentLines(document, 3, '/**'), [
     '/**',
     '* Formats an order status.',
     '*/'
   ]);
 });
 
-test('ignores non-adjacent comments', () => {
+test('collectLeadingBlockCommentLines returns empty when no block end precedes the definition', () => {
+  const document = createDocument([
+    '/* detached comment above',
+    'still inside the block',
+    'const value = 1;'
+  ]);
+
+  assert.deepEqual(collectLeadingBlockCommentLines(document, 2, '/**'), []);
+});
+
+test('collectLeadingDocCommentLines prefers doc line comments over block comments', () => {
+  const document = createDocument([
+    '/// First line.',
+    '/// Second line.',
+    'pub fn format_status() {}'
+  ]);
+
+  assert.deepEqual(collectLeadingDocCommentLines(document, 2), [
+    '/// First line.',
+    '/// Second line.'
+  ]);
+});
+
+test('collectLeadingDocCommentLines falls back to a doc block comment', () => {
+  const document = createDocument([
+    '/**',
+    ' * Formats an order status.',
+    ' */',
+    'function formatOrderStatus() {}'
+  ]);
+
+  assert.deepEqual(collectLeadingDocCommentLines(document, 3), [
+    '/**',
+    '* Formats an order status.',
+    '*/'
+  ]);
+});
+
+test('collectLeadingSlashCommentLines collects contiguous leading line comments', () => {
+  const document = createDocument([
+    '// First line.',
+    '// Second line.',
+    'const value = 1;'
+  ]);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 2), ['// First line.', '// Second line.']);
+});
+
+test('collectLeadingSlashCommentLines collects leading block comments', () => {
+  const document = createDocument([
+    '/**',
+    ' * Formats an order status.',
+    ' */',
+    'function formatOrderStatus() {}'
+  ]);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 3), [
+    '/**',
+    '* Formats an order status.',
+    '*/'
+  ]);
+});
+
+test('collectLeadingSlashCommentLines collects a single-line block comment', () => {
+  const document = createDocument([
+    '/* Formats an order status. */',
+    'const value = 1;'
+  ]);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 1), ['/* Formats an order status. */']);
+});
+
+test('collectLeadingSlashCommentLines ignores non-adjacent comments', () => {
   const document = createDocument([
     '// Detached comment.',
     'const other = 1;',
     'const value = 2;'
   ]);
 
-  assert.deepEqual(collectLeadingCommentLines(document, 2), []);
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 2), []);
 });
 
 test('finds go const block definitions for local source fallback', () => {

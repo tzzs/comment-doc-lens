@@ -122,6 +122,104 @@ test('caches health checks for the same language position', async () => {
   assert.equal(hoverProbeCount, 1);
 });
 
+test('deduplicates concurrent evaluations for the same language position', async () => {
+  let hoverProbeCount = 0;
+  const service = new LanguageHealthService({
+    isExtensionInstalled: async () => true,
+    hasHover: async () => {
+      hoverProbeCount += 1;
+      return true;
+    },
+    hasDefinition: async () => true
+  });
+
+  const [first, second] = await Promise.all([
+    service.evaluate({
+      languageId: 'go',
+      adapter: goLanguageAdapter,
+      documentUri: 'file:///order.go',
+      position: { line: 1, character: 4 }
+    }),
+    service.evaluate({
+      languageId: 'go',
+      adapter: goLanguageAdapter,
+      documentUri: 'file:///order.go',
+      position: { line: 1, character: 4 }
+    })
+  ]);
+
+  assert.equal(first, second);
+  assert.equal(hoverProbeCount, 1);
+});
+
+test('evicts the oldest entry when the cache exceeds its bound', async () => {
+  let hoverProbeCount = 0;
+  const service = new LanguageHealthService(
+    {
+      isExtensionInstalled: async () => true,
+      hasHover: async () => {
+        hoverProbeCount += 1;
+        return true;
+      },
+      hasDefinition: async () => true
+    },
+    750,
+    2
+  );
+
+  const evaluateAt = (line: number) =>
+    service.evaluate({
+      languageId: 'go',
+      adapter: goLanguageAdapter,
+      documentUri: 'file:///order.go',
+      position: { line, character: 4 }
+    });
+
+  await evaluateAt(1);
+  await evaluateAt(2);
+  await evaluateAt(3);
+  assert.equal(hoverProbeCount, 3);
+
+  // Line 1 was the oldest entry and must have been evicted.
+  await evaluateAt(1);
+  assert.equal(hoverProbeCount, 4);
+
+  // Re-inserting line 1 evicted the now-oldest line 2, so the cache holds
+  // only the two most recent entries: line 3 and line 1.
+  await evaluateAt(3);
+  assert.equal(hoverProbeCount, 4);
+
+  await evaluateAt(2);
+  assert.equal(hoverProbeCount, 5);
+});
+
+test('clearCache invalidates previously cached health checks', async () => {
+  let hoverProbeCount = 0;
+  const service = new LanguageHealthService({
+    isExtensionInstalled: async () => true,
+    hasHover: async () => {
+      hoverProbeCount += 1;
+      return true;
+    },
+    hasDefinition: async () => true
+  });
+
+  const input = {
+    languageId: 'go',
+    adapter: goLanguageAdapter,
+    documentUri: 'file:///order.go',
+    position: { line: 1, character: 4 }
+  };
+
+  await service.evaluate(input);
+  assert.equal(hoverProbeCount, 1);
+
+  service.clearCache();
+
+  await service.evaluate(input);
+  assert.equal(hoverProbeCount, 2);
+});
+
 test('formats missing dependency status with install guidance', () => {
   const message = formatLanguageHealthStatus({
     languageId: 'python',

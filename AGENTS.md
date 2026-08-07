@@ -9,6 +9,7 @@ Comment Doc Lens is a VS Code extension that shows existing documentation at sym
 - Language support source of truth: [docs/language-support.md](docs/language-support.md).
 - Language status and fallback troubleshooting: [docs/language-support.md](docs/language-support.md#语言状态排查).
 - Current optimization status: [docs/2026-06-16-comment-lens-optimization-plan.md](docs/2026-06-16-comment-lens-optimization-plan.md).
+- Current architecture deepening plan: [docs/2026-08-07-architecture-deepening-plan.md](docs/2026-08-07-architecture-deepening-plan.md).
 - Release checks: [docs/release-quality-checklist.md](docs/release-quality-checklist.md).
 
 ## Key Commands

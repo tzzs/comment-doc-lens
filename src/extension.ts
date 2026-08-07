@@ -1,41 +1,40 @@
 import * as vscode from 'vscode';
 import { scanCandidateSymbols, type SymbolCandidate } from './candidateScanner';
 import {
-  createDiagnosticsReport,
-  createHiddenHintExplanation,
-  summarizeWorkspaceDiagnosis,
-  type DiagnosticEvent,
-  type WorkspaceLanguageDiagnosis
-} from './diagnostics';
+  readCommentDocLensConfig,
+  toDiagnosticsSettingsSnapshot,
+  toResolverOptions,
+  type ConfigReader
+} from './config';
 import {
   DocumentationResolver,
-  type DocumentationLookup,
-  type DocumentationResolverOptions,
   type LocationLike
 } from './documentationResolver';
-import { buildCommentHints, type CommentDocLensConfig } from './hintBuilder';
-import { hoverContentsToMarkdownLines } from './hoverContent';
-import {
-  formatLanguageHealthStatus,
-  LanguageHealthService,
-  type LanguageHealthStatus,
-  type LanguageHealthPosition,
-  type LanguageHealthProbe
-} from './languageHealth';
-import type { LanguageAdapter, SourceCommentStrategy } from './languages/languageAdapter';
-import {
-  createLanguageRegistry,
-  defaultLanguageAdapters,
-  getDefaultLanguageIds
-} from './languages/languageRegistry';
+import { buildCommentHints } from './hintBuilder';
+import { formatLanguageHealthStatus, LanguageHealthService } from './languageHealth';
+import type { LanguageAdapter } from './languages/languageAdapter';
+import { resolveProbePosition } from './languages/probe';
+import { createLanguageRegistry, defaultLanguageAdapters } from './languages/languageRegistry';
+import { VscodeDocumentationLookup } from './vscode/documentationLookup';
+import { DiagnosticsSession, type WorkspaceLanguageDiagnosis } from './vscode/diagnostics';
+import { VscodeLanguageHealthProbe } from './vscode/languageHealthProbe';
 
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel('Comment Doc Lens');
-  const diagnostics = new CommentLensDiagnostics(outputChannel);
+  const diagnostics = new DiagnosticsSession(outputChannel);
   const lookup = new VscodeDocumentationLookup();
-  const resolver = new DocumentationResolver(lookup, readResolverOptions());
+  const configReader = createVscodeConfigReader();
+  const resolver = new DocumentationResolver(
+    lookup,
+    toResolverOptions(readCommentDocLensConfig(configReader))
+  );
   const languageRegistry = createLanguageRegistry(defaultLanguageAdapters);
-  const hintProvider = new CommentDocLensInlayHintProvider(resolver, languageRegistry, diagnostics);
+  const hintProvider = new CommentDocLensInlayHintProvider(
+    resolver,
+    languageRegistry,
+    diagnostics,
+    configReader
+  );
   const languageHealth = new LanguageHealthService(new VscodeLanguageHealthProbe());
 
   const selector = languageRegistry.getLanguageIds().map((language) => ({ language, scheme: 'file' }));
@@ -91,7 +90,7 @@ export function activate(context: vscode.ExtensionContext): void {
       });
 
       const message = formatLanguageHealthStatus(status);
-      diagnostics.setLatestLanguageStatus(status);
+      diagnostics.latest('languageStatus', status);
       diagnostics.record('info', 'Language status evaluated.', {
         languageId: status.languageId,
         state: status.state,
@@ -107,31 +106,20 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('commentDocLens.diagnoseWorkspace', async () => {
       const diagnoses = await diagnoseWorkspace(languageRegistry, languageHealth, diagnostics);
-      const summary = summarizeWorkspaceDiagnosis(diagnoses);
-      diagnostics.setLatestWorkspaceDiagnosis(summary);
-      outputChannel.appendLine(summary);
-      outputChannel.show(true);
-      diagnostics.record('info', 'Workspace diagnosis completed.', {
-        fileCount: diagnoses.length,
-        states: countDiagnosisStates(diagnoses)
-      });
+      diagnostics.recordWorkspaceDiagnosis(diagnoses);
       await vscode.window.showInformationMessage(`Comment Doc Lens: diagnosed ${diagnoses.length} workspace files.`);
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('commentDocLens.copyDiagnosticsForIssue', async () => {
-      const report = createDiagnosticsReport({
+      const report = diagnostics.renderIssueReport({
         extensionVersion: context.extension.packageJSON.version,
         vscodeVersion: vscode.version,
         workspaceName: vscode.workspace.name,
         activeDocument: vscode.window.activeTextEditor?.document.uri.toString(),
         activeLanguageId: vscode.window.activeTextEditor?.document.languageId,
-        settings: readDiagnosticsSettingsSnapshot(),
-        latestLanguageStatus: diagnostics.getLatestLanguageStatus(),
-        latestHiddenHintExplanation: diagnostics.getLatestHiddenHintExplanation(),
-        latestWorkspaceDiagnosis: diagnostics.getLatestWorkspaceDiagnosis(),
-        events: diagnostics.getEvents()
+        settings: toDiagnosticsSettingsSnapshot(readCommentDocLensConfig(configReader))
       });
       await vscode.env.clipboard.writeText(report);
       diagnostics.record('info', 'Copied diagnostics report for issue.');
@@ -147,7 +135,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      const config = readCommentDocLensConfig();
+      const config = readCommentDocLensConfig(configReader);
       const line = editor.selection.active.line;
       const text = editor.document.lineAt(line).text;
       const candidateCount = scanCandidateSymbols(
@@ -157,7 +145,7 @@ export function activate(context: vscode.ExtensionContext): void {
         config.maxHintsPerRequest,
         config.maxLineLength
       ).length;
-      const explanation = createHiddenHintExplanation({
+      const explanation = diagnostics.explainHiddenHint({
         enabled: config.enabled,
         languageId: editor.document.languageId,
         configuredLanguages: config.languages,
@@ -165,14 +153,6 @@ export function activate(context: vscode.ExtensionContext): void {
         candidateCount,
         lineTooLong: text.length > (config.maxLineLength ?? Number.POSITIVE_INFINITY)
       });
-      diagnostics.setLatestHiddenHintExplanation(explanation);
-      diagnostics.record('info', 'Explained hidden hint state.', {
-        languageId: editor.document.languageId,
-        candidateCount,
-        explanation
-      });
-      outputChannel.appendLine(explanation);
-      outputChannel.show(true);
       await vscode.window.showInformationMessage(`Comment Doc Lens: ${explanation}`);
     })
   );
@@ -191,7 +171,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('commentDocLens')) {
-        resolver.updateOptions(readResolverOptions());
+        resolver.updateOptions(toResolverOptions(readCommentDocLensConfig(configReader)));
         languageHealth.clearCache();
         hintProvider.refresh();
       }
@@ -201,32 +181,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {}
 
-class VscodeLanguageHealthProbe implements LanguageHealthProbe {
-  async isExtensionInstalled(extensionId: string): Promise<boolean> {
-    return vscode.extensions.getExtension(extensionId) !== undefined;
-  }
-
-  async hasHover(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
-    const lines = await getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(position.line, position.character));
-    return lines.some((line) => line.trim().length > 0);
-  }
-
-  async hasDefinition(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
-    let definitions: Array<vscode.Location | vscode.LocationLink> | undefined;
-    try {
-      definitions = await vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(
-        'vscode.executeDefinitionProvider',
-        vscode.Uri.parse(documentUri),
-        new vscode.Position(position.line, position.character)
-      );
-    } catch {
-      definitions = undefined;
-    }
-
-    return (definitions ?? []).length > 0;
-  }
-}
-
 class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   private readonly emitter = new vscode.EventEmitter<void>();
   private readonly resolveData = new WeakMap<vscode.InlayHint, InlayHintResolveData>();
@@ -235,7 +189,8 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   constructor(
     private readonly resolver: DocumentationResolver,
     private readonly languageRegistry: ReturnType<typeof createLanguageRegistry>,
-    private readonly diagnostics: CommentLensDiagnostics
+    private readonly diagnostics: DiagnosticsSession,
+    private readonly configReader: ConfigReader
   ) {}
 
   refresh(): void {
@@ -247,7 +202,7 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
     range: vscode.Range,
     token: vscode.CancellationToken
   ): Promise<vscode.InlayHint[]> {
-    const config = readCommentDocLensConfig();
+    const config = readCommentDocLensConfig(this.configReader);
     const languageAdapter = this.languageRegistry.getAdapter(document.languageId);
     if (!languageAdapter) {
       return [];
@@ -307,7 +262,7 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
   }
 
   async resolveInlayHint(inlayHint: vscode.InlayHint, token: vscode.CancellationToken): Promise<vscode.InlayHint> {
-    const config = readCommentDocLensConfig();
+    const config = readCommentDocLensConfig(this.configReader);
     if (!config.enableHintInteractions || token.isCancellationRequested) {
       return inlayHint;
     }
@@ -356,152 +311,6 @@ interface InlayHintResolveData {
   languageId: string;
 }
 
-class CommentLensDiagnostics {
-  private readonly events: DiagnosticEvent[] = [];
-  private latestLanguageStatus: LanguageHealthStatus | undefined;
-  private latestHiddenHintExplanation: string | undefined;
-  private latestWorkspaceDiagnosis: string | undefined;
-
-  constructor(private readonly outputChannel: vscode.OutputChannel) {}
-
-  record(level: DiagnosticEvent['level'], message: string, details?: Readonly<Record<string, unknown>>): void {
-    const event: DiagnosticEvent = {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      details
-    };
-    this.events.push(event);
-    if (this.events.length > 100) {
-      this.events.shift();
-    }
-
-    this.outputChannel.appendLine(`[${event.timestamp}] ${level.toUpperCase()} ${message}`);
-    if (details) {
-      this.outputChannel.appendLine(JSON.stringify(details, null, 2));
-    }
-  }
-
-  getEvents(): readonly DiagnosticEvent[] {
-    return this.events;
-  }
-
-  setLatestLanguageStatus(status: LanguageHealthStatus): void {
-    this.latestLanguageStatus = status;
-  }
-
-  getLatestLanguageStatus(): LanguageHealthStatus | undefined {
-    return this.latestLanguageStatus;
-  }
-
-  setLatestHiddenHintExplanation(explanation: string): void {
-    this.latestHiddenHintExplanation = explanation;
-  }
-
-  getLatestHiddenHintExplanation(): string | undefined {
-    return this.latestHiddenHintExplanation;
-  }
-
-  setLatestWorkspaceDiagnosis(summary: string): void {
-    this.latestWorkspaceDiagnosis = summary;
-  }
-
-  getLatestWorkspaceDiagnosis(): string | undefined {
-    return this.latestWorkspaceDiagnosis;
-  }
-}
-
-class VscodeDocumentationLookup implements DocumentationLookup {
-  async getHoverMarkdownLines(candidate: SymbolCandidate, documentUri: string): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(documentUri), new vscode.Position(candidate.line, candidate.startCharacter));
-  }
-
-  async getDefinitionLocation(
-    candidate: SymbolCandidate,
-    documentUri: string,
-    languageAdapter?: LanguageAdapter
-  ): Promise<LocationLike | undefined> {
-    const uri = vscode.Uri.parse(documentUri);
-    let definitions: Array<vscode.Location | vscode.LocationLink> | undefined;
-    try {
-      definitions = await vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(
-        'vscode.executeDefinitionProvider',
-        uri,
-        new vscode.Position(candidate.line, candidate.startCharacter)
-      );
-    } catch {
-      definitions = undefined;
-    }
-    const firstDefinition = definitions?.[0];
-    if (!firstDefinition) {
-      return this.getLocalDefinitionLocation(candidate, uri, languageAdapter);
-    }
-
-    if ('targetUri' in firstDefinition) {
-      return {
-        uri: firstDefinition.targetUri.toString(),
-        line: firstDefinition.targetRange.start.line,
-        character: firstDefinition.targetRange.start.character
-      };
-    }
-
-    return {
-      uri: firstDefinition.uri.toString(),
-      line: firstDefinition.range.start.line,
-      character: firstDefinition.range.start.character
-    };
-  }
-
-  private async getLocalDefinitionLocation(
-    candidate: SymbolCandidate,
-    uri: vscode.Uri,
-    languageAdapter?: LanguageAdapter
-  ): Promise<LocationLike | undefined> {
-    const sourceComment = languageAdapter?.sourceComment;
-    if (!sourceComment?.canRead({ uri: uri.toString(), line: candidate.line, character: candidate.startCharacter })) {
-      return undefined;
-    }
-
-    const document = await vscode.workspace.openTextDocument(uri);
-    const definitionLine = sourceComment.findDefinitionLine?.(document, candidate, {
-      uri: uri.toString(),
-      line: candidate.line,
-      character: candidate.startCharacter
-    });
-    if (definitionLine === undefined) {
-      return undefined;
-    }
-
-    return {
-      uri: uri.toString(),
-      line: definitionLine,
-      character: document.lineAt(definitionLine).text.indexOf(candidate.word)
-    };
-  }
-
-  async getHoverMarkdownLinesAtLocation(location: LocationLike): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character));
-  }
-
-  async getDefinitionSourceLines(
-    location: LocationLike,
-    candidate: SymbolCandidate,
-    sourceComment: SourceCommentStrategy
-  ): Promise<string[]> {
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
-    return sourceComment.collectLeadingComments(document, findNearbyDefinitionLine(document, location.line, candidate.word));
-  }
-}
-
-async function getHoverLines(uri: vscode.Uri, position: vscode.Position): Promise<string[]> {
-  const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
-    'vscode.executeHoverProvider',
-    uri,
-    position
-  );
-  return (hovers ?? []).flatMap((hover) => hoverContentsToMarkdownLines(hover.contents));
-}
-
 function collectLines(document: vscode.TextDocument, range: vscode.Range): string[] {
   const lines: string[] = [];
   for (let line = range.start.line; line <= range.end.line; line++) {
@@ -513,10 +322,10 @@ function collectLines(document: vscode.TextDocument, range: vscode.Range): strin
 async function diagnoseWorkspace(
   languageRegistry: ReturnType<typeof createLanguageRegistry>,
   languageHealth: LanguageHealthService,
-  diagnostics: CommentLensDiagnostics
+  diagnostics: DiagnosticsSession
 ): Promise<WorkspaceLanguageDiagnosis[]> {
   const files = await vscode.workspace.findFiles(
-    '**/*.{go,ts,tsx,js,jsx,py,java,rs,php,cs,rb,kt,swift,c,cpp,h,hpp}',
+    languageRegistry.getSourceFileGlobs()[0],
     '**/{node_modules,.git,out}/**',
     40
   );
@@ -543,7 +352,7 @@ async function diagnoseWorkspace(
       languageId: document.languageId,
       adapter,
       documentUri: document.uri.toString(),
-      position: findProbePosition(document)
+      position: resolveProbePosition(document, adapter)
     });
     diagnoses.push({
       uri: document.uri.toString(),
@@ -555,27 +364,6 @@ async function diagnoseWorkspace(
   return diagnoses;
 }
 
-function findProbePosition(document: vscode.TextDocument): LanguageHealthPosition {
-  for (let line = 0; line < document.lineCount; line++) {
-    const text = document.lineAt(line).text;
-    const firstWord = text.search(/[A-Za-z_$]/);
-    if (firstWord >= 0) {
-      return { line, character: firstWord };
-    }
-  }
-
-  return { line: 0, character: 0 };
-}
-
-function countDiagnosisStates(diagnoses: readonly WorkspaceLanguageDiagnosis[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const diagnosis of diagnoses) {
-    counts[diagnosis.status.state] = (counts[diagnosis.status.state] ?? 0) + 1;
-  }
-
-  return counts;
-}
-
 function getFirstLabelPart(inlayHint: vscode.InlayHint): vscode.InlayHintLabelPart {
   if (typeof inlayHint.label === 'string') {
     return new vscode.InlayHintLabelPart(inlayHint.label);
@@ -584,76 +372,11 @@ function getFirstLabelPart(inlayHint: vscode.InlayHint): vscode.InlayHintLabelPa
   return inlayHint.label[0] ?? new vscode.InlayHintLabelPart('');
 }
 
-function readCommentDocLensConfig(): CommentDocLensConfig {
+function createVscodeConfigReader(): ConfigReader {
   const config = vscode.workspace.getConfiguration('commentDocLens');
   return {
-    enabled: config.get<boolean>('enabled', true),
-    languages: config.get<string[]>('languages', getDefaultLanguageIds()),
-    languageOverrides: config.get<Record<string, { enabled?: boolean }>>('languageOverrides', {}),
-    maxLineLength: config.get<number>('maxLineLength', 2000),
-    maxHintsPerRequest: config.get<number>('maxHintsPerRequest', 80),
-    maxHintsPerLine: config.get<number>('maxHintsPerLine', 3),
-    minIdentifierLength: config.get<number>('minIdentifierLength', 2),
-    minimumDocumentationWords: config.get<number>('minimumDocumentationWords', 1),
-    preferPropertyTail: config.get<boolean>('preferPropertyTail', true),
-    dedupeLineHints: config.get<boolean>('dedupeLineHints', true),
-    resolveTimeoutMs: config.get<number>('resolveTimeoutMs', 750),
-    hintPrefix: config.get<string>('hintPrefix', '// '),
-    enableHintInteractions: config.get<boolean>('enableHintInteractions', false)
-  };
-}
-
-function readResolverOptions(): DocumentationResolverOptions {
-  const config = vscode.workspace.getConfiguration('commentDocLens');
-  return {
-    maxHintLength: config.get<number>('maxHintLength', 120),
-    maxCacheEntries: config.get<number>('maxCacheEntries', 1000),
-    minimumDocumentationWords: config.get<number>('minimumDocumentationWords', 1)
-  };
-}
-
-function readDiagnosticsSettingsSnapshot(): Readonly<Record<string, unknown>> {
-  const commentConfig = readCommentDocLensConfig();
-  const resolverOptions = readResolverOptions();
-  return {
-    enabled: commentConfig.enabled,
-    languages: commentConfig.languages,
-    languageOverrides: commentConfig.languageOverrides,
-    maxLineLength: commentConfig.maxLineLength,
-    maxHintLength: resolverOptions.maxHintLength,
-    maxHintsPerRequest: commentConfig.maxHintsPerRequest,
-    maxHintsPerLine: commentConfig.maxHintsPerLine,
-    minIdentifierLength: commentConfig.minIdentifierLength,
-    minimumDocumentationWords: commentConfig.minimumDocumentationWords,
-    preferPropertyTail: commentConfig.preferPropertyTail,
-    dedupeLineHints: commentConfig.dedupeLineHints,
-    resolveTimeoutMs: commentConfig.resolveTimeoutMs,
-    maxCacheEntries: resolverOptions.maxCacheEntries,
-    hintPrefix: commentConfig.hintPrefix,
-    enableHintInteractions: commentConfig.enableHintInteractions
-  };
-}
-
-function findNearbyDefinitionLine(document: vscode.TextDocument, startLine: number, word: string): number {
-  const start = Math.max(0, startLine - 3);
-  const end = Math.min(document.lineCount - 1, startLine + 8);
-  const declarationPattern = new RegExp(`\\b${escapeRegExp(word)}\\b`);
-
-  for (let line = startLine; line <= end; line++) {
-    if (declarationPattern.test(document.lineAt(line).text)) {
-      return line;
+    get(key, defaultValue) {
+      return config.get(key, defaultValue);
     }
-  }
-
-  for (let line = startLine - 1; line >= start; line--) {
-    if (declarationPattern.test(document.lineAt(line).text)) {
-      return line;
-    }
-  }
-
-  return startLine;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
 }

@@ -328,63 +328,86 @@ test('ruby adapter owns yard and rdoc source fallback behavior', () => {
   }), 7);
 });
 
-test('planned adapters expose fallback and dependency diagnostics metadata', () => {
+test('kotlin adapter owns declaration filtering and kdoc fallback behavior', () => {
   assert.equal(kotlinLanguageAdapter.supportLevel, 'experimental');
   assert.deepEqual(kotlinLanguageAdapter.languageIds, ['kotlin']);
   assert.deepEqual(kotlinLanguageAdapter.recommendedExtensions, ['fwcd.kotlin']);
   assert.equal(kotlinLanguageAdapter.sourceComment?.canRead({ uri: 'file:///OrderPresenter.kt', line: 0, character: 0 }), true);
+  assert.equal(kotlinLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.py', line: 0, character: 0 }), false);
 
-  const kotlinDocument = lines([
+  const functionLine = 'fun formatStatus(status: String): String = status';
+  assert.equal(kotlinLanguageAdapter.isDeclarationCandidate?.(candidateInLine('formatStatus', functionLine), functionLine), true);
+  assert.equal(
+    kotlinLanguageAdapter.isDeclarationCandidate?.(candidateInLine('status', functionLine, 'last'), functionLine),
+    true
+  );
+  const callLine = 'val label = formatStatus(status)';
+  assert.equal(kotlinLanguageAdapter.isDeclarationCandidate?.(candidateInLine('formatStatus', callLine), callLine), false);
+  assert.equal(kotlinLanguageAdapter.isDeclarationCandidate?.(candidateInLine('status', callLine), callLine), false);
+
+  const document = lines([
     '/** Formats the order status. */',
     'fun formatStatus(status: String): String = status',
     '',
     '/** Presents order data. */',
     'class OrderPresenter'
   ]);
-  const kotlinFunctionLine = 'fun formatStatus(status: String): String = status';
-  assert.equal(
-    kotlinLanguageAdapter.isDeclarationCandidate?.(
-      candidateInLine('status', kotlinFunctionLine, 'last'),
-      kotlinFunctionLine
-    ),
-    true
-  );
-  assert.equal(kotlinLanguageAdapter.sourceComment?.findDefinitionLine?.(kotlinDocument, candidate('formatStatus', 4, 4), {
+  assert.equal(kotlinLanguageAdapter.sourceComment?.findDefinitionLine?.(document, candidate('formatStatus', 4, 4), {
     uri: 'file:///OrderPresenter.kt',
     line: 4,
     character: 0
   }), 1);
-  assert.deepEqual(kotlinLanguageAdapter.sourceComment?.collectLeadingComments(kotlinDocument, 1), [
+  assert.deepEqual(kotlinLanguageAdapter.sourceComment?.collectLeadingComments(document, 1), [
     '/** Formats the order status. */'
   ]);
+});
 
+test('swift adapter owns declaration filtering and doc comment fallback behavior', () => {
   assert.equal(swiftLanguageAdapter.supportLevel, 'experimental');
   assert.deepEqual(swiftLanguageAdapter.languageIds, ['swift']);
   assert.deepEqual(swiftLanguageAdapter.recommendedExtensions, ['swiftlang.swift-vscode']);
   assert.equal(swiftLanguageAdapter.sourceComment?.canRead({ uri: 'file:///OrderPresenter.swift', line: 0, character: 0 }), true);
+  assert.equal(swiftLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.rb', line: 0, character: 0 }), false);
 
-  const swiftDocument = lines([
+  const functionLine = 'func formatStatus(_ status: String) -> String {';
+  assert.equal(swiftLanguageAdapter.isDeclarationCandidate?.(candidateInLine('formatStatus', functionLine), functionLine), true);
+  assert.equal(swiftLanguageAdapter.isDeclarationCandidate?.(candidateInLine('status', functionLine), functionLine), true);
+  const callLine = 'let label = formatStatus(status)';
+  assert.equal(swiftLanguageAdapter.isDeclarationCandidate?.(candidateInLine('formatStatus', callLine), callLine), false);
+  assert.equal(swiftLanguageAdapter.isDeclarationCandidate?.(candidateInLine('status', callLine), callLine), false);
+
+  const document = lines([
     '/// Formats the order status.',
     'func formatStatus(_ status: String) -> String {',
     '    status',
     '}'
   ]);
-  assert.equal(swiftLanguageAdapter.sourceComment?.findDefinitionLine?.(swiftDocument, candidate('formatStatus', 5, 3), {
+  assert.equal(swiftLanguageAdapter.sourceComment?.findDefinitionLine?.(document, candidate('formatStatus', 5, 3), {
     uri: 'file:///OrderPresenter.swift',
     line: 3,
     character: 0
   }), 1);
-  assert.deepEqual(swiftLanguageAdapter.sourceComment?.collectLeadingComments(swiftDocument, 1), [
+  assert.deepEqual(swiftLanguageAdapter.sourceComment?.collectLeadingComments(document, 1), [
     '/// Formats the order status.'
   ]);
+});
 
+test('cpp adapter owns declaration filtering and doc comment fallback behavior', () => {
   assert.equal(cppLanguageAdapter.supportLevel, 'experimental');
   assert.deepEqual(cppLanguageAdapter.languageIds, ['c', 'cpp']);
   assert.deepEqual(cppLanguageAdapter.recommendedExtensions, ['ms-vscode.cpptools']);
   assert.equal(cppLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.cpp', line: 0, character: 0 }), true);
   assert.equal(cppLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.hpp', line: 0, character: 0 }), true);
+  assert.equal(cppLanguageAdapter.sourceComment?.canRead({ uri: 'file:///order.go', line: 0, character: 0 }), false);
 
-  const cppDocument = lines([
+  const functionLine = 'std::string formatStatus(std::string status) {';
+  assert.equal(cppLanguageAdapter.isDeclarationCandidate?.(candidateInLine('formatStatus', functionLine), functionLine), true);
+  assert.equal(cppLanguageAdapter.isDeclarationCandidate?.(candidateInLine('status', functionLine), functionLine), true);
+  const callLine = '  return formatStatus(status);';
+  assert.equal(cppLanguageAdapter.isDeclarationCandidate?.(candidateInLine('formatStatus', callLine), callLine), false);
+  assert.equal(cppLanguageAdapter.isDeclarationCandidate?.(candidateInLine('status', callLine), callLine), false);
+
+  const document = lines([
     '/** Formats the order status. */',
     'std::string formatStatus(std::string status) {',
     '  return status;',
@@ -393,15 +416,15 @@ test('planned adapters expose fallback and dependency diagnostics metadata', () 
     '/// Presents order data.',
     'class OrderPresenter {};'
   ]);
-  assert.equal(cppLanguageAdapter.sourceComment?.findDefinitionLine?.(cppDocument, candidate('formatStatus', 12, 6), {
+  assert.equal(cppLanguageAdapter.sourceComment?.findDefinitionLine?.(document, candidate('formatStatus', 12, 6), {
     uri: 'file:///order.cpp',
     line: 6,
     character: 0
   }), 1);
-  assert.deepEqual(cppLanguageAdapter.sourceComment?.collectLeadingComments(cppDocument, 1), [
+  assert.deepEqual(cppLanguageAdapter.sourceComment?.collectLeadingComments(document, 1), [
     '/** Formats the order status. */'
   ]);
-  assert.deepEqual(cppLanguageAdapter.sourceComment?.collectLeadingComments(cppDocument, 6), [
+  assert.deepEqual(cppLanguageAdapter.sourceComment?.collectLeadingComments(document, 6), [
     '/// Presents order data.'
   ]);
 });

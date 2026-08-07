@@ -46,10 +46,17 @@ export class LanguageHealthService {
 
   constructor(
     private readonly probe: LanguageHealthProbe,
-    private readonly timeoutMs = DEFAULT_HEALTH_TIMEOUT_MS
+    private readonly timeoutMs = DEFAULT_HEALTH_TIMEOUT_MS,
+    private readonly maxCacheEntries = 1000
   ) {}
 
   evaluate(input: Omit<EvaluateLanguageHealthInput, 'probe' | 'timeoutMs'>): Promise<LanguageHealthStatus> {
+    // Position must be part of the key: hover/definition probe results are true
+    // only for the exact probe position, so health checks are not
+    // position-independent. Workspace diagnostics evaluate up to 40 positions
+    // per batch against the same cache, which is well below the bound below,
+    // and eviction only removes the oldest entries, so an in-flight
+    // single-file evaluation is never evicted right after insertion.
     const cacheKey = [
       input.languageId,
       input.documentUri,
@@ -71,6 +78,17 @@ export class LanguageHealthService {
       timeoutMs: this.timeoutMs
     });
     this.cache.set(cacheKey, health);
+    // Bound the cache: Map iteration order is insertion order, so the first
+    // key is the oldest entry. Evicting oldest-first keeps repeated workspace
+    // diagnoses (up to 40 positions per batch) from unbounded growth while
+    // never evicting the entry just inserted for this evaluation.
+    while (this.cache.size > this.maxCacheEntries) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      this.cache.delete(oldest);
+    }
     return health;
   }
 
