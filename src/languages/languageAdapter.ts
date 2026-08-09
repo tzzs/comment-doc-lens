@@ -9,13 +9,28 @@ export interface SourceDocument {
   lineCount: number;
 }
 
+export interface FindDefinitionLineOptions {
+  /**
+   * When true, test the reference/anchor line itself against the declaration
+   * patterns before scanning the window above it. Used on the hot path where the
+   * anchor is the language-service definition location: if the anchor already
+   * sits on the declaration (e.g. an undocumented overload), recognizing it
+   * prevents a windowed fallback from relocating the lookup to a *different*
+   * same-named declaration and attributing that declaration's doc to the
+   * current one. Left off on the cold local-definition path, where the
+   * reference is a call site that must never be mistaken for the declaration.
+   */
+  includeReferenceLine?: boolean;
+}
+
 export interface SourceCommentStrategy {
   canRead(location: LocationLike): boolean;
   findDefinitionLine?(
     document: SourceDocument,
     candidate: SymbolCandidate,
     location: LocationLike,
-    maxLookback?: number
+    maxLookback?: number,
+    options?: FindDefinitionLineOptions
   ): number | undefined;
   collectLeadingComments(document: SourceDocument, definitionLine: number): string[];
 }

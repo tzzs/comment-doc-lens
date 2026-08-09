@@ -166,14 +166,30 @@ export function findDefinitionLine(
   document: SourceDocument,
   referenceLine: number,
   definitionPatterns: readonly RegExp[],
-  lookback = DEFINITION_SEARCH_WINDOW
+  lookback = DEFINITION_SEARCH_WINDOW,
+  options?: { includeReferenceLine?: boolean }
 ): number | undefined {
-  const from = Math.max(0, referenceLine - lookback);
-  for (let line = from; line <= referenceLine; line++) {
-    if (line === referenceLine) {
-      continue;
+  // When the anchor is the language-service definition location, the line can
+  // itself be the declaration (e.g. an undocumented overload). In that case the
+  // caller asks us to recognize it so a windowed fallback cannot relocate the
+  // lookup to a *different* same-named declaration. When the reference is a
+  // call/reference site (the cold local-definition path), the caller leaves
+  // this off so the reference line is never mistaken for the declaration.
+  if (options?.includeReferenceLine) {
+    const referenceText = document.lineAt(referenceLine).text;
+    if (definitionPatterns.some((pattern) => pattern.test(referenceText))) {
+      return referenceLine;
     }
+  }
 
+  const from = Math.max(0, referenceLine - lookback);
+  // Scan nearest-first: the definition declaration is expected to sit directly
+  // above the anchor, so the closest matching line is the most likely target.
+  // Scanning oldest-first (window start → anchor) would return the *earliest*
+  // same-named declaration in the window — which for overloaded methods would
+  // attribute an unrelated overload's doc to the current (e.g. undocumented)
+  // declaration. Nearest-first keeps the cold definition-lookup fallback honest.
+  for (let line = referenceLine - 1; line >= from; line--) {
     const text = document.lineAt(line).text;
     if (definitionPatterns.some((pattern) => pattern.test(text))) {
       return line;

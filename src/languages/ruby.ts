@@ -1,4 +1,4 @@
-import type { LanguageAdapter, SourceDocument } from './languageAdapter';
+import type { FindDefinitionLineOptions, LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   collectLeadingLineCommentLines,
   escapeRegExp,
@@ -27,7 +27,8 @@ function findRubyDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: FindDefinitionLineOptions
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -37,7 +38,8 @@ function findRubyDefinitionLine(
       new RegExp(`^\\s*(?:def|class|module)\\s+${wordPattern}\\b`),
       new RegExp(`^\\s*${wordPattern}\\s*=`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -55,8 +57,8 @@ export const rubyLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.rb');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findRubyDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findRubyDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingLineCommentLines(document, definitionLine, ['#']);

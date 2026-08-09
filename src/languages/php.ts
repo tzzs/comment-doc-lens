@@ -1,4 +1,4 @@
-import type { LanguageAdapter, SourceDocument } from './languageAdapter';
+import type { FindDefinitionLineOptions, LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   collectLeadingBlockCommentLines,
   escapeRegExp,
@@ -72,7 +72,8 @@ function findPhpDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: FindDefinitionLineOptions
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -85,7 +86,8 @@ function findPhpDefinitionLine(
       new RegExp(`^\\s*(?:public|protected|private)\\s+(?:(?:static|readonly)\\s+)*(?:\\??[\\w\\\\]+(?:\\[\\])?\\s+)?\\$${wordPattern}\\b`),
       new RegExp(`\\$${wordPattern}\\s*=`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -103,8 +105,8 @@ export const phpLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.php');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findPhpDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findPhpDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

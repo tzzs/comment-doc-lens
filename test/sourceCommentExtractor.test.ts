@@ -159,23 +159,50 @@ test('collectCommentsAtAnchor collects comments directly at the definition ancho
   assert.equal(findCalls, 0);
 });
 
-test('collectCommentsAtAnchor falls back to a windowed search above the anchor', () => {
+test('collectCommentsAtAnchor honors an anchor that is itself the declaration', () => {
+  // Regression: the language-service anchor for an *undocumented* overload sits
+  // on its own declaration line. Without `includeReferenceLine` the windowed
+  // fallback relocates the lookup to the documented same-named declaration
+  // above, attributing the wrong overload's doc to the current one.
+  const document = createDocument([
+    '/** First overload. */',
+    'void execute(int id) {}',
+    '',
+    'void execute(String id) {}'
+  ]);
+
+  const collected = collectCommentsAtAnchor(
+    document,
+    3,
+    (line) => collectLeadingDocCommentLines(document, line),
+    (anchorLine) => findDefinitionLine(document, anchorLine, [/\bexecute\s*\(/], undefined, {
+      includeReferenceLine: true
+    })
+  );
+
+  assert.deepEqual(collected, []);
+});
+
+test('collectCommentsAtAnchor falls back to the declaration above a non-declaration anchor', () => {
+  // A multi-line signature anchor does not itself match the declaration pattern,
+  // so the windowed fallback still relocates to the declaration line above and
+  // finds its doc comment.
   const document = createDocument([
     '/// Formats the order status.',
-    'pub fn format_status(status: &str) -> String {',
-    '    status.to_string()',
-    '}',
-    '',
-    'pub fn format_status(status: &str) -> String {',
+    'pub fn format_status(',
+    '    status: &str,',
+    ') -> String {',
     '    status.to_string()',
     '}'
   ]);
 
   const collected = collectCommentsAtAnchor(
     document,
-    5,
+    3,
     (line) => collectLeadingDocCommentLines(document, line),
-    (anchorLine) => findDefinitionLine(document, anchorLine, [/\bfn\s+format_status\s*\(/])
+    (anchorLine) => findDefinitionLine(document, anchorLine, [/\bfn\s+format_status\s*\(/], undefined, {
+      includeReferenceLine: true
+    })
   );
 
   assert.deepEqual(collected, ['/// Formats the order status.']);
@@ -190,6 +217,24 @@ test('findDefinitionLine only searches a window above the anchor', () => {
   ]);
 
   assert.equal(findDefinitionLine(document, 26, [/^const\s+status\b/]), undefined);
+});
+
+test('findDefinitionLine honors the anchor line only with includeReferenceLine', () => {
+  const document = createDocument([
+    '/** First overload. */',
+    'void execute(int id) {}',
+    '',
+    'void execute(String id) {}'
+  ]);
+  const patterns = [/\bexecute\s*\(/];
+
+  // Without the option the anchor is never mistaken for a declaration (the cold
+  // local-definition path relies on this), so the windowed fallback finds the
+  // first overload instead.
+  assert.equal(findDefinitionLine(document, 3, patterns), 1);
+  // With the option, an anchor that is itself the declaration is honored so the
+  // lookup cannot relocate to a different same-named declaration.
+  assert.equal(findDefinitionLine(document, 3, patterns, undefined, { includeReferenceLine: true }), 3);
 });
 
 test('finds go const block definitions for local source fallback', () => {
@@ -266,4 +311,69 @@ test('finds go type, function, and method definitions for local source fallback'
     line: 2,
     character: 5
   });
+});
+
+test('go block member with a multi-line block comment keeps its own declaration', () => {
+  // Regression: the `*/` line preceding the member previously failed the
+  // `startsWith('/*')` adjacency check, so the member wrongly fell back to the
+  // block-level comment (or got none when the block had no comment). The member
+  // must resolve to its own declaration line because it carries documentation.
+  const document = createDocument([
+    '// Currencies supported by billing.',
+    'const (',
+    '	/*',
+    '	 * Euro is used for EU customers.',
+    '	 */',
+    '	CurrencyEUR = "EUR"',
+    ')',
+    '',
+    'func sample() {',
+    '	_ = CurrencyEUR',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'CurrencyEUR', 9), {
+    line: 5,
+    character: 1
+  });
+});
+
+test('go block member with multi-line block comment but no block-level comment still resolves to itself', () => {
+  // When the block itself has no comment, the member must still resolve to its
+  // own declaration because it carries a multi-line block comment directly.
+  const document = createDocument([
+    'const (',
+    '	/*',
+    '	 * European currency.',
+    '	 */',
+    '	CurrencyEUR = "EUR"',
+    ')',
+    '',
+    'func sample() {',
+    '	_ = CurrencyEUR',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'CurrencyEUR', 8), {
+    line: 4,
+    character: 1
+  });
+});
+
+test('go definition anchor on its own declaration line is honored with includeReferenceLine', () => {
+  // On the hot path the anchor is the language-service definition line. When it
+  // is itself a group member without its own comment, it must resolve to the
+  // block-level comment instead of being skipped and yielding nothing.
+  const document = createDocument([
+    '// Block-level docs.',
+    'const (',
+    '\tCurrencyUsd Currency = "USD"',
+    ')'
+  ]);
+
+  assert.deepEqual(
+    findGoDefinitionLine(document, 'CurrencyUsd', 2, undefined, { includeReferenceLine: true }),
+    { line: 1, character: 0 }
+  );
+  assert.equal(findGoDefinitionLine(document, 'CurrencyUsd', 2), undefined);
 });
