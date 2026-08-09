@@ -102,8 +102,18 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
       // Hot path: the anchor is already the language-service definition line, so
       // the narrow DEFINITION_SEARCH_WINDOW fallback (default) is intentional —
       // versus LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups
-      // away from a known definition.
-      (anchorLine) => sourceComment.findDefinitionLine?.(document, candidate, { ...location, line: anchorLine })
+      // away from a known definition. `includeReferenceLine` honors an anchor
+      // that is itself the declaration (e.g. an undocumented overload) so the
+      // windowed fallback cannot relocate the lookup to a *different* same-named
+      // declaration and attribute that declaration's doc to the current one.
+      (anchorLine) =>
+        sourceComment.findDefinitionLine?.(
+          document,
+          candidate,
+          { ...location, line: anchorLine },
+          undefined,
+          { includeReferenceLine: true }
+        )
     );
   }
 }

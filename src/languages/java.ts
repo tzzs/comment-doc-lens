@@ -1,4 +1,4 @@
-import type { LanguageAdapter, SourceDocument } from './languageAdapter';
+import type { FindDefinitionLineOptions, LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   collectLeadingBlockCommentLines,
   escapeRegExp,
@@ -26,7 +26,8 @@ function findJavaDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: FindDefinitionLineOptions
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -37,7 +38,8 @@ function findJavaDefinitionLine(
       new RegExp(`\\b${wordPattern}\\s*\\(`),
       new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -55,8 +57,8 @@ export const javaLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.java');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findJavaDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findJavaDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');
