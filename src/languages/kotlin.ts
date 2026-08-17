@@ -39,7 +39,8 @@ function findKotlinDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: { includeAnchor?: boolean }
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -50,7 +51,8 @@ function findKotlinDefinitionLine(
       new RegExp(`\\bfun\\s+${wordPattern}\\s*\\(`),
       new RegExp(`\\b(?:val|var)\\s+${wordPattern}\\b`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -68,8 +70,8 @@ export const kotlinLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.kt');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findKotlinDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findKotlinDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingBlockCommentLines(document, definitionLine, '/**');

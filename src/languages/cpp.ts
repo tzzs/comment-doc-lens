@@ -35,7 +35,8 @@ function findCppDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: { includeAnchor?: boolean }
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -47,7 +48,8 @@ function findCppDefinitionLine(
       new RegExp(`^\\s*#define\\s+${wordPattern}\\b`),
       new RegExp(`\\b${wordPattern}\\s*(?:=|;)`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -69,8 +71,8 @@ export const cppLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithAnyExtension(location.uri, ['.c', '.cc', '.cpp', '.cxx', '.h', '.hh', '.hpp', '.hxx']);
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findCppDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findCppDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingDocCommentLines(document, definitionLine);

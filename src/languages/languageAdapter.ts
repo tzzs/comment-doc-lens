@@ -15,9 +15,20 @@ export interface SourceCommentStrategy {
     document: SourceDocument,
     candidate: SymbolCandidate,
     location: LocationLike,
-    maxLookback?: number
+    maxLookback?: number,
+    options?: { includeAnchor?: boolean }
   ): number | undefined;
   collectLeadingComments(document: SourceDocument, definitionLine: number): string[];
+  /**
+   * Returns the comment that appears on the same line after the declaration
+   * code. Trailing comments are never documentation, so a strategy that can
+   * identify them lets the resolver reject hover documentation that would
+   * otherwise leak them into the hint.
+   */
+  findTrailingComment?(
+    document: SourceDocument,
+    line: number
+  ): { startCharacter: number; text: string } | undefined;
 }
 
 export interface ProbePosition {

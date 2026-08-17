@@ -3,14 +3,14 @@ import type { SymbolCandidate } from '../candidateScanner';
 import type { DocumentationLookup, LocationLike } from '../documentationResolver';
 import type { LanguageAdapter } from '../languages/languageAdapter';
 import { collectCommentsAtAnchor, LOCAL_DEFINITION_LOOKBACK } from '../languages/shared';
-import { getHoverLines } from './hover';
+import { getHoverDocumentation } from './hover';
 import type { DiagnosticsSession } from './diagnostics';
 
 export class VscodeDocumentationLookup implements DocumentationLookup {
   constructor(private readonly diagnostics?: DiagnosticsSession) {}
 
-  async getHoverMarkdownLines(candidate: SymbolCandidate, documentUri: string): Promise<string[]> {
-    return getHoverLines(
+  async getHoverDocumentation(candidate: SymbolCandidate, documentUri: string) {
+    return getHoverDocumentation(
       vscode.Uri.parse(documentUri),
       new vscode.Position(candidate.line, candidate.startCharacter),
       this.diagnostics
@@ -80,8 +80,12 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
     };
   }
 
-  async getHoverMarkdownLinesAtLocation(location: LocationLike): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character), this.diagnostics);
+  async getHoverDocumentationAtLocation(location: LocationLike) {
+    return getHoverDocumentation(
+      vscode.Uri.parse(location.uri),
+      new vscode.Position(location.line, location.character),
+      this.diagnostics
+    );
   }
 
   async getDefinitionSourceComments(
@@ -99,11 +103,32 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
       document,
       location.line,
       (line) => sourceComment.collectLeadingComments(document, line),
-      // Hot path: the anchor is already the language-service definition line, so
-      // the narrow DEFINITION_SEARCH_WINDOW fallback (default) is intentional —
-      // versus LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups
-      // away from a known definition.
-      (anchorLine) => sourceComment.findDefinitionLine?.(document, candidate, { ...location, line: anchorLine })
+      // The anchor is already the language-service definition line, so it is
+      // checked directly too (includeAnchor) — this lets const/var/type group
+      // members inherit the block-level comment. The narrow
+      // DEFINITION_SEARCH_WINDOW fallback (default) is intentional — versus
+      // LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups away
+      // from a known definition.
+      (anchorLine) => sourceComment.findDefinitionLine?.(
+        document,
+        candidate,
+        { ...location, line: anchorLine },
+        undefined,
+        { includeAnchor: true }
+      )
     );
+  }
+
+  async getDefinitionTrailingComment(
+    location: LocationLike,
+    languageAdapter?: LanguageAdapter
+  ): Promise<string | undefined> {
+    const sourceComment = languageAdapter?.sourceComment;
+    if (!sourceComment?.findTrailingComment || !sourceComment?.canRead(location)) {
+      return undefined;
+    }
+
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
+    return sourceComment.findTrailingComment(document, location.line)?.text;
   }
 }

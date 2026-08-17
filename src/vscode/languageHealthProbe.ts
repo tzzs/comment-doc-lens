@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { LanguageHealthPosition, LanguageHealthProbe } from '../languageHealth';
-import { getHoverLines } from './hover';
+import { getHoverDocumentation } from './hover';
 import type { DiagnosticsSession } from './diagnostics';
 
 export class VscodeLanguageHealthProbe implements LanguageHealthProbe {
@@ -11,7 +11,7 @@ export class VscodeLanguageHealthProbe implements LanguageHealthProbe {
   }
 
   async hasHover(documentUri: string, position: LanguageHealthPosition): Promise<boolean> {
-    const lines = await getHoverLines(
+    const { lines } = await getHoverDocumentation(
       vscode.Uri.parse(documentUri),
       new vscode.Position(position.line, position.character),
       this.diagnostics

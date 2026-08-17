@@ -51,7 +51,8 @@ function findRustDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: { includeAnchor?: boolean }
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -61,7 +62,8 @@ function findRustDefinitionLine(
       new RegExp(`\\b(?:const|enum|fn|struct|trait|type)\\s+${wordPattern}\\b`),
       new RegExp(`^\\s*${wordPattern}\\s*(?:,|\\(|\\{|;)`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -98,8 +100,8 @@ export const rustLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.rs');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findRustDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findRustDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingRustDocCommentLines(document, definitionLine);

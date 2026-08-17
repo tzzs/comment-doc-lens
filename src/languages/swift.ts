@@ -31,7 +31,8 @@ function findSwiftDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: { includeAnchor?: boolean }
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -43,7 +44,8 @@ function findSwiftDefinitionLine(
       new RegExp(`\\b(?:let|var)\\s+${wordPattern}\\b`),
       new RegExp(`\\bcase\\s+${wordPattern}\\b`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -61,8 +63,8 @@ export const swiftLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.swift');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findSwiftDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findSwiftDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingDocCommentLines(document, definitionLine);

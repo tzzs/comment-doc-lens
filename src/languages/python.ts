@@ -46,7 +46,8 @@ function findPythonDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: { includeAnchor?: boolean }
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -56,7 +57,8 @@ function findPythonDefinitionLine(
       new RegExp(`^\\s*(?:def|class)\\s+${wordPattern}\\b`),
       new RegExp(`^\\s*${wordPattern}\\s*=`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -135,8 +137,8 @@ export const pythonLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.py');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findPythonDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findPythonDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectPythonDocstringLines(document, definitionLine);

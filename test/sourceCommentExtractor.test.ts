@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { findGoDefinitionLine } from '../src/languages/go';
+import { goLanguageAdapter } from '../src/languages/languageRegistry';
 import {
   collectCommentsAtAnchor,
   collectLeadingBlockCommentLines,
   collectLeadingDocCommentLines,
   collectLeadingLineCommentLines,
   collectLeadingSlashCommentLines,
-  findDefinitionLine
+  findDefinitionLine,
+  findTrailingCommentStart
 } from '../src/languages/shared';
 
 function createDocument(lines: readonly string[]) {
@@ -266,4 +268,159 @@ test('finds go type, function, and method definitions for local source fallback'
     line: 2,
     character: 5
   });
+});
+
+function collectGoSourceComments(lines: readonly string[], anchorLine: number, word: string) {
+  const document = createDocument(lines);
+  const sourceComment = goLanguageAdapter.sourceComment;
+  assert.ok(sourceComment);
+  return collectCommentsAtAnchor(
+    document,
+    anchorLine,
+    (line) => sourceComment.collectLeadingComments(document, line),
+    (anchorLineAt) => sourceComment.findDefinitionLine?.(
+      document,
+      { word, line: anchorLineAt, startCharacter: 0, endCharacter: word.length },
+      { uri: 'file:///status.go', line: anchorLineAt, character: 0 },
+      undefined,
+      { includeAnchor: true }
+    )
+  );
+}
+
+function goTrailingComment(lines: readonly string[], line: number): string | undefined {
+  const document = createDocument(lines);
+  return goLanguageAdapter.sourceComment?.findTrailingComment?.(document, line)?.text;
+}
+
+// Regression tests for issue #44: trailing comments on the same line as a
+// declaration must never be treated as documentation.
+
+test('scenario 1: leading line comment is documentation', () => {
+  const document = createDocument(['// 用户 ID', 'var userID string']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 1), ['// 用户 ID']);
+  assert.equal(goTrailingComment(['// 用户 ID', 'var userID string'], 1), undefined);
+});
+
+test('scenario 2: trailing line comment is never documentation', () => {
+  const document = createDocument(['var userID string // 用户 ID']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 0), []);
+  assert.equal(goTrailingComment(['var userID string // 用户 ID'], 0), '// 用户 ID');
+  assert.equal(findTrailingCommentStart('var userID string // 用户 ID'), 18);
+});
+
+test('scenario 3: leading plus trailing keeps only the leading comment', () => {
+  const document = createDocument(['// 用户 ID', 'var userID string // 实现细节']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 1), ['// 用户 ID']);
+  assert.equal(goTrailingComment(['// 用户 ID', 'var userID string // 实现细节'], 1), '// 实现细节');
+});
+
+test('scenario 4: leading block comment is documentation', () => {
+  const document = createDocument(['/*', ' * 用户 ID', ' */', 'var userID string']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 3), ['/*', '* 用户 ID', '*/']);
+  assert.equal(goTrailingComment(['/*', ' * 用户 ID', ' */', 'var userID string'], 3), undefined);
+});
+
+test('scenario 5: trailing block comment is never documentation', () => {
+  const line = 'var userID string /* 用户 ID */';
+  const document = createDocument([line]);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 0), []);
+  assert.equal(goTrailingComment([line], 0), '/* 用户 ID */');
+  assert.equal(findTrailingCommentStart(line), 18);
+});
+
+test('scenario 6: leading block plus trailing keeps only the leading block comment', () => {
+  const document = createDocument(['/*', ' * 用户 ID', ' */', 'var userID string /* 实现细节 */']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 3), ['/*', '* 用户 ID', '*/']);
+  assert.equal(goTrailingComment(['/*', ' * 用户 ID', ' */', 'var userID string /* 实现细节 */'], 3), '/* 实现细节 */');
+});
+
+test('scenario 7: const group member inherits the block-level comment', () => {
+  const lines = [
+    '// 用户状态',
+    'const (',
+    '\tUserActive = 1',
+    ')',
+    '',
+    'func main() {',
+    '\t_ = UserActive',
+    '}'
+  ];
+
+  assert.deepEqual(collectGoSourceComments(lines, 2, 'UserActive'), ['// 用户状态']);
+});
+
+test('scenario 8: const group member trailing comment does not leak into documentation', () => {
+  const lines = [
+    '// 用户状态',
+    'const (',
+    '\tUserActive = 1 // 活跃',
+    ')',
+    '',
+    'func main() {',
+    '\t_ = UserActive',
+    '}'
+  ];
+
+  const comments = collectGoSourceComments(lines, 2, 'UserActive');
+  assert.deepEqual(comments, ['// 用户状态']);
+  assert.equal(goTrailingComment(lines, 2), '// 活跃');
+});
+
+test('scenario 9: same-name declarations resolve to the nearest declaration', () => {
+  const document = createDocument([
+    '// 第一个定义',
+    'const Value = 1',
+    '',
+    '// 第二个定义',
+    'const Value = 2',
+    '',
+    'func main() {',
+    '\t_ = Value',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'Value', 7), {
+    line: 4,
+    character: 6
+  });
+});
+
+test('scenario 9b: same-name declarations inside different blocks resolve to the nearest block', () => {
+  const document = createDocument([
+    '// 第一组',
+    'const (',
+    '\tValue = 1',
+    ')',
+    '',
+    '// 第二组',
+    'const (',
+    '\tValue = 2',
+    ')',
+    '',
+    'func main() {',
+    '\t_ = Value',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'Value', 11), {
+    line: 6,
+    character: 0
+  });
+});
+
+test('scenario 10: external definitions keep language server documentation', () => {
+  const sourceComment = goLanguageAdapter.sourceComment;
+  assert.ok(sourceComment);
+  // The go adapter can read any .go file regardless of workspace membership,
+  // so external symbols rely on hover unless a source comment or a trailing
+  // comment is present (covered by the resolver-level scenario tests).
+  assert.equal(sourceComment.canRead({ uri: 'file:///usr/local/go/src/fmt/print.go', line: 1, character: 0 }), true);
+  assert.equal(sourceComment.canRead({ uri: 'file:///usr/local/go/src/fmt/print.txt', line: 1, character: 0 }), false);
 });

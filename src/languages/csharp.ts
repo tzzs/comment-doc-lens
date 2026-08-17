@@ -26,7 +26,8 @@ function findCSharpDefinitionLine(
   document: SourceDocument,
   word: string,
   referenceLine: number,
-  lookback?: number
+  lookback?: number,
+  options?: { includeAnchor?: boolean }
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(
@@ -37,7 +38,8 @@ function findCSharpDefinitionLine(
       new RegExp(`\\b${wordPattern}\\s*\\(`),
       new RegExp(`\\b${wordPattern}\\s*(?:=>|\\{|;)`)
     ],
-    lookback
+    lookback,
+    options
   );
 }
 
@@ -55,8 +57,8 @@ export const csharpLanguageAdapter: LanguageAdapter = {
     canRead(location) {
       return isFilePathWithExtension(location.uri, '.cs');
     },
-    findDefinitionLine(document, candidate, location, maxLookback) {
-      return findCSharpDefinitionLine(document, candidate.word, location.line, maxLookback);
+    findDefinitionLine(document, candidate, location, maxLookback, options) {
+      return findCSharpDefinitionLine(document, candidate.word, location.line, maxLookback, options);
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingLineCommentLines(document, definitionLine, ['///']);

@@ -166,21 +166,61 @@ export function findDefinitionLine(
   document: SourceDocument,
   referenceLine: number,
   definitionPatterns: readonly RegExp[],
-  lookback = DEFINITION_SEARCH_WINDOW
+  lookback = DEFINITION_SEARCH_WINDOW,
+  options: { includeAnchor?: boolean } = {}
 ): number | undefined {
   const from = Math.max(0, referenceLine - lookback);
+  let match: number | undefined;
   for (let line = from; line <= referenceLine; line++) {
-    if (line === referenceLine) {
+    if (line === referenceLine && !options.includeAnchor) {
       continue;
     }
 
     const text = document.lineAt(line).text;
     if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      return line;
+      // Scan upward and keep overwriting so the nearest declaration above the
+      // reference wins when the same name is declared more than once.
+      match = line;
     }
   }
 
-  return undefined;
+  return match;
+}
+
+/**
+ * Returns the character index where a trailing `//` or `/*` comment begins on
+ * a line, or `-1` when the line carries none. String literals (Go double
+ * quoted, backtick raw strings and runes) are skipped so comment markers
+ * inside strings are not mistaken for comments.
+ */
+export function findTrailingCommentStart(line: string): number {
+  let quote: '"' | "'" | '`' | undefined;
+  for (let index = 0; index < line.length; index++) {
+    const ch = line[index];
+    if (quote !== undefined) {
+      if (quote === '`') {
+        if (ch === '`') {
+          quote = undefined;
+        }
+      } else if (ch === '\\') {
+        index++;
+      } else if (ch === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+
+    if (ch === '"' || ch === "'" || ch === '`') {
+      quote = ch;
+      continue;
+    }
+
+    if (ch === '/' && (line[index + 1] === '/' || line[index + 1] === '*')) {
+      return index;
+    }
+  }
+
+  return -1;
 }
 
 /**
