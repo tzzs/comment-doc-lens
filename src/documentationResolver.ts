@@ -47,10 +47,7 @@ export interface DocumentationLookup {
     candidate: SymbolCandidate,
     languageAdapter?: LanguageAdapter
   ): Promise<string[]>;
-  getDefinitionTrailingComment(
-    location: LocationLike,
-    languageAdapter?: LanguageAdapter
-  ): Promise<string | undefined>;
+  hasTrailingCommentAt?(location: LocationLike, languageAdapter?: LanguageAdapter): Promise<boolean>;
 }
 
 export interface DocumentationResolverOptions {
@@ -89,62 +86,11 @@ export class DocumentationResolver {
       return this.cache.get(cacheKey);
     }
 
-    const reference = await this.lookup.getHoverDocumentation(candidate, documentUri);
     const location = await this.lookup.getDefinitionLocation(candidate, documentUri, languageAdapter);
-    const referenceText = this.toUsableText(reference.lines, languageAdapter);
-
-    if (referenceText) {
-      if (location) {
-        const sourceComments = await this.lookup.getDefinitionSourceComments(location, candidate, languageAdapter);
-        const sourceText = this.toUsableText(sourceComments, languageAdapter);
-        if (sourceText) {
-          return this.setCache(cacheKey, {
-            fullText: sourceText,
-            source: 'source-comment',
-            location
-          });
-        }
-
-        if (await this.hasTrailingCommentOnly(location, languageAdapter)) {
-          return this.setCache(cacheKey, undefined);
-        }
-      }
-      return this.setCache(cacheKey, {
-        fullText: referenceText,
-        source: 'hover',
-        location,
-        range: reference.range
-      });
-    }
-
-    if (!location) {
-      return this.setCache(cacheKey, undefined);
-    }
-
-    const definition = await this.lookup.getHoverDocumentationAtLocation(location);
-    const definitionText = this.toUsableText(definition.lines, languageAdapter);
-    if (definitionText) {
-      if (await this.hasTrailingCommentOnly(location, languageAdapter)) {
-        return this.setCache(cacheKey, undefined);
-      }
-      return this.setCache(cacheKey, {
-        fullText: definitionText,
-        source: 'fallback',
-        location,
-        range: definition.range
-      });
-    }
-
-    const sourceComments = await this.lookup.getDefinitionSourceComments(location, candidate, languageAdapter);
-    const sourceText = this.toUsableText(sourceComments, languageAdapter);
-    if (!sourceText) {
-      return this.setCache(cacheKey, undefined);
-    }
-    return this.setCache(cacheKey, {
-      fullText: sourceText,
-      source: 'source-comment',
-      location
-    });
+    const result = this.isLocalDeclaration(location, documentUri)
+      ? await this.resolveLocalDeclaration(location!, candidate, documentUri, languageAdapter)
+      : await this.resolveExternalSymbol(candidate, documentUri, location, languageAdapter);
+    return this.setCache(cacheKey, result);
   }
 
   async resolveSummary(
@@ -158,9 +104,9 @@ export class DocumentationResolver {
       return this.cache.get(cacheKey);
     }
 
+    // Languages without a source-comment strategy treat the reference hover as
+    // authoritative, so the lightweight path is safe and cheap.
     if (!languageAdapter?.sourceComment) {
-      // No source fallback: reference hover is authoritative and cannot be
-      // contaminated by local source comments, so the lightweight path is safe.
       const reference = await this.lookup.getHoverDocumentation(candidate, documentUri);
       const referenceText = this.toUsableText(reference.lines, languageAdapter);
       if (referenceText) {
@@ -175,20 +121,96 @@ export class DocumentationResolver {
       }
     }
 
-    // Source-fallback languages must verify provenance (e.g. a local
-    // declaration with a trailing comment is never documentation), so they
-    // always take the full resolution path.
+    // Source-fallback languages keep the source declaration comment as the
+    // primary documentation source, so their summary path must run the same
+    // provenance validation as full resolution instead of trusting the
+    // reference hover blindly (Issue #44).
     const result = await this.resolve(candidate, documentUri, documentVersion, languageAdapter);
     this.setCache(cacheKey, result);
     return result;
   }
 
-  private async hasTrailingCommentOnly(
+  private async resolveLocalDeclaration(
+    location: LocationLike,
+    candidate: SymbolCandidate,
+    documentUri: string,
+    languageAdapter?: LanguageAdapter
+  ): Promise<ResolvedDocumentation | undefined> {
+    const sourceComments = await this.lookup.getDefinitionSourceComments(location, candidate, languageAdapter);
+    const sourceText = this.toUsableText(sourceComments, languageAdapter);
+    if (sourceText) {
+      return { fullText: sourceText, source: 'source-comment', location };
+    }
+
+    // No leading source documentation: hover content could originate from a
+    // same-line trailing comment on the declaration, which is never valid
+    // declaration documentation.
+    if (await this.hasTrailingComment(location, languageAdapter)) {
+      return undefined;
+    }
+
+    const reference = await this.lookup.getHoverDocumentation(candidate, documentUri);
+    const referenceText = this.toUsableText(reference.lines, languageAdapter);
+    if (referenceText) {
+      return { fullText: referenceText, source: 'hover', location, range: reference.range };
+    }
+
+    const definition = await this.lookup.getHoverDocumentationAtLocation(location);
+    const definitionText = this.toUsableText(definition.lines, languageAdapter);
+    return definitionText
+      ? { fullText: definitionText, source: 'fallback', location, range: definition.range }
+      : undefined;
+  }
+
+  private async resolveExternalSymbol(
+    candidate: SymbolCandidate,
+    documentUri: string,
+    location: LocationLike | undefined,
+    languageAdapter?: LanguageAdapter
+  ): Promise<ResolvedDocumentation | undefined> {
+    const reference = await this.lookup.getHoverDocumentation(candidate, documentUri);
+    const referenceText = this.toUsableText(reference.lines, languageAdapter);
+    if (referenceText) {
+      if (!location) {
+        return { fullText: referenceText, source: 'hover', range: reference.range };
+      }
+
+      const sourceComments = await this.lookup.getDefinitionSourceComments(location, candidate, languageAdapter);
+      const sourceText = this.toUsableText(sourceComments, languageAdapter);
+      return sourceText
+        ? { fullText: sourceText, source: 'source-comment', location }
+        : { fullText: referenceText, source: 'hover', location, range: reference.range };
+    }
+
+    if (!location) {
+      return undefined;
+    }
+
+    const definition = await this.lookup.getHoverDocumentationAtLocation(location);
+    const definitionText = this.toUsableText(definition.lines, languageAdapter);
+    if (definitionText) {
+      return { fullText: definitionText, source: 'fallback', location, range: definition.range };
+    }
+
+    const sourceComments = await this.lookup.getDefinitionSourceComments(location, candidate, languageAdapter);
+    const sourceText = this.toUsableText(sourceComments, languageAdapter);
+    return sourceText
+      ? { fullText: sourceText, source: 'source-comment', location }
+      : undefined;
+  }
+
+  private isLocalDeclaration(location: LocationLike | undefined, documentUri: string): boolean {
+    return Boolean(location && documentUri && location.uri === documentUri);
+  }
+
+  private async hasTrailingComment(
     location: LocationLike,
     languageAdapter?: LanguageAdapter
   ): Promise<boolean> {
-    const trailing = await this.lookup.getDefinitionTrailingComment(location, languageAdapter);
-    return trailing !== undefined;
+    if (!languageAdapter?.sourceComment) {
+      return false;
+    }
+    return (await this.lookup.hasTrailingCommentAt?.(location, languageAdapter)) ?? false;
   }
 
   private toUsableText(lines: readonly string[], languageAdapter?: LanguageAdapter): string | undefined {

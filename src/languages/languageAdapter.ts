@@ -9,6 +9,20 @@ export interface SourceDocument {
   lineCount: number;
 }
 
+export interface FindDefinitionLineOptions {
+  /**
+   * When true, test the reference/anchor line itself against the declaration
+   * patterns before scanning the window above it. Used on the hot path where the
+   * anchor is the language-service definition location: if the anchor already
+   * sits on the declaration (e.g. an undocumented overload), recognizing it
+   * prevents a windowed fallback from relocating the lookup to a *different*
+   * same-named declaration and attributing that declaration's doc to the
+   * current one. Left off on the cold local-definition path, where the
+   * reference is a call site that must never be mistaken for the declaration.
+   */
+  includeReferenceLine?: boolean;
+}
+
 export interface SourceCommentStrategy {
   canRead(location: LocationLike): boolean;
   findDefinitionLine?(
@@ -16,19 +30,15 @@ export interface SourceCommentStrategy {
     candidate: SymbolCandidate,
     location: LocationLike,
     maxLookback?: number,
-    options?: { includeAnchor?: boolean }
+    options?: FindDefinitionLineOptions
   ): number | undefined;
   collectLeadingComments(document: SourceDocument, definitionLine: number): string[];
   /**
-   * Returns the comment that appears on the same line after the declaration
-   * code. Trailing comments are never documentation, so a strategy that can
-   * identify them lets the resolver reject hover documentation that would
-   * otherwise leak them into the hint.
+   * Whether the declaration line carries a same-line (trailing) comment.
+   * Hover documentation that could only originate from such a trailing comment
+   * must not be accepted as declaration documentation.
    */
-  findTrailingComment?(
-    document: SourceDocument,
-    line: number
-  ): { startCharacter: number; text: string } | undefined;
+  hasTrailingCommentAt?(document: SourceDocument, line: number): boolean;
 }
 
 export interface ProbePosition {

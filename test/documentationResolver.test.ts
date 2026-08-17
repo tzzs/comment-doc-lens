@@ -5,19 +5,20 @@ import { goLanguageAdapter } from '../src/languages/languageRegistry';
 
 interface MockLookupOverrides {
   hoverLines?: string[];
+  hoverRange?: { startLine: number; startCharacter: number; endLine: number; endCharacter: number };
   definitionLocation?: { uri: string; line: number; character: number } | undefined;
   definitionHoverLines?: string[];
   sourceComments?: string[];
-  trailingComment?: string | undefined;
+  trailingComment?: boolean;
 }
 
 function createLookup(overrides: MockLookupOverrides = {}): DocumentationLookup {
   return {
-    getHoverDocumentation: async () => ({ lines: overrides.hoverLines ?? [] }),
+    getHoverDocumentation: async () => ({ lines: overrides.hoverLines ?? [], range: overrides.hoverRange }),
     getDefinitionLocation: async () => overrides.definitionLocation,
     getHoverDocumentationAtLocation: async () => ({ lines: overrides.definitionHoverLines ?? [] }),
     getDefinitionSourceComments: async () => overrides.sourceComments ?? [],
-    getDefinitionTrailingComment: async () => overrides.trailingComment
+    hasTrailingCommentAt: async () => overrides.trailingComment ?? false
   };
 }
 
@@ -72,7 +73,7 @@ test('preserves hover range metadata on the resolved documentation', async () =>
     getDefinitionLocation: async () => undefined,
     getHoverDocumentationAtLocation: async () => ({ lines: [] }),
     getDefinitionSourceComments: async () => [],
-    getDefinitionTrailingComment: async () => undefined
+    hasTrailingCommentAt: async () => false
   };
   const resolver = createResolver(lookup);
 
@@ -95,7 +96,7 @@ test('resolves lightweight summaries without definition lookup when reference ho
       throw new Error('definition hover should not be needed for summary-only lookup');
     },
     getDefinitionSourceComments: async () => [],
-    getDefinitionTrailingComment: async () => undefined
+    hasTrailingCommentAt: async () => false
   };
   const resolver = createResolver(lookup);
 
@@ -117,7 +118,7 @@ test('falls back to full resolution when lightweight summaries have no usable re
     },
     getHoverDocumentationAtLocation: async () => ({ lines: ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'] }),
     getDefinitionSourceComments: async () => ['// Paid status from source comment.'],
-    getDefinitionTrailingComment: async () => undefined
+    hasTrailingCommentAt: async () => false
   };
   const resolver = createResolver(lookup);
 
@@ -128,7 +129,7 @@ test('falls back to full resolution when lightweight summaries have no usable re
       startCharacter: 12,
       endCharacter: 27
     },
-    '',
+    'file:///status.go',
     0,
     goLanguageAdapter
   );
@@ -193,7 +194,7 @@ test('falls back to source comments near the definition when hover has no docume
       startCharacter: 12,
       endCharacter: 27
     },
-    '',
+    'file:///status.go',
     0,
     goLanguageAdapter
   );
@@ -206,7 +207,7 @@ test('falls back to source comments near the definition when hover has no docume
 test('prefers go source comments over non-comment reference hover text', async () => {
   const lookup = createLookup({
     hoverLines: ['OrderStatusPaid is declared in package status.'],
-    definitionLocation: { uri: 'file:///status.go?version=1#L3', line: 3, character: 6 },
+    definitionLocation: { uri: 'file:///status.go', line: 3, character: 6 },
     definitionHoverLines: ['```go', 'const OrderStatusPaid OrderStatus = "paid"', '```'],
     sourceComments: ['// Paid status from source comment.']
   });
@@ -219,14 +220,14 @@ test('prefers go source comments over non-comment reference hover text', async (
       startCharacter: 12,
       endCharacter: 27
     },
-    '',
+    'file:///status.go',
     0,
     goLanguageAdapter
   );
 
   assert.equal(result?.fullText, 'Paid status from source comment.');
   assert.equal(result?.source, 'source-comment');
-  assert.deepEqual(result?.location, { uri: 'file:///status.go?version=1#L3', line: 3, character: 6 });
+  assert.deepEqual(result?.location, { uri: 'file:///status.go', line: 3, character: 6 });
 });
 
 test('produces no hint when source comments cannot be read', async () => {
@@ -245,7 +246,7 @@ test('produces no hint when source comments cannot be read', async () => {
       startCharacter: 12,
       endCharacter: 27
     },
-    '',
+    'file:///status.go',
     0,
     goLanguageAdapter
   );
@@ -269,7 +270,7 @@ test('resolveSummary populates the full cache entry for later resolve reuse', as
       throw new Error('definition hover should not be needed once the full cache entry is populated');
     },
     getDefinitionSourceComments: async () => [],
-    getDefinitionTrailingComment: async () => undefined
+    hasTrailingCommentAt: async () => false
   };
   const resolver = createResolver(lookup);
 
@@ -292,7 +293,7 @@ test('caches repeated lookups by document version and candidate position', async
     getDefinitionLocation: async () => undefined,
     getHoverDocumentationAtLocation: async () => ({ lines: [] }),
     getDefinitionSourceComments: async () => [],
-    getDefinitionTrailingComment: async () => undefined
+    hasTrailingCommentAt: async () => false
   };
   const resolver = createResolver(lookup);
   const candidate = {
@@ -321,7 +322,7 @@ test('passes document uri to lookup methods', async () => {
     },
     getHoverDocumentationAtLocation: async () => ({ lines: ['状态说明'] }),
     getDefinitionSourceComments: async () => [],
-    getDefinitionTrailingComment: async () => undefined
+    hasTrailingCommentAt: async () => false
   };
   const resolver = createResolver(lookup);
 
@@ -350,7 +351,7 @@ test('bounds cache size and evicts the oldest lookup', async () => {
     getDefinitionLocation: async () => undefined,
     getHoverDocumentationAtLocation: async () => ({ lines: [] }),
     getDefinitionSourceComments: async () => [],
-    getDefinitionTrailingComment: async () => undefined
+    hasTrailingCommentAt: async () => false
   };
   const resolver = new DocumentationResolver(lookup, { maxCacheEntries: 2 });
 
@@ -374,7 +375,7 @@ test('go: leading line comment is shown as documentation', async () => {
     hoverLines: ['用户 ID'],
     definitionLocation: { uri: 'file:///user.go', line: 1, character: 5 },
     sourceComments: ['// 用户 ID'],
-    trailingComment: undefined
+    trailingComment: false
   });
   const resolver = createResolver(lookup);
 
@@ -386,10 +387,10 @@ test('go: leading line comment is shown as documentation', async () => {
 
 test('go: trailing line comment alone is never shown as documentation', async () => {
   const lookup = createLookup({
-    hoverLines: ['var userID string // 用户 ID'],
+    hoverLines: ['用户 ID'],
     definitionLocation: { uri: 'file:///user.go', line: 1, character: 5 },
     sourceComments: [],
-    trailingComment: '// 用户 ID'
+    trailingComment: true
   });
   const resolver = createResolver(lookup);
 
@@ -403,7 +404,7 @@ test('go: leading plus trailing comment keeps only the leading comment', async (
     hoverLines: ['用户 ID'],
     definitionLocation: { uri: 'file:///user.go', line: 1, character: 5 },
     sourceComments: ['// 用户 ID'],
-    trailingComment: '// 实现细节'
+    trailingComment: true
   });
   const resolver = createResolver(lookup);
 
@@ -417,7 +418,7 @@ test('go: leading block comment is shown as documentation', async () => {
     hoverLines: ['用户 ID'],
     definitionLocation: { uri: 'file:///user.go', line: 3, character: 5 },
     sourceComments: ['/*', '* 用户 ID', '*/'],
-    trailingComment: undefined
+    trailingComment: false
   });
   const resolver = createResolver(lookup);
 
@@ -429,10 +430,10 @@ test('go: leading block comment is shown as documentation', async () => {
 
 test('go: trailing block comment alone is never shown as documentation', async () => {
   const lookup = createLookup({
-    hoverLines: ['var userID string /* 用户 ID */'],
+    hoverLines: ['用户 ID'],
     definitionLocation: { uri: 'file:///user.go', line: 1, character: 5 },
     sourceComments: [],
-    trailingComment: '/* 用户 ID */'
+    trailingComment: true
   });
   const resolver = createResolver(lookup);
 
@@ -446,7 +447,7 @@ test('go: const group member inherits block-level documentation', async () => {
     hoverLines: ['const UserActive = 1 // 活跃'],
     definitionLocation: { uri: 'file:///status.go', line: 2, character: 1 },
     sourceComments: ['// 用户状态'],
-    trailingComment: '// 活跃'
+    trailingComment: true
   });
   const resolver = createResolver(lookup);
 
@@ -461,7 +462,7 @@ test('go: const group member trailing comment never leaks into the hint', async 
     hoverLines: ['const UserActive = 1 // 活跃'],
     definitionLocation: { uri: 'file:///status.go', line: 2, character: 1 },
     sourceComments: ['// 用户状态'],
-    trailingComment: '// 活跃'
+    trailingComment: true
   });
   const resolver = createResolver(lookup);
 
@@ -476,7 +477,7 @@ test('go: rejects contaminated reference hover when definition carries only a tr
     hoverLines: ['var userID string // 用户 ID'],
     definitionLocation: { uri: 'file:///user.go', line: 1, character: 5 },
     sourceComments: [],
-    trailingComment: '// 用户 ID'
+    trailingComment: true
   });
   const resolver = createResolver(lookup);
 
@@ -485,18 +486,23 @@ test('go: rejects contaminated reference hover when definition carries only a tr
   assert.equal(result, undefined);
 });
 
-test('external symbol without local source comments still uses language server documentation', async () => {
+test('keeps language server documentation for external go symbols despite trailing comments', async () => {
   const lookup = createLookup({
-    hoverLines: ['```go', 'func Println(a ...any) (n int, err error)', '```', 'Println formats using the default formats for its operands.'],
-    definitionLocation: { uri: 'file:///usr/local/go/src/fmt/print.go', line: 300, character: 6 },
-    definitionHoverLines: [],
+    hoverLines: ['External library returns the formatted status.'],
+    definitionLocation: { uri: 'file:///lib.go', line: 0, character: 4 },
     sourceComments: [],
-    trailingComment: undefined
+    trailingComment: true
   });
   const resolver = createResolver(lookup);
 
-  const result = await resolver.resolve(goReferenceCandidate, 'file:///main.go', 0, goLanguageAdapter);
+  const result = await resolver.resolve(
+    { word: 'FormatStatus', line: 5, startCharacter: 8, endCharacter: 20 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
 
-  assert.equal(result?.fullText, 'Println formats using the default formats for its operands.');
+  assert.equal(result?.fullText, 'External library returns the formatted status.');
   assert.equal(result?.source, 'hover');
+  assert.deepEqual(result?.location, { uri: 'file:///lib.go', line: 0, character: 4 });
 });

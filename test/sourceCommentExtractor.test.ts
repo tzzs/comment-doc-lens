@@ -9,7 +9,8 @@ import {
   collectLeadingLineCommentLines,
   collectLeadingSlashCommentLines,
   findDefinitionLine,
-  findTrailingCommentStart
+  findTrailingCommentStart,
+  hasTrailingComment
 } from '../src/languages/shared';
 
 function createDocument(lines: readonly string[]) {
@@ -161,23 +162,50 @@ test('collectCommentsAtAnchor collects comments directly at the definition ancho
   assert.equal(findCalls, 0);
 });
 
-test('collectCommentsAtAnchor falls back to a windowed search above the anchor', () => {
+test('collectCommentsAtAnchor honors an anchor that is itself the declaration', () => {
+  // Regression: the language-service anchor for an *undocumented* overload sits
+  // on its own declaration line. Without `includeReferenceLine` the windowed
+  // fallback relocates the lookup to the documented same-named declaration
+  // above, attributing the wrong overload's doc to the current one.
+  const document = createDocument([
+    '/** First overload. */',
+    'void execute(int id) {}',
+    '',
+    'void execute(String id) {}'
+  ]);
+
+  const collected = collectCommentsAtAnchor(
+    document,
+    3,
+    (line) => collectLeadingDocCommentLines(document, line),
+    (anchorLine) => findDefinitionLine(document, anchorLine, [/\bexecute\s*\(/], undefined, {
+      includeReferenceLine: true
+    })
+  );
+
+  assert.deepEqual(collected, []);
+});
+
+test('collectCommentsAtAnchor falls back to the declaration above a non-declaration anchor', () => {
+  // A multi-line signature anchor does not itself match the declaration pattern,
+  // so the windowed fallback still relocates to the declaration line above and
+  // finds its doc comment.
   const document = createDocument([
     '/// Formats the order status.',
-    'pub fn format_status(status: &str) -> String {',
-    '    status.to_string()',
-    '}',
-    '',
-    'pub fn format_status(status: &str) -> String {',
+    'pub fn format_status(',
+    '    status: &str,',
+    ') -> String {',
     '    status.to_string()',
     '}'
   ]);
 
   const collected = collectCommentsAtAnchor(
     document,
-    5,
+    3,
     (line) => collectLeadingDocCommentLines(document, line),
-    (anchorLine) => findDefinitionLine(document, anchorLine, [/\bfn\s+format_status\s*\(/])
+    (anchorLine) => findDefinitionLine(document, anchorLine, [/\bfn\s+format_status\s*\(/], undefined, {
+      includeReferenceLine: true
+    })
   );
 
   assert.deepEqual(collected, ['/// Formats the order status.']);
@@ -192,6 +220,24 @@ test('findDefinitionLine only searches a window above the anchor', () => {
   ]);
 
   assert.equal(findDefinitionLine(document, 26, [/^const\s+status\b/]), undefined);
+});
+
+test('findDefinitionLine honors the anchor line only with includeReferenceLine', () => {
+  const document = createDocument([
+    '/** First overload. */',
+    'void execute(int id) {}',
+    '',
+    'void execute(String id) {}'
+  ]);
+  const patterns = [/\bexecute\s*\(/];
+
+  // Without the option the anchor is never mistaken for a declaration (the cold
+  // local-definition path relies on this), so the windowed fallback finds the
+  // first overload instead.
+  assert.equal(findDefinitionLine(document, 3, patterns), 1);
+  // With the option, an anchor that is itself the declaration is honored so the
+  // lookup cannot relocate to a different same-named declaration.
+  assert.equal(findDefinitionLine(document, 3, patterns, undefined, { includeReferenceLine: true }), 3);
 });
 
 test('finds go const block definitions for local source fallback', () => {
@@ -270,6 +316,107 @@ test('finds go type, function, and method definitions for local source fallback'
   });
 });
 
+test('go block member with a multi-line block comment keeps its own declaration', () => {
+  // Regression: the `*/` line preceding the member previously failed the
+  // `startsWith('/*')` adjacency check, so the member wrongly fell back to the
+  // block-level comment (or got none when the block had no comment). The member
+  // must resolve to its own declaration line because it carries documentation.
+  const document = createDocument([
+    '// Currencies supported by billing.',
+    'const (',
+    '	/*',
+    '	 * Euro is used for EU customers.',
+    '	 */',
+    '	CurrencyEUR = "EUR"',
+    ')',
+    '',
+    'func sample() {',
+    '	_ = CurrencyEUR',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'CurrencyEUR', 9), {
+    line: 5,
+    character: 1
+  });
+});
+
+test('go block member with multi-line block comment but no block-level comment still resolves to itself', () => {
+  // When the block itself has no comment, the member must still resolve to its
+  // own declaration because it carries a multi-line block comment directly.
+  const document = createDocument([
+    'const (',
+    '	/*',
+    '	 * European currency.',
+    '	 */',
+    '	CurrencyEUR = "EUR"',
+    ')',
+    '',
+    'func sample() {',
+    '	_ = CurrencyEUR',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'CurrencyEUR', 8), {
+    line: 4,
+    character: 1
+  });
+});
+
+test('go definition anchor on its own declaration line is honored with includeReferenceLine', () => {
+  // On the hot path the anchor is the language-service definition line. When it
+  // is itself a group member without its own comment, it must resolve to the
+  // block-level comment instead of being skipped and yielding nothing.
+  const document = createDocument([
+    '// Block-level docs.',
+    'const (',
+    '\tCurrencyUsd Currency = "USD"',
+    ')'
+  ]);
+
+  assert.deepEqual(
+    findGoDefinitionLine(document, 'CurrencyUsd', 2, undefined, { includeReferenceLine: true }),
+    { line: 1, character: 0 }
+  );
+  assert.equal(findGoDefinitionLine(document, 'CurrencyUsd', 2), undefined);
+});
+
+test('findTrailingCommentStart locates comments after code', () => {
+  assert.equal(findTrailingCommentStart('var a string // 测试注释'), 13);
+  assert.equal(findTrailingCommentStart('var a string /* 测试注释 */'), 13);
+  assert.equal(findTrailingCommentStart('var a string'), -1);
+  assert.equal(findTrailingCommentStart('url := "http://example.com/x"'), -1);
+  assert.equal(findTrailingCommentStart("x := 'a//b'"), -1);
+  assert.equal(findTrailingCommentStart('`http://example.com/x`'), -1);
+});
+
+test('hasTrailingComment treats only comments after code as trailing', () => {
+  assert.equal(hasTrailingComment('var a string // 测试注释'), true);
+  assert.equal(hasTrailingComment('var a string /* 测试注释 */'), true);
+  assert.equal(hasTrailingComment('var a string'), false);
+  assert.equal(hasTrailingComment('// 测试注释'), false);
+  assert.equal(hasTrailingComment('/* 测试注释 */'), false);
+  assert.equal(hasTrailingComment('url := "http://example.com/x"'), false);
+});
+
+test('go adapter detects trailing comments on the definition line', () => {
+  const document = createDocument([
+    'var a string // 测试注释',
+    'var b string /* 测试注释 */',
+    'var c string',
+    '// leading comment',
+    'var d string',
+    'url := "http://example.com/x"'
+  ]);
+
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 0), true);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 1), true);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 2), false);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 3), false);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 4), false);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 5), false);
+});
+
 function collectGoSourceComments(lines: readonly string[], anchorLine: number, word: string) {
   const document = createDocument(lines);
   const sourceComment = goLanguageAdapter.sourceComment;
@@ -278,19 +425,15 @@ function collectGoSourceComments(lines: readonly string[], anchorLine: number, w
     document,
     anchorLine,
     (line) => sourceComment.collectLeadingComments(document, line),
-    (anchorLineAt) => sourceComment.findDefinitionLine?.(
-      document,
-      { word, line: anchorLineAt, startCharacter: 0, endCharacter: word.length },
-      { uri: 'file:///status.go', line: anchorLineAt, character: 0 },
-      undefined,
-      { includeAnchor: true }
-    )
+    (anchorLineAt) =>
+      sourceComment.findDefinitionLine?.(
+        document,
+        { word, line: anchorLineAt, startCharacter: 0, endCharacter: word.length },
+        { uri: 'file:///status.go', line: anchorLineAt, character: 0 },
+        undefined,
+        { includeReferenceLine: true }
+      )
   );
-}
-
-function goTrailingComment(lines: readonly string[], line: number): string | undefined {
-  const document = createDocument(lines);
-  return goLanguageAdapter.sourceComment?.findTrailingComment?.(document, line)?.text;
 }
 
 // Regression tests for issue #44: trailing comments on the same line as a
@@ -300,14 +443,14 @@ test('scenario 1: leading line comment is documentation', () => {
   const document = createDocument(['// 用户 ID', 'var userID string']);
 
   assert.deepEqual(collectLeadingSlashCommentLines(document, 1), ['// 用户 ID']);
-  assert.equal(goTrailingComment(['// 用户 ID', 'var userID string'], 1), undefined);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 1), false);
 });
 
 test('scenario 2: trailing line comment is never documentation', () => {
   const document = createDocument(['var userID string // 用户 ID']);
 
   assert.deepEqual(collectLeadingSlashCommentLines(document, 0), []);
-  assert.equal(goTrailingComment(['var userID string // 用户 ID'], 0), '// 用户 ID');
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 0), true);
   assert.equal(findTrailingCommentStart('var userID string // 用户 ID'), 18);
 });
 
@@ -315,14 +458,14 @@ test('scenario 3: leading plus trailing keeps only the leading comment', () => {
   const document = createDocument(['// 用户 ID', 'var userID string // 实现细节']);
 
   assert.deepEqual(collectLeadingSlashCommentLines(document, 1), ['// 用户 ID']);
-  assert.equal(goTrailingComment(['// 用户 ID', 'var userID string // 实现细节'], 1), '// 实现细节');
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 1), true);
 });
 
 test('scenario 4: leading block comment is documentation', () => {
   const document = createDocument(['/*', ' * 用户 ID', ' */', 'var userID string']);
 
   assert.deepEqual(collectLeadingSlashCommentLines(document, 3), ['/*', '* 用户 ID', '*/']);
-  assert.equal(goTrailingComment(['/*', ' * 用户 ID', ' */', 'var userID string'], 3), undefined);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 3), false);
 });
 
 test('scenario 5: trailing block comment is never documentation', () => {
@@ -330,7 +473,7 @@ test('scenario 5: trailing block comment is never documentation', () => {
   const document = createDocument([line]);
 
   assert.deepEqual(collectLeadingSlashCommentLines(document, 0), []);
-  assert.equal(goTrailingComment([line], 0), '/* 用户 ID */');
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 0), true);
   assert.equal(findTrailingCommentStart(line), 18);
 });
 
@@ -338,7 +481,7 @@ test('scenario 6: leading block plus trailing keeps only the leading block comme
   const document = createDocument(['/*', ' * 用户 ID', ' */', 'var userID string /* 实现细节 */']);
 
   assert.deepEqual(collectLeadingSlashCommentLines(document, 3), ['/*', '* 用户 ID', '*/']);
-  assert.equal(goTrailingComment(['/*', ' * 用户 ID', ' */', 'var userID string /* 实现细节 */'], 3), '/* 实现细节 */');
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 3), true);
 });
 
 test('scenario 7: const group member inherits the block-level comment', () => {
@@ -370,7 +513,7 @@ test('scenario 8: const group member trailing comment does not leak into documen
 
   const comments = collectGoSourceComments(lines, 2, 'UserActive');
   assert.deepEqual(comments, ['// 用户状态']);
-  assert.equal(goTrailingComment(lines, 2), '// 活跃');
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(createDocument(lines), 2), true);
 });
 
 test('scenario 9: same-name declarations resolve to the nearest declaration', () => {
@@ -413,14 +556,4 @@ test('scenario 9b: same-name declarations inside different blocks resolve to the
     line: 6,
     character: 0
   });
-});
-
-test('scenario 10: external definitions keep language server documentation', () => {
-  const sourceComment = goLanguageAdapter.sourceComment;
-  assert.ok(sourceComment);
-  // The go adapter can read any .go file regardless of workspace membership,
-  // so external symbols rely on hover unless a source comment or a trailing
-  // comment is present (covered by the resolver-level scenario tests).
-  assert.equal(sourceComment.canRead({ uri: 'file:///usr/local/go/src/fmt/print.go', line: 1, character: 0 }), true);
-  assert.equal(sourceComment.canRead({ uri: 'file:///usr/local/go/src/fmt/print.txt', line: 1, character: 0 }), false);
 });

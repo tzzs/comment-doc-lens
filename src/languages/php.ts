@@ -1,4 +1,4 @@
-import type { LanguageAdapter, SourceDocument } from './languageAdapter';
+import type { FindDefinitionLineOptions, LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   collectLeadingBlockCommentLines,
   escapeRegExp,
@@ -73,7 +73,7 @@ function findPhpDefinitionLine(
   word: string,
   referenceLine: number,
   lookback?: number,
-  options?: { includeAnchor?: boolean }
+  options?: FindDefinitionLineOptions
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(

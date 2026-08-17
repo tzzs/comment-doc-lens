@@ -1,4 +1,4 @@
-import type { LanguageAdapter, SourceDocument } from './languageAdapter';
+import type { FindDefinitionLineOptions, LanguageAdapter, SourceDocument } from './languageAdapter';
 import {
   collectLeadingDocCommentLines,
   escapeRegExp,
@@ -32,7 +32,7 @@ function findSwiftDefinitionLine(
   word: string,
   referenceLine: number,
   lookback?: number,
-  options?: { includeAnchor?: boolean }
+  options?: FindDefinitionLineOptions
 ): number | undefined {
   const wordPattern = escapeRegExp(word);
   return findDefinitionLine(

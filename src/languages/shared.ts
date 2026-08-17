@@ -167,60 +167,36 @@ export function findDefinitionLine(
   referenceLine: number,
   definitionPatterns: readonly RegExp[],
   lookback = DEFINITION_SEARCH_WINDOW,
-  options: { includeAnchor?: boolean } = {}
+  options?: { includeReferenceLine?: boolean }
 ): number | undefined {
-  const from = Math.max(0, referenceLine - lookback);
-  let match: number | undefined;
-  for (let line = from; line <= referenceLine; line++) {
-    if (line === referenceLine && !options.includeAnchor) {
-      continue;
+  // When the anchor is the language-service definition location, the line can
+  // itself be the declaration (e.g. an undocumented overload). In that case the
+  // caller asks us to recognize it so a windowed fallback cannot relocate the
+  // lookup to a *different* same-named declaration. When the reference is a
+  // call/reference site (the cold local-definition path), the caller leaves
+  // this off so the reference line is never mistaken for the declaration.
+  if (options?.includeReferenceLine) {
+    const referenceText = document.lineAt(referenceLine).text;
+    if (definitionPatterns.some((pattern) => pattern.test(referenceText))) {
+      return referenceLine;
     }
+  }
 
+  const from = Math.max(0, referenceLine - lookback);
+  // Scan nearest-first: the definition declaration is expected to sit directly
+  // above the anchor, so the closest matching line is the most likely target.
+  // Scanning oldest-first (window start → anchor) would return the *earliest*
+  // same-named declaration in the window — which for overloaded methods would
+  // attribute an unrelated overload's doc to the current (e.g. undocumented)
+  // declaration. Nearest-first keeps the cold definition-lookup fallback honest.
+  for (let line = referenceLine - 1; line >= from; line--) {
     const text = document.lineAt(line).text;
     if (definitionPatterns.some((pattern) => pattern.test(text))) {
-      // Scan upward and keep overwriting so the nearest declaration above the
-      // reference wins when the same name is declared more than once.
-      match = line;
+      return line;
     }
   }
 
-  return match;
-}
-
-/**
- * Returns the character index where a trailing `//` or `/*` comment begins on
- * a line, or `-1` when the line carries none. String literals (Go double
- * quoted, backtick raw strings and runes) are skipped so comment markers
- * inside strings are not mistaken for comments.
- */
-export function findTrailingCommentStart(line: string): number {
-  let quote: '"' | "'" | '`' | undefined;
-  for (let index = 0; index < line.length; index++) {
-    const ch = line[index];
-    if (quote !== undefined) {
-      if (quote === '`') {
-        if (ch === '`') {
-          quote = undefined;
-        }
-      } else if (ch === '\\') {
-        index++;
-      } else if (ch === quote) {
-        quote = undefined;
-      }
-      continue;
-    }
-
-    if (ch === '"' || ch === "'" || ch === '`') {
-      quote = ch;
-      continue;
-    }
-
-    if (ch === '/' && (line[index + 1] === '/' || line[index + 1] === '*')) {
-      return index;
-    }
-  }
-
-  return -1;
+  return undefined;
 }
 
 /**
@@ -322,4 +298,54 @@ export function nextNonWhitespaceCharacter(line: string, startCharacter: number)
   }
 
   return undefined;
+}
+
+/**
+ * Returns the character index of the first comment marker (`//` or `/*`) that
+ * is outside a quoted string literal, or -1 when the line carries none.
+ * Trailing comments on a declaration line must never be treated as declaration
+ * documentation, so this deliberately ignores markers inside strings (e.g.
+ * `url := "http://example.com/x"`).
+ */
+export function findTrailingCommentStart(line: string): number {
+  let quote: '"' | "'" | '`' | undefined;
+  for (let character = 0; character < line.length - 1; character++) {
+    const current = line[character];
+    const next = line[character + 1];
+
+    if (quote) {
+      if (current === '\\' && quote !== '`') {
+        character++;
+        continue;
+      }
+      if (current === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'" || current === '`') {
+      quote = current;
+      continue;
+    }
+
+    if (current === '/' && (next === '/' || next === '*')) {
+      return character;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Whether a line carries a comment after code. Whole-line comments are leading
+ * (or standalone) comments, not trailing ones, so they return false.
+ */
+export function hasTrailingComment(line: string): boolean {
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+    return false;
+  }
+
+  return findTrailingCommentStart(line) >= 0;
 }

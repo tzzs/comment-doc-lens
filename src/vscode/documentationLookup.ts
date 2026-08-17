@@ -103,32 +103,34 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
       document,
       location.line,
       (line) => sourceComment.collectLeadingComments(document, line),
-      // The anchor is already the language-service definition line, so it is
-      // checked directly too (includeAnchor) — this lets const/var/type group
-      // members inherit the block-level comment. The narrow
-      // DEFINITION_SEARCH_WINDOW fallback (default) is intentional — versus
-      // LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups away
-      // from a known definition.
-      (anchorLine) => sourceComment.findDefinitionLine?.(
-        document,
-        candidate,
-        { ...location, line: anchorLine },
-        undefined,
-        { includeAnchor: true }
-      )
+      // Hot path: the anchor is already the language-service definition line, so
+      // the narrow DEFINITION_SEARCH_WINDOW fallback (default) is intentional —
+      // versus LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups
+      // away from a known definition. `includeReferenceLine` honors an anchor
+      // that is itself the declaration (e.g. an undocumented overload or a
+      // const/var/type group member) so the windowed fallback cannot relocate
+      // the lookup to a *different* same-named declaration.
+      (anchorLine) =>
+        sourceComment.findDefinitionLine?.(
+          document,
+          candidate,
+          { ...location, line: anchorLine },
+          undefined,
+          { includeReferenceLine: true }
+        )
     );
   }
 
-  async getDefinitionTrailingComment(
+  async hasTrailingCommentAt(
     location: LocationLike,
     languageAdapter?: LanguageAdapter
-  ): Promise<string | undefined> {
+  ): Promise<boolean> {
     const sourceComment = languageAdapter?.sourceComment;
-    if (!sourceComment?.findTrailingComment || !sourceComment?.canRead(location)) {
-      return undefined;
+    if (!sourceComment?.hasTrailingCommentAt) {
+      return false;
     }
 
     const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
-    return sourceComment.findTrailingComment(document, location.line)?.text;
+    return sourceComment.hasTrailingCommentAt(document, location.line);
   }
 }

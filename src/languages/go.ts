@@ -1,10 +1,10 @@
-import type { LanguageAdapter } from './languageAdapter';
+import type { FindDefinitionLineOptions, LanguageAdapter } from './languageAdapter';
 import {
   collectLeadingSlashCommentLines,
   DEFINITION_SEARCH_WINDOW,
   escapeRegExp,
   findMatchingCloseParen,
-  findTrailingCommentStart,
+  hasTrailingComment,
   isFilePathWithExtension,
   type SourceDocument
 } from './shared';
@@ -14,7 +14,7 @@ export function findGoDefinitionLine(
   word: string,
   referenceLine: number,
   lookback = DEFINITION_SEARCH_WINDOW,
-  options: { includeAnchor?: boolean } = {}
+  options?: FindDefinitionLineOptions
 ): { line: number; character: number } | undefined {
   const wordPattern = escapeRegExp(word);
   const declarationPatterns = [
@@ -30,7 +30,13 @@ export function findGoDefinitionLine(
     const text = document.lineAt(line).text;
     const trimmed = text.trim();
 
-    if (line === referenceLine && !options.includeAnchor) {
+    // On the cold local-definition path, `includeReferenceLine` is `false` so a
+    // call site at `referenceLine` is never mistaken for the declaration. On
+    // the hot anchor path it is `true`: when the language-service definition
+    // location already sits on the declaration, honor it so the windowed
+    // fallback cannot relocate to a *different* same-named declaration (the
+    // classic undocumented-overload cross-wiring case).
+    if (line === referenceLine && !options?.includeReferenceLine) {
       continue;
     }
 
@@ -49,28 +55,25 @@ export function findGoDefinitionLine(
 
     const isDeclaration = declarationPatterns.some((pattern) => pattern.test(text));
     const isBlockMember = blockDeclaration !== undefined && new RegExp(`^\\s*${wordPattern}\\b`).test(text);
-    if (isDeclaration || isBlockMember) {
-      // Scan upward and keep overwriting so the nearest declaration above the
-      // reference wins when the same name is declared more than once.
-      if (blockStartLine >= 0 && !isGoAdjacentComment(document, line)) {
-        // A group member without its own adjacent comment inherits the
-        // block-level comment above the const/var/type block opener.
-        result = { line: blockStartLine, character: 0 };
-      } else {
-        result = { line, character: text.indexOf(word) };
-      }
+    if (!isDeclaration && !isBlockMember) {
+      continue;
+    }
+
+    // Scan upward and keep overwriting so the nearest declaration above the
+    // reference wins when the same name is declared more than once.
+    if (blockStartLine >= 0 && collectLeadingSlashCommentLines(document, line).length === 0) {
+      // A group member without its own adjacent comment inherits the block-level
+      // comment above the const/var/type block opener. Reuse the same collector
+      // that reads comments so `//`, single-line `/* */`, and multi-line
+      // `/* ... */` (ending with `*/` on the line above the member) are all
+      // treated as adjacent instead of only `//`-style and `/*`-prefixed lines.
+      result = { line: blockStartLine, character: 0 };
+    } else {
+      result = { line, character: text.indexOf(word) };
     }
   }
 
   return result;
-}
-
-function isGoAdjacentComment(document: SourceDocument, line: number): boolean {
-  if (line <= 0) {
-    return false;
-  }
-  const previous = document.lineAt(line - 1).text.trim();
-  return previous.startsWith('//') || previous.startsWith('/*');
 }
 
 function isGoDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {
@@ -186,13 +189,8 @@ export const goLanguageAdapter: LanguageAdapter = {
     collectLeadingComments(document, definitionLine) {
       return collectLeadingSlashCommentLines(document, definitionLine);
     },
-    findTrailingComment(document, line) {
-      const text = document.lineAt(line).text;
-      const index = findTrailingCommentStart(text);
-      if (index < 0 || text.slice(0, index).trim().length === 0) {
-        return undefined;
-      }
-      return { startCharacter: index, text: text.slice(index).trim() };
+    hasTrailingCommentAt(document, line) {
+      return hasTrailingComment(document.lineAt(line).text);
     }
   }
 };
