@@ -23,11 +23,22 @@ export function findGoDefinitionLine(
   ];
   let blockDeclaration: 'const' | 'var' | 'type' | undefined;
   let blockStartLine = -1;
+  let result: { line: number; character: number } | undefined;
 
   const from = Math.max(0, referenceLine - lookback);
   for (let line = from; line <= referenceLine; line++) {
     const text = document.lineAt(line).text;
     const trimmed = text.trim();
+
+    // On the cold local-definition path, `includeReferenceLine` is `false` so a
+    // call site at `referenceLine` is never mistaken for the declaration. On
+    // the hot anchor path it is `true`: when the language-service definition
+    // location already sits on the declaration, honor it so the windowed
+    // fallback cannot relocate to a *different* same-named declaration (the
+    // classic undocumented-overload cross-wiring case).
+    if (line === referenceLine && !options?.includeReferenceLine) {
+      continue;
+    }
 
     if (!blockDeclaration) {
       const blockStart = trimmed.match(/^(const|var|type)\s*\($/);
@@ -48,28 +59,21 @@ export function findGoDefinitionLine(
       continue;
     }
 
-    // On the cold local-definition path, `includeReferenceLine` is `false` so a
-    // call site at `referenceLine` is never mistaken for the declaration. On
-    // the hot anchor path it is `true`: when the language-service definition
-    // location already sits on the declaration, honor it so the windowed
-    // fallback cannot relocate to a *different* same-named declaration (the
-    // classic undocumented-overload cross-wiring case).
-    if (line === referenceLine && !options?.includeReferenceLine) {
-      continue;
-    }
-
-    // A group member without its own adjacent comment inherits the block-level
-    // comment above the const/var/type block opener. Reuse the same collector
-    // that reads comments so `//`, single-line `/* */`, and multi-line
-    // `/* ... */` (ending with `*/` on the line above the member) are all
-    // treated as adjacent instead of only `//`-style and `/*`-prefixed lines.
+    // Scan upward and keep overwriting so the nearest declaration above the
+    // reference wins when the same name is declared more than once.
     if (blockStartLine >= 0 && collectLeadingSlashCommentLines(document, line).length === 0) {
-      return { line: blockStartLine, character: 0 };
+      // A group member without its own adjacent comment inherits the block-level
+      // comment above the const/var/type block opener. Reuse the same collector
+      // that reads comments so `//`, single-line `/* */`, and multi-line
+      // `/* ... */` (ending with `*/` on the line above the member) are all
+      // treated as adjacent instead of only `//`-style and `/*`-prefixed lines.
+      result = { line: blockStartLine, character: 0 };
+    } else {
+      result = { line, character: text.indexOf(word) };
     }
-    return { line, character: text.indexOf(word) };
   }
 
-  return undefined;
+  return result;
 }
 
 function isGoDeclarationName(candidate: { startCharacter: number; endCharacter: number }, line: string): boolean {

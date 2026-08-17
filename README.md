@@ -98,7 +98,8 @@ Before reporting a missing hint, run `Comment Doc Lens: Show Language Status`, `
 | `commentDocLens.maxHintsPerRequest` | Limit hints produced for one inlay-hint request. |
 | `commentDocLens.maxHintsPerLine` | Limit same-line hints after candidate priority ranking. |
 | `commentDocLens.maxLineLength` | Skip long generated or minified lines. |
-| `commentDocLens.maxHintLength` | Limit the visible summary length. |
+| `commentDocLens.maxHintLength` | Maximum characters for the inline summary. Longer documentation is summarized at sentence boundaries with an ellipsis; the full text stays available in the tooltip. |
+| `commentDocLens.maxHintLines` | Maximum documentation lines considered for the inline summary. The first paragraph of the documentation is preferred. |
 | `commentDocLens.minimumDocumentationWords` | Suppress very short low-signal summaries. |
 | `commentDocLens.minIdentifierLength` | Ignore very short identifiers unless documentation has a definition location. |
 | `commentDocLens.preferPropertyTail` | Prefer the final identifier in property chains such as `foo.bar.baz`. |

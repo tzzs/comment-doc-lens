@@ -3,14 +3,14 @@ import type { SymbolCandidate } from '../candidateScanner';
 import type { DocumentationLookup, LocationLike } from '../documentationResolver';
 import type { LanguageAdapter } from '../languages/languageAdapter';
 import { collectCommentsAtAnchor, LOCAL_DEFINITION_LOOKBACK } from '../languages/shared';
-import { getHoverLines } from './hover';
+import { getHoverDocumentation } from './hover';
 import type { DiagnosticsSession } from './diagnostics';
 
 export class VscodeDocumentationLookup implements DocumentationLookup {
   constructor(private readonly diagnostics?: DiagnosticsSession) {}
 
-  async getHoverMarkdownLines(candidate: SymbolCandidate, documentUri: string): Promise<string[]> {
-    return getHoverLines(
+  async getHoverDocumentation(candidate: SymbolCandidate, documentUri: string) {
+    return getHoverDocumentation(
       vscode.Uri.parse(documentUri),
       new vscode.Position(candidate.line, candidate.startCharacter),
       this.diagnostics
@@ -80,8 +80,12 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
     };
   }
 
-  async getHoverMarkdownLinesAtLocation(location: LocationLike): Promise<string[]> {
-    return getHoverLines(vscode.Uri.parse(location.uri), new vscode.Position(location.line, location.character), this.diagnostics);
+  async getHoverDocumentationAtLocation(location: LocationLike) {
+    return getHoverDocumentation(
+      vscode.Uri.parse(location.uri),
+      new vscode.Position(location.line, location.character),
+      this.diagnostics
+    );
   }
 
   async getDefinitionSourceComments(
@@ -103,9 +107,9 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
       // the narrow DEFINITION_SEARCH_WINDOW fallback (default) is intentional —
       // versus LOCAL_DEFINITION_LOOKBACK which is only for cold local lookups
       // away from a known definition. `includeReferenceLine` honors an anchor
-      // that is itself the declaration (e.g. an undocumented overload) so the
-      // windowed fallback cannot relocate the lookup to a *different* same-named
-      // declaration and attribute that declaration's doc to the current one.
+      // that is itself the declaration (e.g. an undocumented overload or a
+      // const/var/type group member) so the windowed fallback cannot relocate
+      // the lookup to a *different* same-named declaration.
       (anchorLine) =>
         sourceComment.findDefinitionLine?.(
           document,

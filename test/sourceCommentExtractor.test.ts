@@ -416,3 +416,144 @@ test('go adapter detects trailing comments on the definition line', () => {
   assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 4), false);
   assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 5), false);
 });
+
+function collectGoSourceComments(lines: readonly string[], anchorLine: number, word: string) {
+  const document = createDocument(lines);
+  const sourceComment = goLanguageAdapter.sourceComment;
+  assert.ok(sourceComment);
+  return collectCommentsAtAnchor(
+    document,
+    anchorLine,
+    (line) => sourceComment.collectLeadingComments(document, line),
+    (anchorLineAt) =>
+      sourceComment.findDefinitionLine?.(
+        document,
+        { word, line: anchorLineAt, startCharacter: 0, endCharacter: word.length },
+        { uri: 'file:///status.go', line: anchorLineAt, character: 0 },
+        undefined,
+        { includeReferenceLine: true }
+      )
+  );
+}
+
+// Regression tests for issue #44: trailing comments on the same line as a
+// declaration must never be treated as documentation.
+
+test('scenario 1: leading line comment is documentation', () => {
+  const document = createDocument(['// 用户 ID', 'var userID string']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 1), ['// 用户 ID']);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 1), false);
+});
+
+test('scenario 2: trailing line comment is never documentation', () => {
+  const document = createDocument(['var userID string // 用户 ID']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 0), []);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 0), true);
+  assert.equal(findTrailingCommentStart('var userID string // 用户 ID'), 18);
+});
+
+test('scenario 3: leading plus trailing keeps only the leading comment', () => {
+  const document = createDocument(['// 用户 ID', 'var userID string // 实现细节']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 1), ['// 用户 ID']);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 1), true);
+});
+
+test('scenario 4: leading block comment is documentation', () => {
+  const document = createDocument(['/*', ' * 用户 ID', ' */', 'var userID string']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 3), ['/*', '* 用户 ID', '*/']);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 3), false);
+});
+
+test('scenario 5: trailing block comment is never documentation', () => {
+  const line = 'var userID string /* 用户 ID */';
+  const document = createDocument([line]);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 0), []);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 0), true);
+  assert.equal(findTrailingCommentStart(line), 18);
+});
+
+test('scenario 6: leading block plus trailing keeps only the leading block comment', () => {
+  const document = createDocument(['/*', ' * 用户 ID', ' */', 'var userID string /* 实现细节 */']);
+
+  assert.deepEqual(collectLeadingSlashCommentLines(document, 3), ['/*', '* 用户 ID', '*/']);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 3), true);
+});
+
+test('scenario 7: const group member inherits the block-level comment', () => {
+  const lines = [
+    '// 用户状态',
+    'const (',
+    '\tUserActive = 1',
+    ')',
+    '',
+    'func main() {',
+    '\t_ = UserActive',
+    '}'
+  ];
+
+  assert.deepEqual(collectGoSourceComments(lines, 2, 'UserActive'), ['// 用户状态']);
+});
+
+test('scenario 8: const group member trailing comment does not leak into documentation', () => {
+  const lines = [
+    '// 用户状态',
+    'const (',
+    '\tUserActive = 1 // 活跃',
+    ')',
+    '',
+    'func main() {',
+    '\t_ = UserActive',
+    '}'
+  ];
+
+  const comments = collectGoSourceComments(lines, 2, 'UserActive');
+  assert.deepEqual(comments, ['// 用户状态']);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(createDocument(lines), 2), true);
+});
+
+test('scenario 9: same-name declarations resolve to the nearest declaration', () => {
+  const document = createDocument([
+    '// 第一个定义',
+    'const Value = 1',
+    '',
+    '// 第二个定义',
+    'const Value = 2',
+    '',
+    'func main() {',
+    '\t_ = Value',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'Value', 7), {
+    line: 4,
+    character: 6
+  });
+});
+
+test('scenario 9b: same-name declarations inside different blocks resolve to the nearest block', () => {
+  const document = createDocument([
+    '// 第一组',
+    'const (',
+    '\tValue = 1',
+    ')',
+    '',
+    '// 第二组',
+    'const (',
+    '\tValue = 2',
+    ')',
+    '',
+    'func main() {',
+    '\t_ = Value',
+    '}'
+  ]);
+
+  assert.deepEqual(findGoDefinitionLine(document, 'Value', 11), {
+    line: 6,
+    character: 0
+  });
+});

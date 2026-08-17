@@ -1,76 +1,44 @@
-export interface FormattedDocumentation {
-  summary: string;
-  fullText: string;
-}
+/**
+ * Normalizes raw documentation lines (hover contents, source comments) into a
+ * faithful full documentation text.
+ *
+ * Resolution keeps the complete documentation here; length-aware summarization
+ * for inlay hints lives in `hintSummary.ts`.
+ */
 
 export interface DocumentationFormatOptions {
   minimumWords?: number;
 }
-
-const SUMMARY_SEPARATOR = ' / ';
 
 type DocumentationLineKind = 'prose' | 'tag';
 
 interface NormalizedDocumentationLine {
   text: string;
   kind: DocumentationLineKind;
-  paragraph: number;
 }
 
-export function formatDocumentation(
-  markdownLines: readonly string[],
-  maxHintLength: number,
-  options: DocumentationFormatOptions = {}
-): FormattedDocumentation | undefined {
-  const normalized = normalizeDocumentation(markdownLines);
+/**
+ * Builds the full documentation text from raw markdown/comment lines. Returns
+ * `undefined` when nothing useful remains after normalization (e.g. a hover
+ * that only carries a signature code block or VS Code UI chrome).
+ */
+export function buildDocumentationText(markdownLines: readonly string[]): string | undefined {
+  const normalized = normalizeDocumentationLines(markdownLines);
   if (normalized.length === 0) {
     return undefined;
   }
-
-  const summary = selectSummary(normalized, maxHintLength);
-  if (!hasMinimumWordCount(summary, options.minimumWords ?? 1)) {
-    return undefined;
-  }
-
-  const summaryIndex = normalized.findIndex((line) => line.kind === 'prose');
-  const selectedIndex = summaryIndex >= 0 ? summaryIndex : 0;
-  const selected = normalized[selectedIndex];
-  const displayLines = selectedIndex === 0
-    ? normalized
-    : [selected, ...normalized.filter((_, index) => index !== selectedIndex)];
-  const fullText = displayLines.map((line) => line.text).join('\n');
-
-  return { summary, fullText };
+  return normalized.join('\n');
 }
 
-function selectSummary(normalized: readonly NormalizedDocumentationLine[], maxHintLength: number): string {
-  const paragraphs = groupProseParagraphs(normalized);
-  if (paragraphs.length > 0) {
-    return truncate(paragraphs.join(SUMMARY_SEPARATOR), maxHintLength);
-  }
-
-  return truncate(normalized[0].text, maxHintLength);
-}
-
-function groupProseParagraphs(normalized: readonly NormalizedDocumentationLine[]): string[] {
-  const byParagraph = new Map<number, string>();
-  for (const line of normalized) {
-    if (line.kind !== 'prose') {
-      continue;
-    }
-
-    const previous = byParagraph.get(line.paragraph);
-    byParagraph.set(line.paragraph, previous === undefined ? line.text : `${previous} ${line.text}`);
-  }
-
-  return Array.from(byParagraph.values());
-}
-
-function normalizeDocumentation(markdownLines: readonly string[]): NormalizedDocumentationLine[] {
-  const lines: NormalizedDocumentationLine[] = [];
+/**
+ * Normalizes raw documentation lines: drops code blocks and hover UI chrome,
+ * strips comment markers, deduplicates, collapses blank lines, and preserves
+ * paragraph breaks so presentation can summarize the first paragraph.
+ */
+export function normalizeDocumentationLines(markdownLines: readonly string[]): string[] {
+  const normalized: NormalizedDocumentationLine[] = [];
   const seen = new Set<string>();
   let inCodeBlock = false;
-  let paragraph = 0;
 
   for (const rawLine of markdownLines) {
     const trimmed = rawLine.trim();
@@ -85,7 +53,7 @@ function normalizeDocumentation(markdownLines: readonly string[]): NormalizedDoc
     }
 
     if (trimmed.length === 0) {
-      paragraph++;
+      normalized.push({ text: '', kind: 'prose' });
       continue;
     }
 
@@ -94,14 +62,36 @@ function normalizeDocumentation(markdownLines: readonly string[]): NormalizedDoc
     }
 
     const cleaned = cleanCommentMarker(trimmed);
-    const normalized = normalizeDocumentationLine(cleaned);
-    if (normalized && !seen.has(normalized.text)) {
-      seen.add(normalized.text);
-      lines.push({ ...normalized, paragraph });
+    const normalizedLine = normalizeDocumentationLine(cleaned);
+    if (normalizedLine && !seen.has(normalizedLine.text)) {
+      seen.add(normalizedLine.text);
+      normalized.push(normalizedLine);
     }
   }
 
-  return lines;
+  return collapseBlankLines(normalized).map((line) => line.text);
+}
+
+function collapseBlankLines(lines: readonly NormalizedDocumentationLine[]): NormalizedDocumentationLine[] {
+  const collapsed: NormalizedDocumentationLine[] = [];
+  for (const line of lines) {
+    const isBlank = line.text.length === 0;
+    const previousIsBlank = collapsed.length > 0 && collapsed[collapsed.length - 1].text.length === 0;
+    if (isBlank && previousIsBlank) {
+      continue;
+    }
+    collapsed.push(line);
+  }
+
+  let start = 0;
+  while (start < collapsed.length && collapsed[start].text.length === 0) {
+    start++;
+  }
+  let end = collapsed.length;
+  while (end > start && collapsed[end - 1].text.length === 0) {
+    end--;
+  }
+  return collapsed.slice(start, end);
 }
 
 function cleanCommentMarker(line: string): string {
@@ -114,7 +104,7 @@ function cleanCommentMarker(line: string): string {
     .trim();
 }
 
-function normalizeDocumentationLine(line: string): Omit<NormalizedDocumentationLine, 'paragraph'> | undefined {
+function normalizeDocumentationLine(line: string): NormalizedDocumentationLine | undefined {
   if (line.length === 0) {
     return undefined;
   }
@@ -136,7 +126,7 @@ function normalizeDocumentationLine(line: string): Omit<NormalizedDocumentationL
   return { text: line, kind: 'prose' };
 }
 
-function normalizeXmlDocumentationLine(line: string): Omit<NormalizedDocumentationLine, 'paragraph'> | undefined {
+function normalizeXmlDocumentationLine(line: string): NormalizedDocumentationLine | undefined {
   const param = line.match(/^<param\b([^>]*)>(.*?)<\/param>$/i);
   if (param) {
     const name = param[1].match(/\bname=(?:"([^"]+)"|'([^']+)')/i);
@@ -180,7 +170,7 @@ function isXmlContainerOnly(line: string): boolean {
   return /^<\/?(summary|remarks|value|example|para)\b[^>]*>\s*$/i.test(line);
 }
 
-function normalizeDocCommandLine(line: string): Omit<NormalizedDocumentationLine, 'paragraph'> | undefined {
+function normalizeDocCommandLine(line: string): NormalizedDocumentationLine | undefined {
   const summaryCommand = line.match(/^([@\\])(?:brief|description|summary)\b[:\s-]*(.*)$/i);
   if (summaryCommand) {
     const text = summaryCommand[2].trim();
@@ -237,18 +227,6 @@ function isKnownHoverActionText(value: string): boolean {
 
 function isLanguageServiceDocumentationLink(value: string): boolean {
   return /^\[`[^`]+` (?:on [a-z0-9.-]+|in gopls doc viewer)\]\(https?:\/\/[^)]+\)$/i.test(value);
-}
-
-function truncate(value: string, maxLength: number): string {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  if (maxLength <= 3) {
-    return '.'.repeat(Math.max(0, maxLength));
-  }
-
-  return `${value.slice(0, maxLength - 3)}...`;
 }
 
 export function countDocumentationWords(value: string): number {

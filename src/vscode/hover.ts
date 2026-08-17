@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
+import type { HoverDocumentation, LocationRange } from '../documentationResolver';
 import { hoverContentsToMarkdownLines } from '../hoverContent';
 import type { DiagnosticsSession } from './diagnostics';
 
-export async function getHoverLines(
+export async function getHoverDocumentation(
   uri: vscode.Uri,
   position: vscode.Position,
   diagnostics?: DiagnosticsSession
-): Promise<string[]> {
+): Promise<HoverDocumentation> {
   let hovers: vscode.Hover[] | undefined;
   try {
     hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
@@ -21,7 +22,22 @@ export async function getHoverLines(
       character: position.character,
       error: error instanceof Error ? error.message : String(error)
     });
-    return [];
+    return { lines: [] };
   }
-  return (hovers ?? []).flatMap((hover) => hoverContentsToMarkdownLines(hover.contents));
+
+  const lines: string[] = [];
+  let range: LocationRange | undefined;
+  for (const hover of hovers ?? []) {
+    lines.push(...hoverContentsToMarkdownLines(hover.contents));
+    if (!range && hover.range) {
+      range = {
+        startLine: hover.range.start.line,
+        startCharacter: hover.range.start.character,
+        endLine: hover.range.end.line,
+        endCharacter: hover.range.end.character
+      };
+    }
+  }
+
+  return { lines, range };
 }

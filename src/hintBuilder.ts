@@ -8,6 +8,7 @@ import {
 import type { CommentDocLensConfig } from './config';
 import { hasMinimumWordCount } from './documentationFormatter';
 import type { LocationLike, ResolvedDocumentation } from './documentationResolver';
+import { summarizeDocumentation } from './hintSummary';
 import type { LanguageAdapter } from './languages/languageAdapter';
 import { createLanguageRegistry, defaultLanguageAdapters } from './languages/languageRegistry';
 
@@ -91,14 +92,18 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
       continue;
     }
 
-    if (!hasMinimumWordCount(documentation.summary, input.config.minimumDocumentationWords ?? 1)) {
+    const summary = summarizeDocumentation(documentation.fullText, {
+      maxCharacters: input.config.maxHintLength,
+      maxLines: input.config.maxHintLines
+    });
+    if (!hasMinimumWordCount(summary, input.config.minimumDocumentationWords ?? 1)) {
       continue;
     }
 
     const hint: PrioritizedHint = {
       line: candidate.line,
       character: getLineEndCharacter(input.lines, input.range, candidate.line),
-      label: `${input.config.hintPrefix ?? '// '}${documentation.summary}`,
+      label: `${input.config.hintPrefix ?? '// '}${summary}`,
       tooltip: documentation.fullText,
       candidate
     };
