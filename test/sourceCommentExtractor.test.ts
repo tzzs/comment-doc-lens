@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { findGoDefinitionLine } from '../src/languages/go';
+import { goLanguageAdapter } from '../src/languages/languageRegistry';
 import {
   collectCommentsAtAnchor,
   collectLeadingBlockCommentLines,
   collectLeadingDocCommentLines,
   collectLeadingLineCommentLines,
   collectLeadingSlashCommentLines,
-  findDefinitionLine
+  findDefinitionLine,
+  findTrailingCommentStart,
+  hasTrailingComment
 } from '../src/languages/shared';
 
 function createDocument(lines: readonly string[]) {
@@ -376,4 +379,40 @@ test('go definition anchor on its own declaration line is honored with includeRe
     { line: 1, character: 0 }
   );
   assert.equal(findGoDefinitionLine(document, 'CurrencyUsd', 2), undefined);
+});
+
+test('findTrailingCommentStart locates comments after code', () => {
+  assert.equal(findTrailingCommentStart('var a string // 测试注释'), 13);
+  assert.equal(findTrailingCommentStart('var a string /* 测试注释 */'), 13);
+  assert.equal(findTrailingCommentStart('var a string'), -1);
+  assert.equal(findTrailingCommentStart('url := "http://example.com/x"'), -1);
+  assert.equal(findTrailingCommentStart("x := 'a//b'"), -1);
+  assert.equal(findTrailingCommentStart('`http://example.com/x`'), -1);
+});
+
+test('hasTrailingComment treats only comments after code as trailing', () => {
+  assert.equal(hasTrailingComment('var a string // 测试注释'), true);
+  assert.equal(hasTrailingComment('var a string /* 测试注释 */'), true);
+  assert.equal(hasTrailingComment('var a string'), false);
+  assert.equal(hasTrailingComment('// 测试注释'), false);
+  assert.equal(hasTrailingComment('/* 测试注释 */'), false);
+  assert.equal(hasTrailingComment('url := "http://example.com/x"'), false);
+});
+
+test('go adapter detects trailing comments on the definition line', () => {
+  const document = createDocument([
+    'var a string // 测试注释',
+    'var b string /* 测试注释 */',
+    'var c string',
+    '// leading comment',
+    'var d string',
+    'url := "http://example.com/x"'
+  ]);
+
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 0), true);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 1), true);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 2), false);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 3), false);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 4), false);
+  assert.equal(goLanguageAdapter.sourceComment?.hasTrailingCommentAt?.(document, 5), false);
 });

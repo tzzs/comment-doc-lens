@@ -4,6 +4,7 @@ import {
   DEFINITION_SEARCH_WINDOW,
   escapeRegExp,
   findMatchingCloseParen,
+  hasTrailingComment,
   isFilePathWithExtension,
   type SourceDocument
 } from './shared';
@@ -183,6 +184,9 @@ export const goLanguageAdapter: LanguageAdapter = {
     },
     collectLeadingComments(document, definitionLine) {
       return collectLeadingSlashCommentLines(document, definitionLine);
+    },
+    hasTrailingCommentAt(document, line) {
+      return hasTrailingComment(document.lineAt(line).text);
     }
   }
 };

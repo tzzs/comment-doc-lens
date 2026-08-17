@@ -359,3 +359,171 @@ test('bounds cache size and evicts the oldest lookup', async () => {
 
   assert.equal(hoverCalls, 4);
 });
+
+test('shows leading line comment as documentation for local go declarations', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['测试注释'],
+    getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 1, character: 4 }),
+    getHoverMarkdownLinesAtLocation: async () => ['测试注释'],
+    getDefinitionSourceComments: async () => ['// 测试注释'],
+    hasTrailingCommentAt: async () => false
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    { word: 'a', line: 5, startCharacter: 8, endCharacter: 9 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result?.summary, '测试注释');
+  assert.deepEqual(result?.location, { uri: 'file:///status.go', line: 1, character: 4 });
+});
+
+test('rejects hover documentation that only originates from a trailing line comment', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['测试注释'],
+    getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 0, character: 4 }),
+    getHoverMarkdownLinesAtLocation: async () => ['测试注释'],
+    getDefinitionSourceComments: async () => [],
+    hasTrailingCommentAt: async () => true
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    { word: 'a', line: 5, startCharacter: 8, endCharacter: 9 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result, undefined);
+});
+
+test('shows leading block comment as documentation for local go declarations', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['测试注释'],
+    getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 1, character: 4 }),
+    getHoverMarkdownLinesAtLocation: async () => ['测试注释'],
+    getDefinitionSourceComments: async () => ['/* 测试注释 */'],
+    hasTrailingCommentAt: async () => false
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    { word: 'a', line: 5, startCharacter: 8, endCharacter: 9 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result?.summary, '测试注释');
+});
+
+test('rejects hover documentation that only originates from a trailing block comment', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['测试注释'],
+    getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 0, character: 4 }),
+    getHoverMarkdownLinesAtLocation: async () => ['测试注释'],
+    getDefinitionSourceComments: async () => [],
+    hasTrailingCommentAt: async () => true
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    { word: 'a', line: 5, startCharacter: 8, endCharacter: 9 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result, undefined);
+});
+
+test('prefers leading comment and drops trailing comment content for local go declarations', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['测试注释 实现细节'],
+    getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 1, character: 4 }),
+    getHoverMarkdownLinesAtLocation: async () => ['测试注释 实现细节'],
+    getDefinitionSourceComments: async () => ['// 测试注释'],
+    hasTrailingCommentAt: async () => true
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    { word: 'a', line: 5, startCharacter: 8, endCharacter: 9 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result?.summary, '测试注释');
+});
+
+test('resolveSummary validates hover provenance for local go declarations', async () => {
+  let definitionCalls = 0;
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['测试注释'],
+    getDefinitionLocation: async () => {
+      definitionCalls++;
+      return { uri: 'file:///status.go', line: 0, character: 4 };
+    },
+    getHoverMarkdownLinesAtLocation: async () => ['测试注释'],
+    getDefinitionSourceComments: async () => [],
+    hasTrailingCommentAt: async () => true
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolveSummary(
+    { word: 'a', line: 5, startCharacter: 8, endCharacter: 9 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result, undefined);
+  assert.equal(definitionCalls, 1);
+});
+
+test('accepts reference hover for local go declarations without trailing comments', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['Inferred type documentation from the language service.'],
+    getDefinitionLocation: async () => ({ uri: 'file:///status.go', line: 0, character: 4 }),
+    getHoverMarkdownLinesAtLocation: async () => ['Inferred type documentation from the language service.'],
+    getDefinitionSourceComments: async () => [],
+    hasTrailingCommentAt: async () => false
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    { word: 'a', line: 5, startCharacter: 8, endCharacter: 9 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result?.summary, 'Inferred type documentation from the language service.');
+  assert.deepEqual(result?.location, { uri: 'file:///status.go', line: 0, character: 4 });
+});
+
+test('keeps language server documentation for external go symbols', async () => {
+  const lookup: DocumentationLookup = {
+    getHoverMarkdownLines: async () => ['External library returns the formatted status.'],
+    getDefinitionLocation: async () => ({ uri: 'file:///lib.go', line: 0, character: 4 }),
+    getHoverMarkdownLinesAtLocation: async () => ['External library returns the formatted status.'],
+    getDefinitionSourceComments: async () => [],
+    hasTrailingCommentAt: async () => true
+  };
+  const resolver = new DocumentationResolver(lookup, { maxHintLength: 80 });
+
+  const result = await resolver.resolve(
+    { word: 'FormatStatus', line: 5, startCharacter: 8, endCharacter: 20 },
+    'file:///status.go',
+    0,
+    goLanguageAdapter
+  );
+
+  assert.equal(result?.summary, 'External library returns the formatted status.');
+  assert.deepEqual(result?.location, { uri: 'file:///lib.go', line: 0, character: 4 });
+});
