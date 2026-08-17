@@ -98,7 +98,8 @@ Comment Doc Lens 会扫描当前可见的标识符，调用 VS Code 当前语言
 | `commentDocLens.maxHintsPerRequest` | 限制单次 inlay hint 请求生成的提示数量。 |
 | `commentDocLens.maxHintsPerLine` | 候选优先级排序后，限制同一行展示的提示数量。 |
 | `commentDocLens.maxLineLength` | 跳过过长的生成代码或压缩代码行。 |
-| `commentDocLens.maxHintLength` | 限制摘要展示长度。 |
+| `commentDocLens.maxHintLength` | 行内摘要的最大字符数。更长的文档会在句子边界处摘要并附加省略号；完整内容仍在 tooltip 中可用。 |
+| `commentDocLens.maxHintLines` | 行内摘要最多考虑的文档行数。优先使用文档第一段。 |
 | `commentDocLens.minimumDocumentationWords` | 过滤过短、低信号的摘要。 |
 | `commentDocLens.minIdentifierLength` | 忽略过短标识符，除非文档带有定义位置。 |
 | `commentDocLens.preferPropertyTail` | 在 `foo.bar.baz` 这类属性链中优先取末尾标识符。 |

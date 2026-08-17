@@ -7,7 +7,7 @@ test('builds inlay hints from resolved candidate documentation', async () => {
     resolve: async (candidate) =>
       candidate.word.startsWith('OrderStatus')
         ? {
-            summary: '已支付订单',
+            source: ("hover" as const),
             fullText: '已支付订单\n用于订单列表展示',
             location: { uri: 'file:///status.ts', line: 1, character: 13 }
           }
@@ -27,6 +27,7 @@ test('builds inlay hints from resolved candidate documentation', async () => {
         minIdentifierLength: 2,
         preferPropertyTail: true,
         maxHintLength: 120,
+        maxHintLines: 2,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -37,7 +38,7 @@ test('builds inlay hints from resolved candidate documentation', async () => {
     {
       line: 0,
       character: 31,
-      label: '// 已支付订单',
+      label: '// 已支付订单 用于订单列表展示',
       tooltip: '已支付订单\n用于订单列表展示',
       location: { uri: 'file:///status.ts', line: 1, character: 13 }
     }
@@ -50,7 +51,7 @@ test('places hints at absolute line ends for dense visible-range lines', async (
     resolve: async (candidate) =>
       candidate.word === 'OrderStatusPaid'
         ? {
-            summary: '已支付订单',
+            source: ("hover" as const),
             fullText: '已支付订单'
           }
         : undefined
@@ -69,6 +70,7 @@ test('places hints at absolute line ends for dense visible-range lines', async (
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -88,7 +90,7 @@ test('places hints at absolute line ends for dense visible-range lines', async (
 test('filters resolved documentation below the configured word budget', async () => {
   const resolver: CommentHintResolver = {
     resolve: async (candidate) => ({
-      summary: candidate.word === 'OrderStatusPaid' ? 'Status' : 'Useful order documentation',
+      source: ("hover" as const),
       fullText: candidate.word === 'OrderStatusPaid' ? 'Status' : 'Useful order documentation'
     })
   };
@@ -107,6 +109,7 @@ test('filters resolved documentation below the configured word budget', async ()
       minimumDocumentationWords: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -137,6 +140,7 @@ test('returns no hints when disabled or language is not enabled', async () => {
         minIdentifierLength: 2,
         preferPropertyTail: true,
         maxHintLength: 120,
+        maxHintLines: 2,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -159,6 +163,7 @@ test('returns no hints when disabled or language is not enabled', async () => {
         minIdentifierLength: 2,
         preferPropertyTail: true,
         maxHintLength: 120,
+        maxHintLines: 2,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -192,6 +197,7 @@ test('returns no hints when a per-language override disables the language', asyn
         minIdentifierLength: 2,
         preferPropertyTail: true,
         maxHintLength: 120,
+        maxHintLines: 2,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -222,6 +228,7 @@ test('does not resolve candidates on lines beyond the configured length budget',
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -237,7 +244,7 @@ test('does not show a symbol own documentation on its definition line', async ()
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: '格式化状态',
+        source: ("hover" as const),
         fullText: '格式化状态'
       };
     }
@@ -259,6 +266,7 @@ test('does not show a symbol own documentation on its definition line', async ()
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -351,7 +359,7 @@ test('does not show own documentation on supported language definition lines', a
       resolve: async (candidate) => {
         resolvedWords.push(candidate.word);
         return {
-          summary: `${name} documentation`,
+          source: ("hover" as const),
           fullText: `${name} documentation`
         };
       }
@@ -370,6 +378,7 @@ test('does not show own documentation on supported language definition lines', a
         minIdentifierLength: 2,
         preferPropertyTail: true,
         maxHintLength: 120,
+        maxHintLines: 2,
         dedupeLineHints: true,
         resolveTimeoutMs: 750
       },
@@ -394,7 +403,7 @@ test('prefers the tail of property chains when configured', async () => {
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`,
         location: { uri: 'file:///order.ts', line: 1, character: 1 }
       };
@@ -414,6 +423,7 @@ test('prefers the tail of property chains when configured', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -430,7 +440,7 @@ test('drops optional-chaining and namespace receivers under the unified role cla
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`,
         location: { uri: 'file:///order.ts', line: 1, character: 1 }
       };
@@ -450,6 +460,7 @@ test('drops optional-chaining and namespace receivers under the unified role cla
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -466,7 +477,7 @@ test('applies max hint budget after filtering noisy candidates', async () => {
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`,
         location: { uri: 'file:///order.ts', line: 1, character: 1 }
       };
@@ -489,6 +500,7 @@ test('applies max hint budget after filtering noisy candidates', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -505,7 +517,7 @@ test('deduplicates repeated candidate positions within a request', async () => {
     resolve: async () => {
       resolveCalls++;
       return {
-        summary: 'shared documentation',
+        source: ("hover" as const),
         fullText: 'shared documentation'
       };
     }
@@ -524,6 +536,7 @@ test('deduplicates repeated candidate positions within a request', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -537,7 +550,7 @@ test('deduplicates repeated candidate positions within a request', async () => {
 test('filters short identifiers unless resolved documentation has a location', async () => {
   const resolver: CommentHintResolver = {
     resolve: async (candidate) => ({
-      summary: `doc for ${candidate.word}`,
+      source: ("hover" as const),
       fullText: `doc for ${candidate.word}`,
       location: candidate.word === 'b' ? { uri: 'file:///order.ts', line: 1, character: 1 } : undefined
     })
@@ -556,6 +569,7 @@ test('filters short identifiers unless resolved documentation has a location', a
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -568,7 +582,7 @@ test('filters short identifiers unless resolved documentation has a location', a
 test('dedupes repeated line summaries and prefers a location-bearing hint', async () => {
   const resolver: CommentHintResolver = {
     resolve: async (candidate) => ({
-      summary: '已支付订单',
+      source: ("hover" as const),
       fullText: '已支付订单',
       location: candidate.word === 'paidAgain' ? { uri: 'file:///status.ts', line: 1, character: 1 } : undefined
     })
@@ -587,6 +601,7 @@ test('dedupes repeated line summaries and prefers a location-bearing hint', asyn
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -607,7 +622,7 @@ test('dedupes repeated line summaries and prefers a location-bearing hint', asyn
 test('keeps repeated summaries when line dedupe is disabled', async () => {
   const resolver: CommentHintResolver = {
     resolve: async () => ({
-      summary: '已支付订单',
+      source: ("hover" as const),
       fullText: '已支付订单'
     })
   };
@@ -625,6 +640,7 @@ test('keeps repeated summaries when line dedupe is disabled', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: false,
       resolveTimeoutMs: 750
     },
@@ -640,7 +656,7 @@ test('skips common declaration names and jsx tag names', async () => {
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`
       };
     }
@@ -663,6 +679,7 @@ test('skips common declaration names and jsx tag names', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -683,7 +700,7 @@ test('skips jsx attribute names', async () => {
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`
       };
     }
@@ -702,6 +719,7 @@ test('skips jsx attribute names', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -718,7 +736,7 @@ test('skips go declaration names', async () => {
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`
       };
     }
@@ -742,6 +760,7 @@ test('skips go declaration names', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -761,7 +780,7 @@ test('keeps go case label references', async () => {
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`
       };
     }
@@ -780,6 +799,7 @@ test('keeps go case label references', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -795,7 +815,7 @@ test('allows slower go resolver responses than the configured base timeout', asy
     resolve: async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
       return {
-        summary: 'go documentation',
+        source: ("hover" as const),
         fullText: 'go documentation'
       };
     }
@@ -814,6 +834,7 @@ test('allows slower go resolver responses than the configured base timeout', asy
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 1
     },
@@ -833,7 +854,7 @@ test('limits concurrent resolver calls', async () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       active--;
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`
       };
     }
@@ -852,6 +873,7 @@ test('limits concurrent resolver calls', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: false,
       resolveTimeoutMs: 750
     },
@@ -866,7 +888,7 @@ test('drops resolver results that exceed the configured timeout', async () => {
     resolve: async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
       return {
-        summary: 'late documentation',
+        source: ("hover" as const),
         fullText: 'late documentation'
       };
     }
@@ -885,6 +907,7 @@ test('drops resolver results that exceed the configured timeout', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 1
     },
@@ -899,7 +922,7 @@ test('uses custom hint prefix and places hints at line end', async () => {
     resolve: async (candidate) =>
       candidate.word === 'status'
         ? {
-            summary: '业务状态',
+            source: ("hover" as const),
             fullText: '业务状态'
           }
         : undefined
@@ -918,6 +941,7 @@ test('uses custom hint prefix and places hints at line end', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750,
       hintPrefix: ' // doc: '
@@ -940,7 +964,7 @@ test('groups multiple same-line hints with candidate names', async () => {
     resolve: async (candidate) => {
       if (candidate.word === 'formatStatus') {
         return {
-          summary: '格式化状态',
+          source: ("hover" as const),
           fullText: '格式化状态\n用于订单列表展示',
           location: { uri: 'file:///order.ts', line: 1, character: 16 }
         };
@@ -948,7 +972,7 @@ test('groups multiple same-line hints with candidate names', async () => {
 
       if (candidate.word === 'OrderStatusPaid') {
         return {
-          summary: '已支付订单状态',
+          source: ("hover" as const),
           fullText: '已支付订单状态',
           location: { uri: 'file:///status.ts', line: 2, character: 13 }
         };
@@ -971,6 +995,7 @@ test('groups multiple same-line hints with candidate names', async () => {
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -981,7 +1006,7 @@ test('groups multiple same-line hints with candidate names', async () => {
     {
       line: 0,
       character: 46,
-      label: '// formatStatus: 格式化状态 | OrderStatusPaid: 已支付订单状态',
+      label: '// formatStatus: 格式化状态 用于订单列表展示 | OrderStatusPaid: 已支付订单状态',
       tooltip: 'formatStatus:\n格式化状态\n用于订单列表展示\n\nOrderStatusPaid:\n已支付订单状态'
     }
   ]);
@@ -993,7 +1018,7 @@ test('prioritizes method and enum candidates before applying max hint budget', a
     resolve: async (candidate) => {
       resolvedWords.push(candidate.word);
       return {
-        summary: `doc for ${candidate.word}`,
+        source: ("hover" as const),
         fullText: `doc for ${candidate.word}`,
         location: { uri: 'file:///order.ts', line: 1, character: 1 }
       };
@@ -1013,6 +1038,7 @@ test('prioritizes method and enum candidates before applying max hint budget', a
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },
@@ -1026,7 +1052,7 @@ test('prioritizes method and enum candidates before applying max hint budget', a
 test('limits crowded same-line hints without hiding method plus enum pairs', async () => {
   const resolver: CommentHintResolver = {
     resolve: async (candidate) => ({
-      summary: `doc for ${candidate.word}`,
+      source: ("hover" as const),
       fullText: `doc for ${candidate.word}`,
       location: { uri: 'file:///order.ts', line: 1, character: 1 }
     })
@@ -1046,6 +1072,7 @@ test('limits crowded same-line hints without hiding method plus enum pairs', asy
       minIdentifierLength: 2,
       preferPropertyTail: true,
       maxHintLength: 120,
+      maxHintLines: 2,
       dedupeLineHints: true,
       resolveTimeoutMs: 750
     },

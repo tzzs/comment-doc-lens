@@ -45,6 +45,7 @@ test('readCommentDocLensConfig applies documented defaults for every field', () 
     hintPrefix: '// ',
     enableHintInteractions: false,
     maxHintLength: 120,
+    maxHintLines: 2,
     maxCacheEntries: 1000
   });
 });
@@ -70,20 +71,19 @@ test('readCommentDocLensConfig merges reader overrides while keeping other defau
   assert.equal(config.hintPrefix, '// ');
   assert.equal(config.enableHintInteractions, false);
   assert.equal(config.maxHintLength, 120);
+  assert.equal(config.maxHintLines, 2);
   assert.equal(config.maxCacheEntries, 1000);
 });
 
 test('toResolverOptions derives resolver options from the same config model', () => {
   const config = readCommentDocLensConfig(
     readerWithValues({
-      maxHintLength: 200,
       maxCacheEntries: 500,
       minimumDocumentationWords: 3
     })
   );
 
   assert.deepEqual(toResolverOptions(config), {
-    maxHintLength: 200,
     maxCacheEntries: 500,
     minimumDocumentationWords: 3
   });
@@ -98,6 +98,7 @@ test('toDiagnosticsSettingsSnapshot projects the full settings snapshot from one
     'languageOverrides',
     'maxLineLength',
     'maxHintLength',
+    'maxHintLines',
     'maxHintsPerRequest',
     'maxHintsPerLine',
     'minIdentifierLength',
@@ -115,6 +116,7 @@ test('toDiagnosticsSettingsSnapshot projects the full settings snapshot from one
     languageOverrides: {},
     maxLineLength: 2000,
     maxHintLength: 120,
+    maxHintLines: 2,
     maxHintsPerRequest: 80,
     maxHintsPerLine: 3,
     minIdentifierLength: 2,

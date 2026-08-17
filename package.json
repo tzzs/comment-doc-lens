@@ -159,11 +159,17 @@
           "minimum": 80,
           "description": "%commentDocLens.configuration.maxLineLength.description%"
         },
-        "commentDocLens.maxHintLength": {
+"commentDocLens.maxHintLength": {
           "type": "number",
           "default": 120,
           "minimum": 20,
           "description": "%commentDocLens.configuration.maxHintLength.description%"
+        },
+        "commentDocLens.maxHintLines": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "description": "%commentDocLens.configuration.maxHintLines.description%"
         },
         "commentDocLens.maxHintsPerRequest": {
           "type": "number",

@@ -20,6 +20,7 @@ export interface CommentDocLensConfig {
   hintPrefix?: string;
   enableHintInteractions?: boolean;
   maxHintLength: number;
+  maxHintLines: number;
   maxCacheEntries?: number;
 }
 
@@ -39,13 +40,13 @@ export function readCommentDocLensConfig(reader: ConfigReader): CommentDocLensCo
     hintPrefix: reader.get<string>('hintPrefix', '// '),
     enableHintInteractions: reader.get<boolean>('enableHintInteractions', false),
     maxHintLength: reader.get<number>('maxHintLength', 120),
+    maxHintLines: reader.get<number>('maxHintLines', 2),
     maxCacheEntries: reader.get<number>('maxCacheEntries', 1000)
   };
 }
 
 export function toResolverOptions(config: CommentDocLensConfig): DocumentationResolverOptions {
   return {
-    maxHintLength: config.maxHintLength,
     maxCacheEntries: config.maxCacheEntries,
     minimumDocumentationWords: config.minimumDocumentationWords
   };
@@ -58,6 +59,7 @@ export function toDiagnosticsSettingsSnapshot(config: CommentDocLensConfig): Rea
     languageOverrides: config.languageOverrides,
     maxLineLength: config.maxLineLength,
     maxHintLength: config.maxHintLength,
+    maxHintLines: config.maxHintLines,
     maxHintsPerRequest: config.maxHintsPerRequest,
     maxHintsPerLine: config.maxHintsPerLine,
     minIdentifierLength: config.minIdentifierLength,
