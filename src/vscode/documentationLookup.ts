@@ -116,4 +116,17 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
         )
     );
   }
+
+  async hasTrailingCommentAt(
+    location: LocationLike,
+    languageAdapter?: LanguageAdapter
+  ): Promise<boolean> {
+    const sourceComment = languageAdapter?.sourceComment;
+    if (!sourceComment?.hasTrailingCommentAt) {
+      return false;
+    }
+
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(location.uri));
+    return sourceComment.hasTrailingCommentAt(document, location.line);
+  }
 }

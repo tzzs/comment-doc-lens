@@ -299,3 +299,53 @@ export function nextNonWhitespaceCharacter(line: string, startCharacter: number)
 
   return undefined;
 }
+
+/**
+ * Returns the character index of the first comment marker (`//` or `/*`) that
+ * is outside a quoted string literal, or -1 when the line carries none.
+ * Trailing comments on a declaration line must never be treated as declaration
+ * documentation, so this deliberately ignores markers inside strings (e.g.
+ * `url := "http://example.com/x"`).
+ */
+export function findTrailingCommentStart(line: string): number {
+  let quote: '"' | "'" | '`' | undefined;
+  for (let character = 0; character < line.length - 1; character++) {
+    const current = line[character];
+    const next = line[character + 1];
+
+    if (quote) {
+      if (current === '\\' && quote !== '`') {
+        character++;
+        continue;
+      }
+      if (current === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'" || current === '`') {
+      quote = current;
+      continue;
+    }
+
+    if (current === '/' && (next === '/' || next === '*')) {
+      return character;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Whether a line carries a comment after code. Whole-line comments are leading
+ * (or standalone) comments, not trailing ones, so they return false.
+ */
+export function hasTrailingComment(line: string): boolean {
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+    return false;
+  }
+
+  return findTrailingCommentStart(line) >= 0;
+}

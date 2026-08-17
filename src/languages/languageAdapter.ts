@@ -33,6 +33,12 @@ export interface SourceCommentStrategy {
     options?: FindDefinitionLineOptions
   ): number | undefined;
   collectLeadingComments(document: SourceDocument, definitionLine: number): string[];
+  /**
+   * Whether the declaration line carries a same-line (trailing) comment.
+   * Hover documentation that could only originate from such a trailing comment
+   * must not be accepted as declaration documentation.
+   */
+  hasTrailingCommentAt?(document: SourceDocument, line: number): boolean;
 }
 
 export interface ProbePosition {
