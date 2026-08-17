@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.7.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.6.3...comment-doc-lens-v0.7.0) (2026-08-17)
+
+
+### Features
+
+* architecture deepening and review optimizations ([#41](https://github.com/tzzs/comment-doc-lens/issues/41)) ([47f6157](https://github.com/tzzs/comment-doc-lens/commit/47f615780fcba595f3eb37bf51d9a41abec09f37))
+* **hints:** summarize long documentation adaptively with a display policy ([ed6417b](https://github.com/tzzs/comment-doc-lens/commit/ed6417b0d1c9f47951e82ba7c3fa1c02f93fbf10))
+* **languages:** resolve go group members to block-level comments ([c6147c2](https://github.com/tzzs/comment-doc-lens/commit/c6147c277900d878aa2a4f0298cfba9e0ee6cd71))
+
+
+### Bug Fixes
+
+* **diagnostics:** dedupe repeated failure events by message, not details ([f7a9f36](https://github.com/tzzs/comment-doc-lens/commit/f7a9f3632d9493d3a8a9f07d9c3cbfe06255442a))
+* **diagnostics:** swallow rejected health promise and dedupe repeated failure events ([e57ab29](https://github.com/tzzs/comment-doc-lens/commit/e57ab29e9209891d70d57e29b52115ea79bddc62))
+* **go:** never treat trailing comments as documentation; adaptive summaries ([aa27935](https://github.com/tzzs/comment-doc-lens/commit/aa27935752c2bd0d2e47ace3245b93fc0dd4be60))
+* **resolver:** reject trailing comments as documentation for local declarations ([493d76c](https://github.com/tzzs/comment-doc-lens/commit/493d76cdcd3e359de63b7ae4cbc5294f197e0074))
+* **resolver:** reject trailing-comment hover docs for local declarations ([ea3a97b](https://github.com/tzzs/comment-doc-lens/commit/ea3a97bc98664cc0a685f1405733555a0ab4f299))
+* **resolver:** reject trailing-comment hover docs for local declarations ([#45](https://github.com/tzzs/comment-doc-lens/issues/45)) ([4709c02](https://github.com/tzzs/comment-doc-lens/commit/4709c0298f06285fb6c6b7a39ebed9da6bb46778))
+* **scanner:** complete php keyword list and lock default-language behavior ([bc3cc67](https://github.com/tzzs/comment-doc-lens/commit/bc3cc6751c4c8bb3d1c1b2aa699981a6530d1b89))
+* **source-comment:** honor anchor declarations and multi-line Go block comments ([#43](https://github.com/tzzs/comment-doc-lens/issues/43)) ([bbae194](https://github.com/tzzs/comment-doc-lens/commit/bbae19419a52cb8a6085d97eb41c29b3307d5037))
+
+
+### Performance Improvements
+
+* **languages:** anchor source-comment lookups at the definition location ([18cb73d](https://github.com/tzzs/comment-doc-lens/commit/18cb73df44c11727bbdebca8f88e77292ee8f76a))
+* **languages:** widen local definition lookback on the cold path ([601e8db](https://github.com/tzzs/comment-doc-lens/commit/601e8dbfe87d4ef5771986c9dd7e948f1942f92d))
+
 ## [0.6.3](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.6.2...comment-doc-lens-v0.6.3) (2026-08-07)
 
 
