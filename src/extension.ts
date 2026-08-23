@@ -11,7 +11,7 @@ import {
   type LocationLike,
   type ResolvedDocumentation
 } from './documentationResolver';
-import { buildCommentHints, selectResolvableCandidates } from './hintBuilder';
+import { buildCommentHints, mapWithConcurrency, selectResolvableCandidates } from './hintBuilder';
 import { formatLanguageHealthStatus, LanguageHealthService } from './languageHealth';
 import type { LanguageAdapter } from './languages/languageAdapter';
 import { resolveProbePosition } from './languages/probe';
@@ -23,6 +23,7 @@ import { VscodeLanguageHealthProbe } from './vscode/languageHealthProbe';
 const WORKSPACE_DIAGNOSIS_FILE_LIMIT = 40;
 const WORKSPACE_DIAGNOSIS_EXCLUDE = '**/{node_modules,.git,out}/**';
 const DOCUMENT_CHANGE_REFRESH_DELAY_MS = 250;
+const MAX_INTERACTION_RESOLVES = 4;
 
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel('Comment Doc Lens');
@@ -315,22 +316,15 @@ class CommentDocLensInlayHintProvider implements vscode.InlayHintsProvider {
       return inlayHint;
     }
 
-    const resolved: Array<{ word: string; documentation: ResolvedDocumentation }> = [];
-    for (const candidate of data.candidates) {
-      if (token.isCancellationRequested) {
-        return inlayHint;
-      }
-
-      const documentation = await this.resolver.resolve(
-        candidate,
-        data.documentUri,
-        data.documentVersion,
-        languageAdapter
-      );
-      if (documentation) {
-        resolved.push({ word: candidate.word, documentation });
-      }
-    }
+    const resolved = (
+      await mapWithConcurrency(data.candidates, MAX_INTERACTION_RESOLVES, async (candidate) => ({
+        word: candidate.word,
+        documentation: token.isCancellationRequested
+          ? undefined
+          : await this.resolver.resolve(candidate, data.documentUri, data.documentVersion, languageAdapter)
+      }))
+    ).filter((item): item is { word: string; documentation: ResolvedDocumentation } =>
+      item.documentation !== undefined);
 
     if (resolved.length === 0 || token.isCancellationRequested) {
       return inlayHint;

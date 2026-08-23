@@ -316,7 +316,7 @@ function stripHintPrefix(label: string, prefix: string): string {
   return label.startsWith(prefix) ? label.slice(prefix.length) : label;
 }
 
-async function mapWithConcurrency<T, R>(
+export async function mapWithConcurrency<T, R>(
   items: readonly T[],
   limit: number,
   worker: (item: T) => Promise<R>
