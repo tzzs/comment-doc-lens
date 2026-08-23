@@ -1,4 +1,4 @@
-import { withTimeout } from './async';
+import { mapWithConcurrency, withTimeout } from './async';
 import { getLineText, scanCandidateSymbols, type LineRange, type SymbolCandidate } from './candidateScanner';
 import {
   classifyCandidate,
@@ -314,25 +314,4 @@ function formatGroupedTooltipPart(hint: PrioritizedHint): string {
 
 function stripHintPrefix(label: string, prefix: string): string {
   return label.startsWith(prefix) ? label.slice(prefix.length) : label;
-}
-
-export async function mapWithConcurrency<T, R>(
-  items: readonly T[],
-  limit: number,
-  worker: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-
-  async function runWorker(): Promise<void> {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex;
-      nextIndex++;
-      results[currentIndex] = await worker(items[currentIndex]);
-    }
-  }
-
-  const workerCount = Math.min(limit, items.length);
-  await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
-  return results;
 }

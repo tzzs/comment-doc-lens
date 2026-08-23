@@ -6,12 +6,13 @@ import {
   toResolverOptions,
   type ConfigReader
 } from './config';
+import { mapWithConcurrency } from './async';
 import {
   DocumentationResolver,
   type LocationLike,
   type ResolvedDocumentation
 } from './documentationResolver';
-import { buildCommentHints, mapWithConcurrency, selectResolvableCandidates } from './hintBuilder';
+import { buildCommentHints, selectResolvableCandidates } from './hintBuilder';
 import { formatLanguageHealthStatus, LanguageHealthService } from './languageHealth';
 import type { LanguageAdapter } from './languages/languageAdapter';
 import { resolveProbePosition } from './languages/probe';
