@@ -73,6 +73,12 @@ Comment Doc Lens 会扫描当前可见的标识符，调用 VS Code 当前语言
 | `Comment Doc Lens: Explain Hidden Hint` | 解释当前行为什么没有显示内联文档提示。 |
 | `Comment Doc Lens: Open Sample Gallery` | 打开代表性的内联文档示例。 |
 
+快捷键：编辑器获得焦点时，`Ctrl+Alt+D`（macOS 为 `Cmd+Alt+D`）可以切换 Comment Doc Lens 的启用状态。
+
+## 平台支持
+
+Comment Doc Lens 同时支持桌面版 VS Code 和 `vscode.dev` 等 Web 环境。Web 环境下的文档质量仍取决于该环境中可用的语言扩展。
+
 ## 语言服务状态
 
 在命令面板运行 `Comment Doc Lens: Show Language Status` 可以检查当前文件。状态检查会验证推荐扩展、hover 输出、definition 输出，以及当前 adapter 是否具备源码注释 fallback。

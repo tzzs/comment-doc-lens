@@ -76,7 +76,19 @@
     "onCommand:commentDocLens.openSampleGallery"
   ],
   "main": "./out/src/extension.js",
+  "browser": "./out/src/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
   "contributes": {
+    "keybindings": [
+      {
+        "command": "commentDocLens.toggle",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "editorTextFocus"
+      }
+    ],
     "commands": [
       {
         "command": "commentDocLens.toggle",

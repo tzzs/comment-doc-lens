@@ -70,6 +70,20 @@ export class DocumentationResolver {
     this.cache.clear();
   }
 
+  /**
+   * Drops cached results whose documentation lives in `documentUri`. Cache keys
+   * only carry the reference-site uri and version, so edits to a definition
+   * file would otherwise leave other files' hints stale until a manual
+   * refresh. Same-file entries are version-keyed and self-invalidate.
+   */
+  invalidateDocument(documentUri: string): void {
+    for (const [key, result] of this.cache) {
+      if (result?.location?.uri === documentUri) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   updateOptions(options: DocumentationResolverOptions): void {
     this.options = options;
     this.clearCache();

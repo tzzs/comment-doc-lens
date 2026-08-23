@@ -1,3 +1,4 @@
+import { withTimeout } from './async';
 import type { LanguageAdapter } from './languages/languageAdapter';
 
 export type LanguageHealthState = 'ready' | 'degraded' | 'missingDependency' | 'unknown';
@@ -208,19 +209,4 @@ async function evaluateLanguageHealthUnchecked(input: EvaluateLanguageHealthInpu
   }
 
   return createStatus(input, 'ready', 'Language service can provide documentation context.', checkedCapabilities);
-}
-
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, onTimeout: () => T): Promise<T> {
-  let timeout: NodeJS.Timeout | undefined;
-  const timeoutPromise = new Promise<T>((resolve) => {
-    timeout = setTimeout(() => resolve(onTimeout()), timeoutMs);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
 }

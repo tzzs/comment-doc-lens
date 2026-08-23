@@ -73,6 +73,12 @@ See the [language support matrix](docs/language-support.md) for support levels, 
 | `Comment Doc Lens: Explain Hidden Hint` | Explain why the current line does not show an inline documentation hint. |
 | `Comment Doc Lens: Open Sample Gallery` | Open representative inline documentation examples. |
 
+Keyboard shortcut: `Ctrl+Alt+D` (`Cmd+Alt+D` on macOS) toggles Comment Doc Lens while the editor has focus.
+
+## Platform Support
+
+Comment Doc Lens runs on desktop VS Code and on web targets such as `vscode.dev`. On the web, documentation quality still depends on the language extensions available in that environment.
+
 ## Language Service Status
 
 Run `Comment Doc Lens: Show Language Status` from the command palette to inspect the active file. The status check verifies recommended extensions, hover output, definition output, and whether the adapter has source-comment fallback support.

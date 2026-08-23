@@ -1,6 +1,15 @@
 # Comment Doc Lens 全项目 Review 与竞品对比优化计划
 
-> 当前状态：**计划已生成，待实施（2026-08-07）**。来源：2026-08-07 全项目 review（代码库深度审查 agent 通读全部 26 个 src 文件、19 个测试文件、配置与 release 配置；另含 VS Code Marketplace / IDE 生态竞品调研）。
+> 当前状态：**第一至第三批代码修复已完成（2026-08-23 更新）**；第四批增长项中 D3 已落地 `browser` 入口与 `extensionKind`（真实 vscode.dev 环境验证待做），D1/D2/D4 与 C4 仍待实施。来源：2026-08-07 全项目 review（代码库深度审查 agent 通读全部 26 个 src 文件、19 个测试文件、配置与 release 配置；另含 VS Code Marketplace / IDE 生态竞品调研）。
+>
+> 2026-08-23 进度补充：
+> - C2 快捷键已贡献（`Ctrl+Alt+D` / `Cmd+Alt+D` 切换，`editorTextFocus`）。
+> - C3+A5 已合并实施：`diagnoseWorkspace` 使用 `withProgress` 通知进度并支持取消。
+> - C1 已补完：分组 hint 携带全部候选，`resolveInlayHint` 可重建组合 tooltip 并挂第一个可用 definition location。
+> - 新增跨文件缓存失效：编辑定义所在文件会即时失效引用其文档的缓存并去抖刷新可见 hint。
+> - B1 已修复：lines 数组统一为相对 `range.startLine` 索引，消除双模隐式契约。
+> - B4/B5 已修复：共享 `withTimeout`（`src/async.ts`）与 `nextNonWhitespaceCharacter`；`explainHiddenHint` 候选计数复用 adapter 过滤管线。
+> - definition provider 异常不再静默，与 hover 路径一致记录 warn。
 
 ## 背景
 

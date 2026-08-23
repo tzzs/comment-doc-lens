@@ -1,4 +1,5 @@
 import { getLineText, type LineRange, type SymbolCandidate } from './candidateScanner';
+import { nextNonWhitespaceCharacter } from './languages/shared';
 import type { CommentHint } from './hintBuilder';
 
 export interface PrioritizedHint extends CommentHint {
@@ -121,7 +122,7 @@ export function getCandidatePriorityScore(candidate: SymbolCandidate, line: stri
 }
 
 function isCallTarget(candidate: SymbolCandidate, line: string): boolean {
-  return nextNonWhitespace(line, candidate.endCharacter) === '(';
+  return nextNonWhitespaceCharacter(line, candidate.endCharacter) === '(';
 }
 
 function isMemberTail(candidate: SymbolCandidate, line: string): boolean {
@@ -141,14 +142,4 @@ function isTypeReference(candidate: SymbolCandidate, line: string): boolean {
 
 function looksEnumOrConstantLike(word: string): boolean {
   return /^[A-Z][A-Za-z0-9_]*$/.test(word) || /^[A-Z0-9_]+$/.test(word);
-}
-
-function nextNonWhitespace(line: string, startCharacter: number): string | undefined {
-  for (let character = startCharacter; character < line.length; character++) {
-    if (!/\s/.test(line[character])) {
-      return line[character];
-    }
-  }
-
-  return undefined;
 }

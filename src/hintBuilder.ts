@@ -1,3 +1,4 @@
+import { withTimeout } from './async';
 import { getLineText, scanCandidateSymbols, type LineRange, type SymbolCandidate } from './candidateScanner';
 import {
   classifyCandidate,
@@ -19,6 +20,12 @@ export interface CommentHint {
   tooltip: string;
   location?: LocationLike;
   candidate?: SymbolCandidate;
+  /**
+   * All candidates behind a grouped same-line hint, in display order. Single
+   * hints omit this; interaction resolution uses it to rebuild the combined
+   * tooltip and attach the first located definition.
+   */
+  candidates?: SymbolCandidate[];
 }
 
 export interface CommentHintResolver {
@@ -47,6 +54,31 @@ export interface BuildCommentHintsInput {
   isCancellationRequested?: () => boolean;
 }
 
+export interface CandidateSelectionInput {
+  lines: readonly string[];
+  range: LineRange;
+  languageId: string;
+  config: CommentDocLensConfig;
+  languageAdapter: LanguageAdapter;
+  isCancellationRequested?: () => boolean;
+}
+
+/**
+ * Scans and filters candidates exactly like the hint pipeline does (adapter
+ * declaration/noise filters plus property-tail classification), without
+ * resolving documentation. Shared by hint building and hidden-hint diagnosis.
+ */
+export function selectResolvableCandidates(input: CandidateSelectionInput): SymbolCandidate[] {
+  const candidates = scanCandidateSymbols(
+    input.lines,
+    input.range,
+    input.languageId,
+    getCandidateScanLimit(input.config.maxHintsPerRequest),
+    input.config.maxLineLength
+  );
+  return dedupeCandidates(candidates.filter((candidate) => shouldResolveCandidate(candidate, input)));
+}
+
 const MAX_CONCURRENT_RESOLVES = 4;
 const CANDIDATE_SCAN_MULTIPLIER = 3;
 const MIN_EXTRA_SCAN_CANDIDATES = 10;
@@ -63,16 +95,14 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
     return [];
   }
 
-  const candidates = scanCandidateSymbols(
-    input.lines,
-    input.range,
-    input.languageId,
-    getCandidateScanLimit(input.config.maxHintsPerRequest),
-    input.config.maxLineLength
-  );
-  const filteredCandidates = dedupeCandidates(
-    candidates.filter((candidate) => shouldResolveCandidate(candidate, input, languageAdapter))
-  );
+  const filteredCandidates = selectResolvableCandidates({
+    lines: input.lines,
+    range: input.range,
+    languageId: input.languageId,
+    config: input.config,
+    languageAdapter,
+    isCancellationRequested: input.isCancellationRequested
+  });
   const candidatesToResolve = prioritizeCandidates(filteredCandidates, input.lines, input.range)
     .slice(0, input.config.maxHintsPerRequest);
   const resolvedByCandidate = await mapWithConcurrency(
@@ -121,7 +151,7 @@ export async function buildCommentHints(input: BuildCommentHintsInput): Promise<
       return hint;
     }
 
-    const { candidate: _candidate, ...publicHint } = hint;
+    const { candidate: _candidate, candidates: _candidates, ...publicHint } = hint;
     return publicHint;
   });
 }
@@ -185,19 +215,15 @@ function getResolveTimeoutMs(input: BuildCommentHintsInput, languageAdapter: Lan
   return Math.max(input.config.resolveTimeoutMs, languageAdapter.resolveTimeoutMs ?? 0);
 }
 
-function shouldResolveCandidate(
-  candidate: SymbolCandidate,
-  input: BuildCommentHintsInput,
-  languageAdapter: LanguageAdapter
-): boolean {
+function shouldResolveCandidate(candidate: SymbolCandidate, input: CandidateSelectionInput): boolean {
   if (input.isCancellationRequested?.()) {
     return false;
   }
 
   const line = getLineText(input.lines, input.range, candidate.line);
   if (
-    languageAdapter.isDeclarationCandidate?.(candidate, line, input.languageId) ||
-    languageAdapter.isNoisyCandidate?.(candidate, line, input.languageId)
+    input.languageAdapter.isDeclarationCandidate?.(candidate, line, input.languageId) ||
+    input.languageAdapter.isNoisyCandidate?.(candidate, line, input.languageId)
   ) {
     return false;
   }
@@ -267,7 +293,11 @@ function groupSameLineHints(hints: readonly PrioritizedHint[], prefix: string): 
       line: hint.line,
       character: hint.character,
       label: `${prefix}${lineHints.map((lineHint) => formatGroupedLabelPart(lineHint, prefix)).join(GROUPED_HINT_SEPARATOR)}`,
-      tooltip: lineHints.map(formatGroupedTooltipPart).join('\n\n')
+      tooltip: lineHints.map(formatGroupedTooltipPart).join('\n\n'),
+      candidate: lineHints[0].candidate,
+      candidates: lineHints
+        .map((lineHint) => lineHint.candidate)
+        .filter((candidate): candidate is SymbolCandidate => candidate !== undefined)
     });
   }
 
@@ -305,19 +335,4 @@ async function mapWithConcurrency<T, R>(
   const workerCount = Math.min(limit, items.length);
   await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
   return results;
-}
-
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
-  let timeout: NodeJS.Timeout | undefined;
-  const timeoutPromise = new Promise<undefined>((resolve) => {
-    timeout = setTimeout(() => resolve(undefined), timeoutMs);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
 }
