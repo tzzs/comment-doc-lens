@@ -10,6 +10,11 @@
 > - B1 已修复：lines 数组统一为相对 `range.startLine` 索引，消除双模隐式契约。
 > - B4/B5 已修复：共享 `withTimeout`（`src/async.ts`）与 `nextNonWhitespaceCharacter`；`explainHiddenHint` 候选计数复用 adapter 过滤管线。
 > - definition provider 异常不再静默，与 hover 路径一致记录 warn。
+> - `resolveInlayHint` 已复用 `mapWithConcurrency`（并发 4），分组 hint 的多候选惰性解析不再按候选数串行叠加超时。
+>
+> 已知限制（2026-08-23 记录）：
+> - 纯 hover 路径的缓存条目（无 definition location，如 `documentationResolver.ts` 中外部符号无定义时的返回）不含定义文件 uri，编辑定义文件不会使其失效；这些条目仍由引用处版本键管理，可用 `Refresh` 手动清理。
+> - Web 支持仅满足加载条件（`browser` 入口 + `extensionKind`）；inlay hints selector 目前只注册 `file` scheme，`vscode-vfs` 等 web 场景未验证，README 措辞已保持待验证口径。
 
 ## 背景
 

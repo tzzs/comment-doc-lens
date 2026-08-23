@@ -73,11 +73,11 @@ Comment Doc Lens 会扫描当前可见的标识符，调用 VS Code 当前语言
 | `Comment Doc Lens: Explain Hidden Hint` | 解释当前行为什么没有显示内联文档提示。 |
 | `Comment Doc Lens: Open Sample Gallery` | 打开代表性的内联文档示例。 |
 
-快捷键：编辑器获得焦点时，`Ctrl+Alt+D`（macOS 为 `Cmd+Alt+D`）可以切换 Comment Doc Lens 的启用状态。
+快捷键：编辑器获得焦点时，`Ctrl+Alt+D`（macOS 为 `Cmd+Alt+D`）可以切换 Comment Doc Lens 的启用状态。在 `Ctrl+Alt` 等同于 AltGr 的 Windows/Linux 键盘布局下，该快捷键可能影响特殊字符输入；如有冲突，可在键盘快捷方式设置中改绑或移除。
 
 ## 平台支持
 
-Comment Doc Lens 同时支持桌面版 VS Code 和 `vscode.dev` 等 Web 环境。Web 环境下的文档质量仍取决于该环境中可用的语言扩展。
+Comment Doc Lens 目前在桌面版 VS Code 上运行。扩展声明了 `browser` 入口和 `extensionKind: ["workspace"]`，具备在 `vscode.dev` 等 Web 宿主中加载的条件，但 Web 场景尚未验证：inlay hints 目前只对 `file` scheme 的文档注册，vscode.dev 支持属于待验证状态，暂不作为对外宣传能力。
 
 ## 语言服务状态
 

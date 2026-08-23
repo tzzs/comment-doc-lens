@@ -73,11 +73,11 @@ See the [language support matrix](docs/language-support.md) for support levels, 
 | `Comment Doc Lens: Explain Hidden Hint` | Explain why the current line does not show an inline documentation hint. |
 | `Comment Doc Lens: Open Sample Gallery` | Open representative inline documentation examples. |
 
-Keyboard shortcut: `Ctrl+Alt+D` (`Cmd+Alt+D` on macOS) toggles Comment Doc Lens while the editor has focus.
+Keyboard shortcut: `Ctrl+Alt+D` (`Cmd+Alt+D` on macOS) toggles Comment Doc Lens while the editor has focus. On Windows/Linux layouts where `Ctrl+Alt` acts as AltGr, the shortcut may interfere with special-character input; rebind or remove it in Keyboard Shortcuts if that happens.
 
 ## Platform Support
 
-Comment Doc Lens runs on desktop VS Code and on web targets such as `vscode.dev`. On the web, documentation quality still depends on the language extensions available in that environment.
+Comment Doc Lens runs on desktop VS Code. The package declares a `browser` entry and `extensionKind: ["workspace"]`, so it meets the loading conditions for web hosts such as `vscode.dev`; however, web scenarios are not verified yet — inlay hints currently register for `file` scheme documents only, so treat vscode.dev support as pending validation rather than an advertised capability.
 
 ## Language Service Status
 
