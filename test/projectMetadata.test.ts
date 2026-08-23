@@ -9,9 +9,12 @@ interface PackageJson {
   description: string;
   icon: string;
   main: string;
+  browser?: string;
+  extensionKind?: string[];
   publisher: string;
   activationEvents: string[];
   contributes: {
+    keybindings?: Array<{ command: string; key: string; mac?: string; when?: string }>;
     commands: Array<{ command: string; title: string }>;
     configuration: {
       title: string;
@@ -48,6 +51,27 @@ test('project metadata uses Comment Doc Lens naming', () => {
   assert.equal(packageJson.icon, 'assets/icon.png');
   assert.equal(existsSync(join(process.cwd(), packageJson.icon)), true);
   assert.equal(packageJson.main, './out/src/extension.js');
+});
+
+test('web and desktop entries share one implementation for vscode.dev support', () => {
+  const packageJson = readPackageJson() as PackageJson & { files: string[] };
+
+  assert.equal(packageJson.main, './out/src/extension.js');
+  assert.equal(packageJson.browser, './out/src/extension.js');
+  assert.deepEqual(packageJson.extensionKind, ['workspace']);
+});
+
+test('toggle command has a default keybinding', () => {
+  const packageJson = readPackageJson();
+
+  assert.deepEqual(packageJson.contributes.keybindings, [
+    {
+      command: 'commentDocLens.toggle',
+      key: 'ctrl+alt+d',
+      mac: 'cmd+alt+d',
+      when: 'editorTextFocus'
+    }
+  ]);
 });
 
 test('extension contributions use commentDocLens identifiers', () => {

@@ -309,6 +309,35 @@ test('caches repeated lookups by document version and candidate position', async
   assert.equal(hoverCalls, 1);
 });
 
+test('invalidateDocument drops entries whose documentation lives in the edited file', async () => {
+  let hoverCalls = 0;
+  const lookup: DocumentationLookup = {
+    getHoverDocumentation: async () => {
+      hoverCalls++;
+      return { lines: ['业务状态'] };
+    },
+    getDefinitionLocation: async (_candidate, documentUri) =>
+      documentUri === 'file:///order.ts'
+        ? { uri: 'file:///status.ts', line: 8, character: 0 }
+        : undefined,
+    getHoverDocumentationAtLocation: async () => ({ lines: [] }),
+    getDefinitionSourceComments: async () => [],
+    hasTrailingCommentAt: async () => false
+  };
+  const resolver = createResolver(lookup);
+
+  await resolver.resolve(statusCandidate, 'file:///order.ts', 3);
+  assert.equal(hoverCalls, 1);
+
+  resolver.invalidateDocument('file:///status.ts');
+  await resolver.resolve(statusCandidate, 'file:///order.ts', 3);
+  assert.equal(hoverCalls, 2);
+
+  resolver.invalidateDocument('file:///unrelated.ts');
+  await resolver.resolve(statusCandidate, 'file:///order.ts', 3);
+  assert.equal(hoverCalls, 2);
+});
+
 test('passes document uri to lookup methods', async () => {
   const seenUris: string[] = [];
   const lookup: DocumentationLookup = {

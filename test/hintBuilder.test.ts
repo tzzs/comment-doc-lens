@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCommentHints, type CommentHintResolver } from '../src/hintBuilder';
+import { buildCommentHints, selectResolvableCandidates, type CommentHintResolver } from '../src/hintBuilder';
+import { typescriptFamilyLanguageAdapter } from '../src/languages/languageRegistry';
 
 test('builds inlay hints from resolved candidate documentation', async () => {
   const resolver: CommentHintResolver = {
@@ -1010,6 +1011,78 @@ test('groups multiple same-line hints with candidate names', async () => {
       tooltip: 'formatStatus:\n格式化状态\n用于订单列表展示\n\nOrderStatusPaid:\n已支付订单状态'
     }
   ]);
+});
+
+test('grouped hints keep every candidate for lazy interaction resolution', async () => {
+  const resolver: CommentHintResolver = {
+    resolve: async (candidate) => {
+      if (candidate.word === 'formatStatus') {
+        return {
+          source: ("hover" as const),
+          fullText: '格式化状态',
+          location: { uri: 'file:///order.ts', line: 1, character: 16 }
+        };
+      }
+
+      if (candidate.word === 'OrderStatusPaid') {
+        return {
+          source: ("hover" as const),
+          fullText: '已支付订单状态',
+          location: { uri: 'file:///status.ts', line: 2, character: 13 }
+        };
+      }
+
+      return undefined;
+    }
+  };
+
+  const hints = await buildCommentHints({
+    lines: ['render(formatStatus(status), OrderStatusPaid);'],
+    range: { startLine: 0, endLineInclusive: 0 },
+    languageId: 'typescript',
+    documentUri: 'file:///order.ts',
+    documentVersion: 1,
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxHintsPerRequest: 20,
+      minIdentifierLength: 2,
+      preferPropertyTail: true,
+      maxHintLength: 120,
+      maxHintLines: 2,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    resolver,
+    includeCandidateData: true
+  });
+
+  assert.equal(hints.length, 1);
+  assert.deepEqual(hints[0].candidates?.map((candidate) => candidate.word), ['formatStatus', 'OrderStatusPaid']);
+  assert.equal(hints[0].candidate?.word, 'formatStatus');
+});
+
+test('selectResolvableCandidates applies adapter filters before hint building', () => {
+  const candidates = selectResolvableCandidates({
+    lines: ['function formatStatus() {}', 'render(formatStatus(status));'],
+    range: { startLine: 0, endLineInclusive: 1 },
+    languageId: 'typescript',
+    config: {
+      enabled: true,
+      languages: ['typescript'],
+      maxHintsPerRequest: 20,
+      minIdentifierLength: 2,
+      preferPropertyTail: true,
+      maxHintLength: 120,
+      maxHintLines: 2,
+      dedupeLineHints: true,
+      resolveTimeoutMs: 750
+    },
+    languageAdapter: typescriptFamilyLanguageAdapter
+  });
+
+  assert.equal(candidates.some((candidate) => candidate.line === 0), false);
+  assert.equal(candidates.some((candidate) => candidate.word === 'formatStatus' && candidate.line === 1), true);
 });
 
 test('prioritizes method and enum candidates before applying max hint budget', async () => {

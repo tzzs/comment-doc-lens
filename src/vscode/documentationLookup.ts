@@ -30,7 +30,13 @@ export class VscodeDocumentationLookup implements DocumentationLookup {
         uri,
         new vscode.Position(candidate.line, candidate.startCharacter)
       );
-    } catch {
+    } catch (error) {
+      this.diagnostics?.record('warn', 'Definition provider failed; skipping candidate.', {
+        uri: uri.toString(),
+        line: candidate.line,
+        character: candidate.startCharacter,
+        error: error instanceof Error ? error.message : String(error)
+      });
       definitions = undefined;
     }
     const firstDefinition = definitions?.[0];

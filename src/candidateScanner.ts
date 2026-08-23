@@ -186,18 +186,13 @@ const LANGUAGE_KEYWORDS: Readonly<Record<string, ReadonlySet<string>>> = {
   ])
 };
 
+/**
+ * `lines` is indexed relative to the range (index 0 is `range.startLine`),
+ * while `lineNumber` is an absolute document line number. Callers producing
+ * `lines` must slice from `range.startLine` so both conventions cannot mix.
+ */
 export function getLineText(lines: readonly string[], range: LineRange, lineNumber: number): string {
-  const absoluteLine = lines[lineNumber];
-  if (absoluteLine !== undefined) {
-    return absoluteLine;
-  }
-
-  const relativeLine = lineNumber - range.startLine;
-  if (relativeLine >= 0) {
-    return lines[relativeLine] ?? '';
-  }
-
-  return '';
+  return lines[lineNumber - range.startLine] ?? '';
 }
 
 export function scanCandidateSymbols(
