@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.7.0...comment-doc-lens-v0.8.0) (2026-08-23)
+
+
+### Features
+
+* add diagnosis progress, cache invalidation, hint interactions, keybinding, and web support ([2cee277](https://github.com/tzzs/comment-doc-lens/commit/2cee277f1b184ac8d33f3d63180acac27ac6353a))
+* add diagnosis progress, cache invalidation, hint interactions, keybinding, and web support ([c7998b3](https://github.com/tzzs/comment-doc-lens/commit/c7998b373a380f9217a683232f302669b07941e4))
+
+
+### Performance Improvements
+
+* **hints:** resolve grouped hint candidates concurrently ([5d57f8f](https://github.com/tzzs/comment-doc-lens/commit/5d57f8fd6edc18a233f3553aa05de47c50496b15))
+
 ## [0.7.0](https://github.com/tzzs/comment-doc-lens/compare/comment-doc-lens-v0.6.3...comment-doc-lens-v0.7.0) (2026-08-17)
 
 
